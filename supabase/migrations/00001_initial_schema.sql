@@ -286,13 +286,13 @@ create index idx_shipment_lines_lot on shipment_lines(lot_id);
 -- ============================================================
 
 -- Helper function: get current user's tenant_id
-create or replace function auth.tenant_id()
+create or replace function public.get_tenant_id()
 returns uuid as $$
   select tenant_id from public.users where id = auth.uid()
 $$ language sql security definer stable;
 
 -- Helper function: get current user's role
-create or replace function auth.user_role()
+create or replace function public.get_user_role()
 returns user_role as $$
   select role from public.users where id = auth.uid()
 $$ language sql security definer stable;
@@ -313,16 +313,16 @@ alter table shipment_lines enable row level security;
 
 -- TENANTS: users can only see their own tenant
 create policy "tenant_isolation" on tenants
-  for all using (id = auth.tenant_id());
+  for all using (id = public.get_tenant_id());
 
 -- USERS: users can see others in their tenant
 create policy "tenant_isolation" on users
-  for select using (tenant_id = auth.tenant_id());
+  for select using (tenant_id = public.get_tenant_id());
 
 create policy "admin_manage_users" on users
   for all using (
-    tenant_id = auth.tenant_id()
-    and auth.user_role() in ('admin', 'manager')
+    tenant_id = public.get_tenant_id()
+    and public.get_user_role() in ('admin', 'manager')
   );
 
 -- Generic tenant isolation policies for all data tables
@@ -336,19 +336,19 @@ begin
     'shipments', 'shipment_lines'
   ]) loop
     execute format(
-      'create policy "tenant_select" on %I for select using (tenant_id = auth.tenant_id())',
+      'create policy "tenant_select" on %I for select using (tenant_id = public.get_tenant_id())',
       tbl
     );
     execute format(
-      'create policy "tenant_insert" on %I for insert with check (tenant_id = auth.tenant_id())',
+      'create policy "tenant_insert" on %I for insert with check (tenant_id = public.get_tenant_id())',
       tbl
     );
     execute format(
-      'create policy "tenant_update" on %I for update using (tenant_id = auth.tenant_id())',
+      'create policy "tenant_update" on %I for update using (tenant_id = public.get_tenant_id())',
       tbl
     );
     execute format(
-      'create policy "tenant_delete" on %I for delete using (tenant_id = auth.tenant_id())',
+      'create policy "tenant_delete" on %I for delete using (tenant_id = public.get_tenant_id())',
       tbl
     );
   end loop;
