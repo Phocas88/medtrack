@@ -123,7 +123,7 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
       sku: data.sku,
       manufacturer: data.manufacturer || null,
       category: data.category || null,
-      supplier_id: data.supplier_id || null,
+      supplier_id: data.supplier_id && data.supplier_id !== 'none' ? data.supplier_id : null,
       unit_of_measure: data.unit_of_measure,
       cost: data.cost,
       price: data.price,
@@ -202,7 +202,7 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {suppliers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}

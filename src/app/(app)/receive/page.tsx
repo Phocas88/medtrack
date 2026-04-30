@@ -111,7 +111,7 @@ export default function ReceivePage() {
         expiration_date: data.expiration_date || null,
         quantity_on_hand: data.quantity,
         received_date: new Date().toISOString().split('T')[0],
-        supplier_id: data.supplier_id || null,
+        supplier_id: data.supplier_id && data.supplier_id !== 'none' ? data.supplier_id : null,
         cost_at_receipt: data.cost_at_receipt,
         location: data.location || null,
         notes: data.notes || null,
@@ -303,7 +303,7 @@ export default function ReceivePage() {
                     <SelectValue placeholder="Select supplier" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {suppliers.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
