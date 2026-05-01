@@ -16,6 +16,18 @@ import {
   Pill,
   LogOut,
   ArrowLeftRight,
+  ClipboardList,
+  RotateCcw,
+  Warehouse,
+  ArrowRightLeft,
+  ClipboardCheck,
+  ShieldCheck,
+  FileText,
+  Bell,
+  DollarSign,
+  Boxes,
+  RefreshCw,
+  TrendingUp,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -37,24 +49,39 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const mainNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Products", href: "/products", icon: Package },
   { label: "Lots", href: "/lots", icon: Layers },
   { label: "Movements", href: "/movements", icon: ArrowLeftRight },
 ]
 
 const operationNavItems = [
+  { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
   { label: "Receive", href: "/receive", icon: PackagePlus },
   { label: "Ship", href: "/ship", icon: Truck },
+  { label: "Returns", href: "/returns", icon: RotateCcw },
+  { label: "Reorder", href: "/reorder", icon: RefreshCw },
+]
+
+const warehouseNavItems = [
+  { label: "Locations", href: "/locations", icon: Warehouse },
+  { label: "Transfers", href: "/transfers", icon: ArrowRightLeft },
+  { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
+  { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
+  { label: "Kitting", href: "/kitting", icon: Boxes },
 ]
 
 const managementNavItems = [
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Suppliers", href: "/suppliers", icon: Building2 },
+  { label: "Pricing", href: "/pricing", icon: DollarSign },
+  { label: "Documents", href: "/documents", icon: FileText },
 ]
 
 const toolsNavItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
+  { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -117,6 +144,8 @@ function SidebarContent() {
           <NavSection items={mainNavItems} pathname={pathname} />
           <Separator />
           <NavSection items={operationNavItems} pathname={pathname} />
+          <Separator />
+          <NavSection items={warehouseNavItems} pathname={pathname} />
           <Separator />
           <NavSection items={managementNavItems} pathname={pathname} />
           <Separator />
