@@ -38,6 +38,14 @@ const pageTitles: Record<string, string> = {
   "/recall": "Recall Lookup",
   "/notifications": "Notifications",
   "/movements": "Stock Movements",
+  "/controlled-substances": "Controlled Substances",
+  "/dscsa": "DSCSA Tracking",
+  "/compliance": "Compliance Reports",
+  "/audit": "Audit Trail",
+  "/customer-portal": "Customer Portal",
+  "/consignment": "Consignment Inventory",
+  "/expiration": "Expiration Management",
+  "/custom-fields": "Custom Fields",
   "/settings": "Settings",
 }
 

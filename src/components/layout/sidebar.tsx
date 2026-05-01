@@ -28,6 +28,14 @@ import {
   Boxes,
   RefreshCw,
   TrendingUp,
+  Shield,
+  Clock,
+  Handshake,
+  Timer,
+  ScrollText,
+  ScanLine,
+  ListChecks,
+  Globe,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -69,6 +77,8 @@ const warehouseNavItems = [
   { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
   { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
   { label: "Kitting", href: "/kitting", icon: Boxes },
+  { label: "Consignment", href: "/consignment", icon: Handshake },
+  { label: "Expiration", href: "/expiration", icon: Timer },
 ]
 
 const managementNavItems = [
@@ -76,12 +86,21 @@ const managementNavItems = [
   { label: "Suppliers", href: "/suppliers", icon: Building2 },
   { label: "Pricing", href: "/pricing", icon: DollarSign },
   { label: "Documents", href: "/documents", icon: FileText },
+  { label: "Customer Portal", href: "/customer-portal", icon: Globe },
+]
+
+const complianceNavItems = [
+  { label: "Controlled Substances", href: "/controlled-substances", icon: Shield },
+  { label: "DSCSA", href: "/dscsa", icon: ScrollText },
+  { label: "Compliance", href: "/compliance", icon: ListChecks },
+  { label: "Audit Trail", href: "/audit", icon: ScanLine },
 ]
 
 const toolsNavItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
   { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "Custom Fields", href: "/custom-fields", icon: Clock },
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -148,6 +167,8 @@ function SidebarContent() {
           <NavSection items={warehouseNavItems} pathname={pathname} />
           <Separator />
           <NavSection items={managementNavItems} pathname={pathname} />
+          <Separator />
+          <NavSection items={complianceNavItems} pathname={pathname} />
           <Separator />
           <NavSection items={toolsNavItems} pathname={pathname} />
         </nav>
