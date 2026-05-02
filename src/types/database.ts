@@ -544,6 +544,41 @@ export interface TemperatureLog {
   zone?: Zone;
 }
 
+// ── UOM & Multi-Part Types ──
+
+export interface ProductUomConversion {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  uom_name: string;
+  conversion_factor: number;
+  barcode: string | null;
+  is_default: boolean;
+  is_orderable: boolean;
+  is_sellable: boolean;
+  weight: number | null;
+  dimensions: string | null;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
+export interface ProductPart {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  part_number: number;
+  total_parts: number;
+  part_description: string | null;
+  part_sku: string | null;
+  weight: number | null;
+  dimensions: string | null;
+  barcode: string | null;
+  notes: string | null;
+  created_at: string;
+  product?: Product;
+}
+
 // ── Bins & Scanner Types ──
 
 export type BinType = 'primary' | 'secondary' | 'bulk' | 'staging' | 'returns';

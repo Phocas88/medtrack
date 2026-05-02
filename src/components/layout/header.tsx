@@ -20,6 +20,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/analytics": "Analytics",
   "/products": "Products",
+  "/uom": "Units & Parts",
   "/lots": "Lots",
   "/receive": "Receive",
   "/ship": "Ship",
@@ -50,6 +51,7 @@ const pageTitles: Record<string, string> = {
   "/bins": "Bin Management",
   "/scanner": "Scanner",
   "/custom-fields": "Custom Fields",
+  "/import-export": "Import / Export",
   "/integrations/quickbooks": "QuickBooks Integration",
   "/settings": "Settings",
 }

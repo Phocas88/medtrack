@@ -39,6 +39,8 @@ import {
   Grid3X3,
   Smartphone,
   Plug,
+  ArrowUpDown,
+  Ruler,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -62,6 +64,7 @@ const mainNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Products", href: "/products", icon: Package },
+  { label: "Units & Parts", href: "/uom", icon: Ruler },
   { label: "Lots", href: "/lots", icon: Layers },
   { label: "Movements", href: "/movements", icon: ArrowLeftRight },
   { label: "Product Matrix", href: "/product-matrix", icon: LayoutGrid },
@@ -104,6 +107,7 @@ const complianceNavItems = [
 
 const toolsNavItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Import / Export", href: "/import-export", icon: ArrowUpDown },
   { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Integrations", href: "/integrations/quickbooks", icon: Plug },
