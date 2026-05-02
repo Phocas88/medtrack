@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/sonner"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "TrackFlow | Inventory Management",
-  description: "Inventory management and product tracking platform",
+  title: "Phocas IMS | Inventory Management System",
+  description: "Complete inventory management for every industry. Lot tracking, bin management, mobile scanning, compliance, and more. Start free.",
 }
 
 export default function RootLayout({
