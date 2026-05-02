@@ -34,6 +34,7 @@ import {
   Handshake,
   Timer,
   ScrollText,
+  CalendarDays,
   ScanLine,
   ListChecks,
   Globe,
@@ -42,6 +43,8 @@ import {
   Plug,
   ArrowUpDown,
   Ruler,
+  ShieldAlert,
+  ScanBarcode,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -75,7 +78,10 @@ const operationNavItems = [
   { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
   { label: "Receive", href: "/receive", icon: PackagePlus },
   { label: "Put-Away", href: "/put-away", icon: PackageOpen },
+  { label: "Wave Picking", href: "/wave-picking", icon: Layers },
   { label: "Ship", href: "/ship", icon: Truck },
+  { label: "Cross-Dock", href: "/cross-dock", icon: ArrowRightLeft },
+  { label: "Dock Schedule", href: "/dock-scheduling", icon: CalendarDays },
   { label: "Returns", href: "/returns", icon: RotateCcw },
   { label: "Reorder", href: "/reorder", icon: RefreshCw },
 ]
@@ -103,17 +109,23 @@ const managementNavItems = [
 const complianceNavItems = [
   { label: "Controlled Substances", href: "/controlled-substances", icon: Shield },
   { label: "DSCSA", href: "/dscsa", icon: ScrollText },
+  { label: "Prop 65", href: "/prop65", icon: AlertTriangle },
+  { label: "Recall Monitor", href: "/recall-monitor", icon: ShieldAlert },
+  { label: "GS1 Compliance", href: "/gs1-compliance", icon: ScanBarcode },
   { label: "Compliance", href: "/compliance", icon: ListChecks },
   { label: "Audit Trail", href: "/audit", icon: ScanLine },
 ]
 
 const toolsNavItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Labor", href: "/labor", icon: Clock },
+  { label: "Slotting", href: "/slotting", icon: ArrowUpDown },
+  { label: "ABC Analysis", href: "/abc-analysis", icon: BarChart3 },
   { label: "Import / Export", href: "/import-export", icon: ArrowUpDown },
   { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Integrations", href: "/integrations/quickbooks", icon: Plug },
-  { label: "Custom Fields", href: "/custom-fields", icon: Clock },
+  { label: "Custom Fields", href: "/custom-fields", icon: Timer },
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 

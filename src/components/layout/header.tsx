@@ -28,6 +28,9 @@ const pageTitles: Record<string, string> = {
   "/purchase-orders": "Purchase Orders",
   "/returns": "Returns",
   "/reorder": "Reorder Management",
+  "/wave-picking": "Wave Picking",
+  "/cross-dock": "Cross-Docking",
+  "/dock-scheduling": "Dock Scheduling",
   "/locations": "Locations & Zones",
   "/transfers": "Transfers",
   "/cycle-counts": "Cycle Counts",
@@ -54,6 +57,12 @@ const pageTitles: Record<string, string> = {
   "/custom-fields": "Custom Fields",
   "/import-export": "Import / Export",
   "/integrations/quickbooks": "QuickBooks Integration",
+  "/labor": "Labor Tracking",
+  "/slotting": "Slotting Optimization",
+  "/abc-analysis": "ABC Analysis",
+  "/prop65": "Proposition 65 Tracking",
+  "/recall-monitor": "Recall Monitor",
+  "/gs1-compliance": "GS1 Compliance",
   "/settings": "Settings",
 }
 
