@@ -8,6 +8,7 @@ import type { User, UserRole } from '@/types/database';
 interface AuthContextValue {
   user: User | null;
   tenantId: string | null;
+  tenantName: string | null;
   role: UserRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -16,6 +17,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   tenantId: null,
+  tenantName: null,
   role: null,
   loading: true,
   signOut: async () => {},
@@ -24,6 +26,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,8 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single();
 
         setUser(data ?? null);
+
+        // Fetch tenant name for white-label branding
+        if (data?.tenant_id) {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('name')
+            .eq('id', data.tenant_id)
+            .single();
+          setTenantName(tenant?.name ?? null);
+        }
       } catch {
         setUser(null);
+        setTenantName(null);
       } finally {
         setLoading(false);
       }
@@ -78,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
+    setTenantName(null);
     router.push('/auth/login');
     router.refresh();
   }, [router]);
@@ -87,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         tenantId: user?.tenant_id ?? null,
+        tenantName,
         role: user?.role ?? null,
         loading,
         signOut,

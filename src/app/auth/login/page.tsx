@@ -57,9 +57,9 @@ export default function LoginPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Package className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold">MedTrack</CardTitle>
+          <CardTitle className="text-2xl font-bold">TrackFlow</CardTitle>
           <CardDescription>
-            Medical supply inventory management. Sign in to your account.
+            Inventory Management System. Sign in to your account.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>

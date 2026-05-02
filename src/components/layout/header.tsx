@@ -45,6 +45,8 @@ const pageTitles: Record<string, string> = {
   "/customer-portal": "Customer Portal",
   "/consignment": "Consignment Inventory",
   "/expiration": "Expiration Management",
+  "/bins": "Bin Management",
+  "/scanner": "Scanner",
   "/custom-fields": "Custom Fields",
   "/settings": "Settings",
 }
@@ -56,7 +58,7 @@ function getPageTitle(pathname: string): string {
   for (const [route, title] of Object.entries(pageTitles)) {
     if (pathname.startsWith(route + "/")) return title
   }
-  return "MedTrack"
+  return "TrackFlow"
 }
 
 interface HeaderProps {

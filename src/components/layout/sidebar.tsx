@@ -13,7 +13,6 @@ import {
   BarChart3,
   AlertTriangle,
   Settings,
-  Pill,
   LogOut,
   ArrowLeftRight,
   ClipboardList,
@@ -36,6 +35,8 @@ import {
   ScanLine,
   ListChecks,
   Globe,
+  Grid3X3,
+  Smartphone,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -77,6 +78,8 @@ const warehouseNavItems = [
   { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
   { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
   { label: "Kitting", href: "/kitting", icon: Boxes },
+  { label: "Bins", href: "/bins", icon: Grid3X3 },
+  { label: "Scanner", href: "/scanner", icon: Smartphone },
   { label: "Consignment", href: "/consignment", icon: Handshake },
   { label: "Expiration", href: "/expiration", icon: Timer },
 ]
@@ -136,7 +139,7 @@ function NavSection({ items, pathname }: NavSectionProps) {
 
 function SidebarContent() {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const { user, tenantName, signOut } = useAuth()
 
   const initials = user?.full_name
     ?.split(' ')
@@ -150,9 +153,9 @@ function SidebarContent() {
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Pill className="h-4 w-4" />
+          <Package className="h-4 w-4" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">MedTrack</span>
+        <span className="text-lg font-semibold tracking-tight">{tenantName || 'TrackFlow'}</span>
       </div>
 
       <Separator />

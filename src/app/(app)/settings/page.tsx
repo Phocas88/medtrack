@@ -736,7 +736,7 @@ export default function SettingsPage() {
                   <Plug className="h-5 w-5" /> Integrations
                 </CardTitle>
                 <CardDescription>
-                  Connect MedTrack with your favorite tools and services.
+                  Connect TrackFlow with your favorite tools and services.
                 </CardDescription>
               </CardHeader>
             </Card>

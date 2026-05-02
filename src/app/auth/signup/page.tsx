@@ -99,7 +99,7 @@ export default function SignupPage() {
             <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
             <CardDescription>
               We sent a confirmation link to your email address. Click the link to
-              activate your account and get started with MedTrack.
+              activate your account and get started with TrackFlow.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -119,9 +119,9 @@ export default function SignupPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Package className="h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold">Create your MedTrack account</CardTitle>
+          <CardTitle className="text-2xl font-bold">Create your TrackFlow account</CardTitle>
           <CardDescription>
-            Start managing your medical supply inventory today.
+            Start managing your inventory today.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>

@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/sonner"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "MedTrack",
-  description: "Medical device and product tracking platform",
+  title: "TrackFlow | Inventory Management",
+  description: "Inventory management and product tracking platform",
 }
 
 export default function RootLayout({

@@ -544,6 +544,107 @@ export interface TemperatureLog {
   zone?: Zone;
 }
 
+// ── Bins & Scanner Types ──
+
+export type BinType = 'primary' | 'secondary' | 'bulk' | 'staging' | 'returns';
+export type ScanTaskType = 'verify_stock' | 'verify_bin' | 'cycle_count' | 'bin_to_bin' | 'replenish' | 'putaway' | 'pick';
+export type ScanTaskStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface Bin {
+  id: string;
+  tenant_id: string;
+  location_id: string;
+  zone_id: string | null;
+  bin_code: string;
+  bin_type: BinType;
+  description: string | null;
+  is_active: boolean;
+  max_weight: number | null;
+  max_volume: number | null;
+  created_at: string;
+  updated_at: string;
+  location?: Location;
+  zone?: Zone;
+}
+
+export interface BinInventory {
+  id: string;
+  tenant_id: string;
+  bin_id: string;
+  product_id: string;
+  lot_id: string | null;
+  quantity: number;
+  created_at: string;
+  updated_at: string;
+  bin?: Bin;
+  product?: Product;
+  lot?: Lot;
+}
+
+export interface ProductBinAssignment {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  bin_id: string;
+  bin_role: string;
+  min_quantity: number;
+  max_quantity: number;
+  reorder_point: number;
+  unit_of_measure: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  bin?: Bin;
+}
+
+export interface ScanTask {
+  id: string;
+  tenant_id: string;
+  task_type: ScanTaskType;
+  status: ScanTaskStatus;
+  priority: number;
+  title: string;
+  instructions: string | null;
+  assigned_to: string | null;
+  assigned_by: string | null;
+  assigned_at: string | null;
+  location_id: string | null;
+  bin_id: string | null;
+  product_id: string | null;
+  lot_id: string | null;
+  source_bin_id: string | null;
+  target_bin_id: string | null;
+  requested_quantity: number | null;
+  scanned_quantity: number | null;
+  variance: number | null;
+  result_notes: string | null;
+  completed_by: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  assigned_user?: User;
+  location?: Location;
+  bin?: Bin;
+  product?: Product;
+}
+
+export interface ScanLog {
+  id: string;
+  tenant_id: string;
+  task_id: string | null;
+  scanned_by: string | null;
+  scan_type: string;
+  scanned_value: string;
+  resolved_bin_id: string | null;
+  resolved_product_id: string | null;
+  resolved_lot_id: string | null;
+  quantity: number | null;
+  notes: string | null;
+  scanned_at: string;
+}
+
 // View types
 export interface ProductStockSummary {
   product_id: string;
