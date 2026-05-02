@@ -48,6 +48,7 @@ const pageTitles: Record<string, string> = {
   "/bins": "Bin Management",
   "/scanner": "Scanner",
   "/custom-fields": "Custom Fields",
+  "/integrations/quickbooks": "QuickBooks Integration",
   "/settings": "Settings",
 }
 
