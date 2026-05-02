@@ -35,7 +35,8 @@ import { Truck, Plus, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { pickLotsForQuantity } from '@/lib/fefo';
 import { formatDate } from '@/lib/format';
 import { ExpiryBadge } from '@/components/ui/expiry-badge';
-import type { Customer, Product, Lot } from '@/types/database';
+import { InvoiceButton } from './invoice-button';
+import type { Customer, Product, Lot, SalesOrder } from '@/types/database';
 
 interface OrderLine {
   product_id: string;
@@ -64,6 +65,7 @@ export default function ShipPage() {
   const [pickSuggestions, setPickSuggestions] = useState<PickSuggestion[]>([]);
   const [showPicking, setShowPicking] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [recentOrders, setRecentOrders] = useState<(SalesOrder & { customer?: Customer })[]>([]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -74,7 +76,22 @@ export default function ShipPage() {
 
     supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_archived', false).order('name')
       .then(({ data }) => setProducts(data || []));
+
+    loadRecentOrders();
   }, [tenantId]);
+
+  async function loadRecentOrders() {
+    if (!tenantId) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('sales_orders')
+      .select('*, customer:customers(id, name)')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'shipped')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setRecentOrders((data as (SalesOrder & { customer?: Customer })[]) || []);
+  }
 
   function addLine() {
     setLines([...lines, { product_id: '', quantity: 1, unit_price: 0 }]);
@@ -227,6 +244,7 @@ export default function ShipPage() {
     setTrackingNumber('');
     setPickSuggestions([]);
     setProcessing(false);
+    loadRecentOrders();
   }
 
   return (
@@ -339,6 +357,43 @@ export default function ShipPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent Shipments */}
+      {recentOrders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Shipments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Ship Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-24">Documents</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-mono">{order.order_number}</TableCell>
+                    <TableCell>{order.customer?.name || '—'}</TableCell>
+                    <TableCell>{formatDate(order.ship_date)}</TableCell>
+                    <TableCell>
+                      <Badge variant="default">Shipped</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <InvoiceButton orderId={order.id} tenantId={order.tenant_id} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* FEFO Picking Dialog */}
       <Dialog open={showPicking} onOpenChange={setShowPicking}>

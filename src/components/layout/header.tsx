@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
-import { Menu, Sun, Moon, Bell } from "lucide-react"
+import { Menu, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { NotificationBell } from "@/components/layout/notification-bell"
 import { User, Settings, LogOut } from "lucide-react"
 
 const pageTitles: Record<string, string> = {
@@ -38,6 +39,7 @@ const pageTitles: Record<string, string> = {
   "/recall": "Recall Lookup",
   "/notifications": "Notifications",
   "/movements": "Stock Movements",
+  "/product-matrix": "Product Matrix",
   "/controlled-substances": "Controlled Substances",
   "/dscsa": "DSCSA Tracking",
   "/compliance": "Compliance Reports",
@@ -104,10 +106,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon">
-          <Bell className="h-4 w-4" />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <NotificationBell />
 
         <Separator orientation="vertical" className="mx-1 h-6" />
 

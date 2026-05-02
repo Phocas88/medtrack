@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   ArrowLeftRight,
+  LayoutGrid,
   ClipboardList,
   RotateCcw,
   Warehouse,
@@ -63,6 +64,7 @@ const mainNavItems = [
   { label: "Products", href: "/products", icon: Package },
   { label: "Lots", href: "/lots", icon: Layers },
   { label: "Movements", href: "/movements", icon: ArrowLeftRight },
+  { label: "Product Matrix", href: "/product-matrix", icon: LayoutGrid },
 ]
 
 const operationNavItems = [
