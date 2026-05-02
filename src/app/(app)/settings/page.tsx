@@ -167,15 +167,16 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!tenantId) return;
 
-    // Load tenant info
+    // Load tenant info (extra settings stored in settings JSON column)
     supabase.from('tenants').select('*').eq('id', tenantId).single()
       .then(({ data }) => {
         if (data) {
           setCompanyName(data.name || '');
-          setLogoUrl(data.logo_url || '');
-          setTimezone(data.timezone || 'America/New_York');
-          setDateFormat(data.date_format || 'MM/DD/YYYY');
-          setCurrency(data.currency || 'USD');
+          const s = (data.settings || {}) as Record<string, string>;
+          setLogoUrl(s.logo_url || '');
+          setTimezone(s.timezone || 'America/New_York');
+          setDateFormat(s.date_format || 'MM/DD/YYYY');
+          setCurrency(s.currency || 'USD');
         }
       });
 
@@ -203,7 +204,7 @@ export default function SettingsPage() {
     Promise.all([
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
       supabase.from('lots').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-      supabase.from('movements').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+      supabase.from('stock_movements').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     ]).then(([p, l, m]) => {
       setStats({
         products: p.count ?? 0,
@@ -220,10 +221,12 @@ export default function SettingsPage() {
     setSavingGeneral(true);
     const { error } = await supabase.from('tenants').update({
       name: companyName,
-      logo_url: logoUrl,
-      timezone,
-      date_format: dateFormat,
-      currency,
+      settings: {
+        logo_url: logoUrl,
+        timezone,
+        date_format: dateFormat,
+        currency,
+      },
     }).eq('id', tenantId);
     if (error) toast.error(error.message);
     else toast.success('Settings saved');
