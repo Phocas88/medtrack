@@ -29,9 +29,27 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users to login (except auth pages)
-  const isAuthPage = request.nextUrl.pathname.startsWith('/auth');
+  const pathname = request.nextUrl.pathname;
+  const isAuthPage = pathname.startsWith('/auth');
+  const isPortalRoute = pathname.startsWith('/portal');
+  const isPortalLogin = pathname === '/portal/login';
 
+  // Portal routes: redirect to portal login if not authenticated
+  if (isPortalRoute) {
+    if (!user && !isPortalLogin) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/portal/login';
+      return NextResponse.redirect(url);
+    }
+    if (user && isPortalLogin) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/portal';
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
+  // Admin routes: redirect unauthenticated users to login (except auth pages)
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
