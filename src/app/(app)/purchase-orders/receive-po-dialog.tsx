@@ -12,10 +12,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { PackageCheck } from 'lucide-react';
+import { PackageCheck, Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
-import type { PurchaseOrder, POLine, Product } from '@/types/database';
+import type { PurchaseOrder, POLine, Product, Location } from '@/types/database';
 
 interface ReceiveLine {
   po_line_id: string;
@@ -28,7 +35,6 @@ interface ReceiveLine {
   quantity_to_receive: number;
   lot_number: string;
   expiration_date: string;
-  location_bin: string;
   unit_cost: number;
 }
 
@@ -44,11 +50,44 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
   const [lines, setLines] = useState<ReceiveLine[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [receivingLocationId, setReceivingLocationId] = useState<string>('');
 
   useEffect(() => {
     if (!open || !po) return;
     loadLines();
+    loadLocations();
   }, [open, po]);
+
+  async function loadLocations() {
+    if (!tenantId) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('locations')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('name');
+
+    const locs = data || [];
+    setLocations(locs);
+
+    // Auto-select: prefer a dock/receiving location, else the PO's location, else first
+    const dockLoc = locs.find(
+      (l: Location) =>
+        l.location_type?.toLowerCase().includes('dock') ||
+        l.location_type?.toLowerCase().includes('receiving') ||
+        l.name?.toLowerCase().includes('dock') ||
+        l.name?.toLowerCase().includes('receiving')
+    );
+    if (dockLoc) {
+      setReceivingLocationId(dockLoc.id);
+    } else if (po.location_id && locs.find((l: Location) => l.id === po.location_id)) {
+      setReceivingLocationId(po.location_id);
+    } else if (locs.length > 0) {
+      setReceivingLocationId(locs[0].id);
+    }
+  }
 
   async function loadLines() {
     setLoading(true);
@@ -78,7 +117,6 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
         quantity_to_receive: 0,
         lot_number: '',
         expiration_date: '',
-        location_bin: '',
         unit_cost: line.unit_cost,
       };
     });
@@ -95,8 +133,15 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
     });
   }
 
+  const receivingLocation = locations.find((l) => l.id === receivingLocationId);
+
   async function handleReceive() {
     if (!tenantId || !user) return;
+
+    if (!receivingLocationId) {
+      toast.error('Select a receiving location');
+      return;
+    }
 
     const linesToReceive = lines.filter((l) => l.quantity_to_receive > 0);
     if (linesToReceive.length === 0) {
@@ -120,8 +165,10 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
     const supabase = createClient();
 
     try {
+      let putawayTaskCount = 0;
+
       for (const line of linesToReceive) {
-        // Create lot record
+        // Create lot record — location is the RECEIVING location, not final bin
         const { data: lot, error: lotErr } = await supabase
           .from('lots')
           .insert({
@@ -133,8 +180,8 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
             received_date: new Date().toISOString().split('T')[0],
             supplier_id: po.supplier_id,
             cost_at_receipt: line.unit_cost,
-            location: line.location_bin || null,
-            location_id: po.location_id || null,
+            location: receivingLocation?.name || null,
+            location_id: receivingLocationId,
             status: 'active',
           })
           .select('id')
@@ -163,6 +210,40 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
           })
           .eq('id', line.po_line_id);
         if (lineErr) throw lineErr;
+
+        // Look up primary bin assignment for this product
+        const { data: binAssignment } = await supabase
+          .from('product_bin_assignments')
+          .select('*, bin:bins(*)')
+          .eq('tenant_id', tenantId)
+          .eq('product_id', line.product_id)
+          .eq('bin_role', 'primary')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const targetBinId = binAssignment?.bin_id || null;
+        const targetBinCode = binAssignment?.bin?.bin_code || 'unassigned';
+
+        // Create put-away scan task
+        const { error: taskErr } = await supabase.from('scan_tasks').insert({
+          tenant_id: tenantId,
+          task_type: 'putaway',
+          status: 'pending',
+          priority: 5,
+          title: `Put away ${line.product_name} - Lot ${line.lot_number}`,
+          instructions: `Move ${line.quantity_to_receive} units from ${receivingLocation?.name || 'Receiving'} to bin ${targetBinCode}`,
+          assigned_to: null,
+          assigned_by: user.id,
+          location_id: receivingLocationId,
+          bin_id: null,
+          product_id: line.product_id,
+          lot_id: lot.id,
+          source_bin_id: null,
+          target_bin_id: targetBinId,
+          requested_quantity: line.quantity_to_receive,
+        });
+        if (taskErr) throw taskErr;
+        putawayTaskCount++;
       }
 
       // Check if all lines are fully received
@@ -187,7 +268,9 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
           .eq('id', po.id);
       }
 
-      toast.success('Items received successfully');
+      toast.success(
+        `${linesToReceive.length} item(s) received. ${putawayTaskCount} put-away task(s) created.`
+      );
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {
@@ -214,6 +297,35 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
           <div className="py-8 text-center text-muted-foreground">No lines found</div>
         ) : (
           <div className="space-y-4">
+            {/* Receiving Location Selector */}
+            <div className="space-y-2">
+              <Label>Receiving Location</Label>
+              <Select value={receivingLocationId} onValueChange={setReceivingLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select receiving location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name} ({loc.code}) - {loc.location_type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Info banner */}
+            {receivingLocation && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 text-sm">
+                <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  Items will be received to <span className="font-medium">{receivingLocation.name}</span> and
+                  put-away tasks will be generated automatically. Associates can then move items to their
+                  assigned bins via the Put-Away page or Scanner.
+                </div>
+              </div>
+            )}
+
             {lines.map((line, index) => (
               <div
                 key={line.po_line_id}
@@ -247,7 +359,7 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
                 </div>
 
                 {line.remaining > 0 && (
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Qty to Receive</Label>
                       <Input
@@ -274,14 +386,6 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
                         type="date"
                         value={line.expiration_date}
                         onChange={(e) => updateLine(index, 'expiration_date', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Location / Bin</Label>
-                      <Input
-                        value={line.location_bin}
-                        onChange={(e) => updateLine(index, 'location_bin', e.target.value)}
-                        placeholder="A-1-01"
                       />
                     </div>
                   </div>

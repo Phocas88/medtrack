@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   ClipboardList,
   RotateCcw,
+  PackageOpen,
   Warehouse,
   ArrowRightLeft,
   ClipboardCheck,
@@ -73,6 +74,7 @@ const mainNavItems = [
 const operationNavItems = [
   { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
   { label: "Receive", href: "/receive", icon: PackagePlus },
+  { label: "Put-Away", href: "/put-away", icon: PackageOpen },
   { label: "Ship", href: "/ship", icon: Truck },
   { label: "Returns", href: "/returns", icon: RotateCcw },
   { label: "Reorder", href: "/reorder", icon: RefreshCw },

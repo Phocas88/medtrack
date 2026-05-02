@@ -23,6 +23,7 @@ const pageTitles: Record<string, string> = {
   "/uom": "Units & Parts",
   "/lots": "Lots",
   "/receive": "Receive",
+  "/put-away": "Put-Away",
   "/ship": "Ship",
   "/purchase-orders": "Purchase Orders",
   "/returns": "Returns",
