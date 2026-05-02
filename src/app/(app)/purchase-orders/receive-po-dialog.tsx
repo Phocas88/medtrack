@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { PackageCheck, Info } from 'lucide-react';
+import { PackageCheck, Info, Printer } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
+import { generateReceivingDocumentPDF } from '@/lib/pdf';
 import type { PurchaseOrder, POLine, Product, Location } from '@/types/database';
 
 interface ReceiveLine {
@@ -393,13 +394,58 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
               </div>
             ))}
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+            <div className="flex justify-between pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const supabase = createClient();
+                  const { data: tenant } = await supabase.from('tenants').select('name, settings').eq('id', tenantId).single();
+                  const { data: supplier } = await supabase.from('suppliers').select('*').eq('id', po.supplier_id).single();
+                  const selectedLoc = locations.find((l) => l.id === receivingLocationId);
+                  if (!tenant) return;
+                  const s = (tenant.settings || {}) as Record<string, string>;
+                  const received = lines.filter((l) => l.quantity_to_receive > 0);
+                  generateReceivingDocumentPDF({
+                    companyName: tenant.name,
+                    companyAddress: s.address || '',
+                    poNumber: po.po_number,
+                    receivingNumber: `RCV-${po.po_number}-${new Date().toISOString().split('T')[0]}`,
+                    receivingDate: new Date().toLocaleDateString(),
+                    receivingLocation: selectedLoc?.name || 'Receiving Dock',
+                    supplierName: supplier?.name || '',
+                    supplierContact: supplier?.contact_name || null,
+                    receivedBy: user?.full_name || '',
+                    lines: received.map((l) => ({
+                      productName: l.product_name,
+                      sku: l.sku,
+                      lotNumber: l.lot_number,
+                      expirationDate: l.expiration_date || null,
+                      quantityOrdered: l.quantity_ordered,
+                      quantityReceived: l.quantity_previously_received,
+                      quantityThisReceipt: l.quantity_to_receive,
+                      unitCost: l.unit_cost,
+                      condition: 'Good',
+                    })),
+                    totalItemsReceived: received.reduce((s, l) => s + l.quantity_to_receive, 0),
+                    totalValue: received.reduce((s, l) => s + l.quantity_to_receive * l.unit_cost, 0),
+                    notes: null,
+                    putAwayTasksGenerated: received.length,
+                  });
+                }}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Print Receiving Doc
               </Button>
-              <Button onClick={handleReceive} disabled={saving}>
-                {saving ? 'Receiving...' : 'Receive Items'}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleReceive} disabled={saving}>
+                  {saving ? 'Receiving...' : 'Receive Items'}
+                </Button>
+              </div>
             </div>
           </div>
         )}

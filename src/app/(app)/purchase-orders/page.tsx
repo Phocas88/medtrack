@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Download, PackageCheck } from 'lucide-react';
+import { Plus, Download, PackageCheck, Printer } from 'lucide-react';
+import { generatePurchaseOrderPDF } from '@/lib/pdf';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { exportToCSV } from '@/lib/csv';
 import { PODialog } from './po-dialog';
@@ -177,19 +178,67 @@ export default function PurchaseOrdersPage() {
       label: '',
       render: (row) => {
         const canReceive = ['approved', 'sent', 'partial'].includes(row.status);
-        if (!canReceive) return null;
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleReceive(row);
-            }}
-          >
-            <PackageCheck className="h-4 w-4 mr-1" />
-            Receive
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const supabase = createClient();
+                const { data: poData } = await supabase
+                  .from('purchase_orders')
+                  .select('*, supplier:suppliers(*), lines:po_lines(*, product:products(name, sku)), location:locations(name), created_user:users!purchase_orders_created_by_fkey(full_name), approved_user:users!purchase_orders_approved_by_fkey(full_name)')
+                  .eq('id', row.id)
+                  .single();
+                const { data: tenant } = await supabase.from('tenants').select('name, settings').eq('id', tenantId).single();
+                if (!poData || !tenant) return;
+                const s = (tenant.settings || {}) as Record<string, string>;
+                generatePurchaseOrderPDF({
+                  companyName: tenant.name,
+                  companyAddress: s.address || '',
+                  poNumber: poData.po_number,
+                  poDate: poData.order_date,
+                  expectedDate: poData.expected_date,
+                  status: poData.status,
+                  supplierName: poData.supplier?.name || '',
+                  supplierContact: poData.supplier?.contact_name || null,
+                  supplierEmail: poData.supplier?.email || null,
+                  supplierPhone: poData.supplier?.phone || null,
+                  supplierAddress: poData.supplier?.address || null,
+                  deliverToLocation: poData.location?.name || null,
+                  lines: (poData.lines || []).map((l: { product?: { name: string; sku: string }; quantity_ordered: number; quantity_received: number; unit_cost: number }) => ({
+                    productName: l.product?.name || '',
+                    sku: l.product?.sku || '',
+                    quantityOrdered: l.quantity_ordered,
+                    quantityReceived: l.quantity_received,
+                    unitCost: l.unit_cost,
+                    lineTotal: l.quantity_ordered * l.unit_cost,
+                  })),
+                  subtotal: poData.total_amount,
+                  notes: poData.notes,
+                  createdBy: poData.created_user?.full_name || null,
+                  approvedBy: poData.approved_user?.full_name || null,
+                  approvedDate: poData.approved_at ? new Date(poData.approved_at).toLocaleDateString() : null,
+                });
+              }}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+            {canReceive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReceive(row);
+                }}
+              >
+                <PackageCheck className="h-4 w-4 mr-1" />
+                Receive
+              </Button>
+            )}
+          </div>
         );
       },
     },
