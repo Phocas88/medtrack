@@ -1,0 +1,29 @@
+// App branding
+export const APP_NAME = 'Phocas IMS';
+export const APP_FALLBACK_NAME = 'TrackFlow';
+
+// localStorage keys
+export const STORAGE_KEYS = {
+  FEATURES: 'phocas_features',
+  ONBOARDING: 'phocas_onboarding',
+  RECON_PREFIX: 'phocas_recon_',
+  CART: 'phocas_cart',
+} as const;
+
+// API endpoints
+export const API_ROUTES = {
+  SIGNUP: '/api/auth/signup',
+  NOTIFICATION_CHECK: '/api/notifications/check',
+  NOTIFICATION_EMAIL: '/api/notifications/send-email',
+  PORTAL_INVITE: '/api/portal/invite',
+} as const;
+
+// Default values
+export const DEFAULTS = {
+  TIMEZONE: 'America/New_York',
+  DATE_FORMAT: 'MM/DD/YYYY',
+  CURRENCY: 'USD',
+  EXPIRY_ALERT_DAYS: 90,
+  LOW_STOCK_THRESHOLD: 10,
+  REORDER_POINT: 10,
+} as const;

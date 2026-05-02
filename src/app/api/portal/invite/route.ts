@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,6 +15,9 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
+    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
+    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
     const body = await request.json();
     const { customerId, tenantId } = body;
 

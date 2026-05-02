@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkAndNotify } from '@/lib/notifications';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,6 +16,9 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
+    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
+    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
     // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
     if (apiKey) {

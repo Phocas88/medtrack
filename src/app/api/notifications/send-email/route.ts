@@ -1,21 +1,11 @@
-// ────────────────────────────────────────────────────────────────────────────
-// Email Integration (currently in mock mode)
-//
-// To enable real emails, install resend: npm install resend
-// Then uncomment the email sending code below and set RESEND_API_KEY env var.
-//
-// Alternatively, you can use SendGrid or Nodemailer:
-//   - SendGrid: npm install @sendgrid/mail
-//   - Nodemailer: npm install nodemailer
-//
-// See the commented-out Resend integration below for the pattern to follow.
-// ────────────────────────────────────────────────────────────────────────────
-
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import { checkRateLimit } from '@/lib/rate-limit';
 
-// import { Resend } from 'resend';
-// const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,6 +20,9 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
+    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
+    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+
     // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
     if (apiKey) {
@@ -132,39 +125,34 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // ── Mock email send (replace with real provider) ──
-      const subject = `[TrackFlow] ${notification.title}`;
-      const body = notification.message ?? notification.title;
+      // ── Send emails to recipients ──
+      const fromAddress = 'notifications@' + (process.env.NEXT_PUBLIC_APP_DOMAIN || 'phocasims.com');
 
-      for (const recipient of recipients) {
-        console.log('─── EMAIL (mock) ───');
-        console.log(`  To:      ${recipient}`);
-        console.log(`  Subject: ${subject}`);
-        console.log(`  Body:    ${body}`);
-        console.log(`  Priority: ${notification.priority}`);
-        console.log('────────────────────');
-
-        // ── Uncomment for Resend integration ──
-        // try {
-        //   await resend.emails.send({
-        //     from: 'TrackFlow <notifications@yourdomain.com>',
-        //     to: [recipient],
-        //     subject,
-        //     html: `
-        //       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        //         <h2 style="color: #1a1a1a;">${notification.title}</h2>
-        //         <p style="color: #4a4a4a; line-height: 1.6;">${body}</p>
-        //         <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 20px 0;" />
-        //         <p style="color: #999; font-size: 12px;">
-        //           This is an automated notification from TrackFlow.
-        //           <a href="${process.env.NEXT_PUBLIC_APP_URL}/settings">Manage preferences</a>
-        //         </p>
-        //       </div>
-        //     `,
-        //   });
-        // } catch (emailErr) {
-        //   console.error(`Failed to send email to ${recipient}:`, emailErr);
-        // }
+      for (const recipientEmail of recipients) {
+        if (resend) {
+          try {
+            await resend.emails.send({
+              from: fromAddress,
+              to: recipientEmail,
+              subject: notification.title,
+              html: `<div style="font-family: sans-serif; padding: 20px;">
+      <h2>${notification.title}</h2>
+      <p>${notification.message || ''}</p>
+      <p style="color: #666; font-size: 12px;">This is an automated notification from your inventory management system.</p>
+    </div>`
+            });
+          } catch (emailErr) {
+            console.error(`Failed to send email to ${recipientEmail}:`, emailErr);
+          }
+        } else {
+          // Resend not configured — log to console as fallback
+          console.log('─── EMAIL (mock - set RESEND_API_KEY to enable) ───');
+          console.log(`  To:      ${recipientEmail}`);
+          console.log(`  Subject: ${notification.title}`);
+          console.log(`  Body:    ${notification.message ?? notification.title}`);
+          console.log(`  Priority: ${notification.priority}`);
+          console.log('────────────────────');
+        }
       }
 
       // Mark notification as email sent
@@ -182,6 +170,7 @@ export async function POST(request: Request) {
       skipped: skippedCount,
       total: (notifications ?? []).length,
       processedAt: new Date().toISOString(),
+      provider: resend ? 'resend' : 'mock',
     });
   } catch (err) {
     console.error('Email send error:', err);
