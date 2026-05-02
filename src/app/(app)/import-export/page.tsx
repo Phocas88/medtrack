@@ -71,7 +71,25 @@ const PRODUCT_FIELDS = [
   { key: "is_serial_tracked", label: "Serial Tracked" },
   { key: "expiry_alert_days", label: "Expiry Alert Days" },
   { key: "notes", label: "Notes" },
+  // UOM columns (not direct product fields, handled separately during import)
+  { key: "uom_each_upc", label: "UOM Each UPC" },
+  { key: "uom_inner_qty", label: "UOM Inner Qty" },
+  { key: "uom_inner_upc", label: "UOM Inner UPC" },
+  { key: "uom_case_qty", label: "UOM Case Qty" },
+  { key: "uom_case_upc", label: "UOM Case UPC" },
+  // Bin assignment columns (handled separately during import)
+  { key: "primary_bin_each", label: "Primary Bin Each" },
+  { key: "primary_bin_case", label: "Primary Bin Case" },
+  { key: "reserve_bin", label: "Reserve Bin" },
 ]
+
+// Fields that map directly to product table columns (excludes UOM/bin columns)
+const PRODUCT_DB_FIELDS = PRODUCT_FIELDS.filter(
+  (f) =>
+    !f.key.startsWith("uom_") &&
+    !f.key.startsWith("primary_bin_") &&
+    f.key !== "reserve_bin"
+)
 
 const PRODUCT_TEMPLATE_ROWS = [
   {
@@ -89,6 +107,14 @@ const PRODUCT_TEMPLATE_ROWS = [
     is_serial_tracked: "false",
     expiry_alert_days: "90",
     notes: "Keep away from moisture",
+    uom_each_upc: "012345678901",
+    uom_inner_qty: "3",
+    uom_inner_upc: "012345678918",
+    uom_case_qty: "12",
+    uom_case_upc: "012345678925",
+    primary_bin_each: "A-01-01",
+    primary_bin_case: "B-01-01",
+    reserve_bin: "R-01-01",
   },
   {
     name: "Insulin Glargine 100U/mL",
@@ -105,6 +131,14 @@ const PRODUCT_TEMPLATE_ROWS = [
     is_serial_tracked: "true",
     expiry_alert_days: "60",
     notes: "Requires cold chain logistics",
+    uom_each_upc: "098765432109",
+    uom_inner_qty: "",
+    uom_inner_upc: "",
+    uom_case_qty: "6",
+    uom_case_upc: "098765432116",
+    primary_bin_each: "C-02-03",
+    primary_bin_case: "",
+    reserve_bin: "R-02-01",
   },
 ]
 
@@ -359,6 +393,150 @@ export default function ImportExportPage() {
     [columnMapping, parsedData]
   )
 
+  // --- UOM & Bin helper ---
+  const processUomAndBins = useCallback(
+    async (
+      productId: string,
+      row: ParsedRow,
+      reverseMap: Record<string, string>
+    ) => {
+      // Helper to get a CSV value from a mapped field
+      const getVal = (fieldKey: string) => {
+        const csvCol = reverseMap[fieldKey]
+        return csvCol ? row[csvCol]?.trim() || "" : ""
+      }
+
+      // --- UOM Conversions ---
+      const uomEachUpc = getVal("uom_each_upc")
+      const uomInnerQty = getVal("uom_inner_qty")
+      const uomInnerUpc = getVal("uom_inner_upc")
+      const uomCaseQty = getVal("uom_case_qty")
+      const uomCaseUpc = getVal("uom_case_upc")
+
+      if (uomEachUpc) {
+        await supabase.from("product_uom_conversions").upsert(
+          {
+            tenant_id: tenantId!,
+            product_id: productId,
+            uom_name: "each",
+            conversion_factor: 1,
+            barcode: uomEachUpc,
+            is_default: true,
+            is_orderable: true,
+            is_sellable: true,
+          },
+          { onConflict: "product_id,uom_name" }
+        )
+      }
+
+      if (uomInnerQty) {
+        const factor = parseFloat(uomInnerQty)
+        if (factor > 0) {
+          await supabase.from("product_uom_conversions").upsert(
+            {
+              tenant_id: tenantId!,
+              product_id: productId,
+              uom_name: "inner",
+              conversion_factor: factor,
+              barcode: uomInnerUpc || null,
+              is_default: false,
+              is_orderable: true,
+              is_sellable: true,
+            },
+            { onConflict: "product_id,uom_name" }
+          )
+        }
+      }
+
+      if (uomCaseQty) {
+        const factor = parseFloat(uomCaseQty)
+        if (factor > 0) {
+          await supabase.from("product_uom_conversions").upsert(
+            {
+              tenant_id: tenantId!,
+              product_id: productId,
+              uom_name: "case",
+              conversion_factor: factor,
+              barcode: uomCaseUpc || null,
+              is_default: false,
+              is_orderable: true,
+              is_sellable: true,
+            },
+            { onConflict: "product_id,uom_name" }
+          )
+        }
+      }
+
+      // --- Bin Assignments ---
+      const primaryBinEach = getVal("primary_bin_each")
+      const primaryBinCase = getVal("primary_bin_case")
+      const reserveBin = getVal("reserve_bin")
+
+      const lookupBin = async (binCode: string) => {
+        const { data } = await supabase
+          .from("bins")
+          .select("id")
+          .eq("tenant_id", tenantId!)
+          .eq("bin_code", binCode)
+          .limit(1)
+          .single()
+        return data?.id ?? null
+      }
+
+      if (primaryBinEach) {
+        const binId = await lookupBin(primaryBinEach)
+        if (binId) {
+          await supabase.from("product_bin_assignments").upsert(
+            {
+              tenant_id: tenantId!,
+              product_id: productId,
+              bin_id: binId,
+              bin_role: "primary",
+              unit_of_measure: "each",
+              is_active: true,
+            },
+            { onConflict: "product_id,bin_id,bin_role" }
+          )
+        }
+      }
+
+      if (primaryBinCase) {
+        const binId = await lookupBin(primaryBinCase)
+        if (binId) {
+          await supabase.from("product_bin_assignments").upsert(
+            {
+              tenant_id: tenantId!,
+              product_id: productId,
+              bin_id: binId,
+              bin_role: "primary",
+              unit_of_measure: "case",
+              is_active: true,
+            },
+            { onConflict: "product_id,bin_id,bin_role" }
+          )
+        }
+      }
+
+      if (reserveBin) {
+        const binId = await lookupBin(reserveBin)
+        if (binId) {
+          await supabase.from("product_bin_assignments").upsert(
+            {
+              tenant_id: tenantId!,
+              product_id: productId,
+              bin_id: binId,
+              bin_role: "secondary",
+              unit_of_measure: "each",
+              is_active: true,
+            },
+            { onConflict: "product_id,bin_id,bin_role" }
+          )
+        }
+      }
+    },
+    [tenantId, supabase]
+  )
+
   // --- Import ---
   const handleImport = useCallback(async () => {
     if (!tenantId) return
@@ -412,7 +590,7 @@ export default function ImportExportPage() {
         const batch = validRows.slice(i, i + batchSize)
         const records = batch.map((row) => {
           const record: Record<string, unknown> = { tenant_id: tenantId }
-          for (const field of PRODUCT_FIELDS) {
+          for (const field of PRODUCT_DB_FIELDS) {
             const csvCol = reverseMap[field.key]
             if (!csvCol || field.key === "supplier_name") continue
             let val: unknown = row[csvCol]?.trim() ?? null
@@ -451,7 +629,9 @@ export default function ImportExportPage() {
 
         if (updateExisting) {
           // Upsert: need to handle one-by-one for proper counting
-          for (const rec of records) {
+          for (let ri = 0; ri < records.length; ri++) {
+            const rec = records[ri]
+            const originalRow = batch[ri]
             const { data: existing } = await supabase
               .from("products")
               .select("id")
@@ -465,13 +645,21 @@ export default function ImportExportPage() {
                 .update(rec)
                 .eq("id", existing.id)
               if (error) errors++
-              else updated++
+              else {
+                updated++
+                await processUomAndBins(existing.id, originalRow, reverseMap)
+              }
             } else {
-              const { error } = await supabase
+              const { error, data: newProd } = await supabase
                 .from("products")
                 .insert(rec)
+                .select("id")
+                .single()
               if (error) errors++
-              else imported++
+              else {
+                imported++
+                if (newProd) await processUomAndBins(newProd.id, originalRow, reverseMap)
+              }
             }
           }
         } else {
@@ -486,23 +674,37 @@ export default function ImportExportPage() {
           const existingSkus = new Set(
             (existingProducts ?? []).map((p) => p.sku)
           )
-          const newRecords = records.filter((r) => {
-            if (existingSkus.has(r.sku as string)) {
+          // Track which original rows map to new records
+          const newRecordsWithRows: { rec: Record<string, unknown>; row: ParsedRow }[] = []
+          for (let ri = 0; ri < records.length; ri++) {
+            if (existingSkus.has(records[ri].sku as string)) {
               skipped++
-              return false
+            } else {
+              newRecordsWithRows.push({ rec: records[ri], row: batch[ri] })
             }
-            return true
-          })
+          }
 
-          if (newRecords.length > 0) {
+          if (newRecordsWithRows.length > 0) {
+            const newRecords = newRecordsWithRows.map((r) => r.rec)
             const { error, data } = await supabase
               .from("products")
               .insert(newRecords)
-              .select("id")
+              .select("id, sku")
             if (error) {
               errors += newRecords.length
             } else {
               imported += data?.length ?? 0
+              // Process UOM and bin assignments for each inserted product
+              if (data) {
+                for (const insertedProd of data) {
+                  const matchingEntry = newRecordsWithRows.find(
+                    (r) => r.rec.sku === insertedProd.sku
+                  )
+                  if (matchingEntry) {
+                    await processUomAndBins(insertedProd.id, matchingEntry.row, reverseMap)
+                  }
+                }
+              }
             }
           }
         }
@@ -527,7 +729,7 @@ export default function ImportExportPage() {
     } finally {
       setImporting(false)
     }
-  }, [tenantId, validRows, columnMapping, updateExisting, supabase])
+  }, [tenantId, validRows, columnMapping, updateExisting, supabase, processUomAndBins])
 
   // --- Export ---
   const handleExport = useCallback(
@@ -1133,7 +1335,9 @@ export default function ImportExportPage() {
                   Columns: name, sku, manufacturer, category, supplier_name,
                   unit_of_measure, cost, price, low_stock_threshold,
                   storage_requirement, is_lot_tracked, is_serial_tracked,
-                  expiry_alert_days, notes
+                  expiry_alert_days, notes, uom_each_upc, uom_inner_qty,
+                  uom_inner_upc, uom_case_qty, uom_case_upc,
+                  primary_bin_each, primary_bin_case, reserve_bin
                 </p>
                 <Button
                   className="w-full"
