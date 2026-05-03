@@ -1,14 +1,17 @@
 'use client';
 
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { Package, LogOut, Wifi, WifiOff } from 'lucide-react';
+import { Package, LogOut, Wifi, WifiOff, ClipboardList, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 function ScannerShell({ children }: { children: React.ReactNode }) {
   const { user, tenantName, loading, signOut } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -26,6 +29,11 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  const tabs = [
+    { label: 'Tasks', href: '/scan', icon: ClipboardList },
+    { label: 'Find Item', href: '/scan/find', icon: Search },
+  ];
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -49,10 +57,30 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Scanner content - full remaining height */}
-      <main className="flex-1 overflow-y-auto">
+      {/* Scanner content */}
+      <main className="flex-1 overflow-hidden">
         {children}
       </main>
+
+      {/* Bottom tab bar */}
+      <nav className="flex items-center border-t bg-background shrink-0 safe-area-pb">
+        {tabs.map((tab) => {
+          const isActive = pathname === tab.href;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={cn(
+                'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors',
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              )}
+            >
+              <tab.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

@@ -58,10 +58,33 @@ export interface Product {
   reorder_quantity: number | null;
   par_level_min: number | null;
   par_level_max: number | null;
+  image_url: string | null;
+  aisle: string | null;
+  section: string | null;
   notes: string | null;
   is_archived: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Promotion / sale tracking
+export type PromotionStatus = 'scheduled' | 'active' | 'ended' | 'cancelled';
+
+export interface Promotion {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  name: string;
+  sale_price: number;
+  original_price: number;
+  start_date: string;
+  end_date: string;
+  status: PromotionStatus;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
 }
 
 export interface Supplier {

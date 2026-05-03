@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, UserRole } from '@/types/database';
 
+export type EnabledModules = Record<string, boolean>;
+
 interface AuthContextValue {
   user: User | null;
   tenantId: string | null;
   tenantName: string | null;
   role: UserRole | null;
   loading: boolean;
+  enabledModules: EnabledModules;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +23,7 @@ const AuthContext = createContext<AuthContextValue>({
   tenantName: null,
   role: null,
   loading: true,
+  enabledModules: {},
   signOut: async () => {},
 });
 
@@ -27,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
+  const [enabledModules, setEnabledModules] = useState<EnabledModules>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,14 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(data ?? null);
 
-        // Fetch tenant name for white-label branding
+        // Fetch tenant name + settings for white-label branding and module config
         if (data?.tenant_id) {
           const { data: tenant } = await supabase
             .from('tenants')
-            .select('name')
+            .select('name, settings')
             .eq('id', data.tenant_id)
             .single();
           setTenantName(tenant?.name ?? null);
+
+          // Extract enabled_modules from tenant settings
+          const settings = (tenant?.settings as Record<string, unknown>) || {};
+          const modules = (settings.enabled_modules as Record<string, boolean>) || {};
+          setEnabledModules(modules);
         }
       } catch {
         setUser(null);
@@ -93,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setTenantName(null);
+    setEnabledModules({});
     router.push('/auth/login');
     router.refresh();
   }, [router]);
@@ -105,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantName,
         role: user?.role ?? null,
         loading,
+        enabledModules,
         signOut,
       }}
     >

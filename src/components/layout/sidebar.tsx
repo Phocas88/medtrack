@@ -68,6 +68,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const mainNavItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Metrics", href: "/metrics", icon: BarChart3 },
   { label: "Analytics", href: "/analytics", icon: TrendingUp },
   { label: "Products", href: "/products", icon: Package },
   { label: "Units & Parts", href: "/uom", icon: Ruler },
@@ -93,10 +94,10 @@ const warehouseNavItems = [
   { label: "Transfers", href: "/transfers", icon: ArrowRightLeft },
   { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
   { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
-  { label: "Kitting", href: "/kitting", icon: Boxes },
+  { label: "Kitting", href: "/kitting", icon: Boxes, module: "kitting" },
   { label: "Bins", href: "/bins", icon: Grid3X3 },
   { label: "Scanner", href: "/scanner", icon: Smartphone },
-  { label: "Consignment", href: "/consignment", icon: Handshake },
+  { label: "Consignment", href: "/consignment", icon: Handshake, module: "consignment" },
   { label: "Expiration", href: "/expiration", icon: Timer },
 ]
 
@@ -104,13 +105,14 @@ const managementNavItems = [
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Suppliers", href: "/suppliers", icon: Building2 },
   { label: "Pricing", href: "/pricing", icon: DollarSign },
+  { label: "Promotions", href: "/promotions", icon: DollarSign },
   { label: "Documents", href: "/documents", icon: FileText },
   { label: "Customer Portal", href: "/customer-portal", icon: Globe },
 ]
 
 const complianceNavItems = [
-  { label: "Controlled Substances", href: "/controlled-substances", icon: Shield },
-  { label: "DSCSA", href: "/dscsa", icon: ScrollText },
+  { label: "Controlled Substances", href: "/controlled-substances", icon: Shield, module: "controlled_substances" },
+  { label: "DSCSA", href: "/dscsa", icon: ScrollText, module: "dscsa_tracking" },
   { label: "Prop 65", href: "/prop65", icon: AlertTriangle },
   { label: "Recall Monitor", href: "/recall-monitor", icon: ShieldAlert },
   { label: "GS1 Compliance", href: "/gs1-compliance", icon: ScanBarcode },
@@ -137,15 +139,31 @@ const toolsNavItems = [
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 
+type NavItem = { label: string; href: string; icon: typeof LayoutDashboard; module?: string }
+
 interface NavSectionProps {
-  items: typeof mainNavItems
+  items: NavItem[]
   pathname: string
+  enabledModules?: Record<string, boolean>
 }
 
-function NavSection({ items, pathname }: NavSectionProps) {
+function NavSection({ items, pathname, enabledModules }: NavSectionProps) {
+  const hasModuleConfig = enabledModules && Object.keys(enabledModules).length > 0
+
+  const filteredItems = items.filter((item) => {
+    // If item doesn't require a module, always show it
+    if (!item.module) return true
+    // If no module config exists, show all items (default = everything on)
+    if (!hasModuleConfig) return true
+    // Otherwise, only show if the module is explicitly enabled
+    return enabledModules![item.module] === true
+  })
+
+  if (filteredItems.length === 0) return null
+
   return (
     <div className="flex flex-col gap-0.5">
-      {items.map((item) => {
+      {filteredItems.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
         return (
           <Link
@@ -169,7 +187,7 @@ function NavSection({ items, pathname }: NavSectionProps) {
 
 function SidebarContent() {
   const pathname = usePathname()
-  const { user, tenantName, signOut } = useAuth()
+  const { user, tenantName, enabledModules, role, signOut } = useAuth()
 
   const initials = user?.full_name
     ?.split(' ')
@@ -193,19 +211,23 @@ function SidebarContent() {
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-3">
         <nav className="flex flex-col gap-4">
-          <NavSection items={mainNavItems} pathname={pathname} />
+          <NavSection items={mainNavItems} pathname={pathname} enabledModules={enabledModules} />
           <Separator />
-          <NavSection items={operationNavItems} pathname={pathname} />
+          <NavSection items={operationNavItems} pathname={pathname} enabledModules={enabledModules} />
           <Separator />
-          <NavSection items={warehouseNavItems} pathname={pathname} />
+          <NavSection items={warehouseNavItems} pathname={pathname} enabledModules={enabledModules} />
           <Separator />
-          <NavSection items={managementNavItems} pathname={pathname} />
+          <NavSection items={managementNavItems} pathname={pathname} enabledModules={enabledModules} />
           <Separator />
-          <NavSection items={complianceNavItems} pathname={pathname} />
+          <NavSection items={complianceNavItems} pathname={pathname} enabledModules={enabledModules} />
           <Separator />
-          <NavSection items={toolsNavItems} pathname={pathname} />
-          <Separator />
-          <NavSection items={adminNavItems} pathname={pathname} />
+          <NavSection items={toolsNavItems} pathname={pathname} enabledModules={enabledModules} />
+          {role === 'admin' && (
+            <>
+              <Separator />
+              <NavSection items={adminNavItems} pathname={pathname} enabledModules={enabledModules} />
+            </>
+          )}
         </nav>
       </ScrollArea>
 

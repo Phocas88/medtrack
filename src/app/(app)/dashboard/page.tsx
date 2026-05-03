@@ -27,6 +27,8 @@ import {
   Truck,
   Search,
   Activity,
+  XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatRelativeDate, movementTypeLabel, daysUntilExpiry } from '@/lib/format';
 import type { StockMovement } from '@/types/database';
@@ -35,9 +37,12 @@ interface DashboardData {
   totalProducts: number;
   totalValue: number;
   lowStockCount: number;
+  stockOutCount: number;
   expiringCount: number;
   recentMovements: StockMovement[];
   expiringLots: { lot_number: string; product_name: string; expiration_date: string; quantity: number; days: number }[];
+  stockOutItems: { name: string; sku: string }[];
+  replenishItems: { name: string; sku: string; stock: number; reorderPoint: number }[];
 }
 
 export default function DashboardPage() {
@@ -76,7 +81,27 @@ export default function DashboardPage() {
         productStock[l.product_id].total += l.quantity_on_hand;
       });
 
-      const lowStockCount = Object.values(productStock).filter((s) => s.total <= s.threshold).length;
+      const lowStockCount = Object.values(productStock).filter((s) => s.total > 0 && s.total <= s.threshold).length;
+
+      // Stock-outs and replenishment needs
+      const { data: allProducts } = await supabase
+        .from('products')
+        .select('id, name, sku, reorder_point')
+        .eq('tenant_id', tenantId!)
+        .eq('is_archived', false);
+
+      const stockOutItems: { name: string; sku: string }[] = [];
+      const replenishItems: { name: string; sku: string; stock: number; reorderPoint: number }[] = [];
+
+      (allProducts || []).forEach((p) => {
+        const stock = productStock[p.id]?.total || 0;
+        if (stock === 0) {
+          stockOutItems.push({ name: p.name, sku: p.sku });
+        } else if (p.reorder_point && stock <= p.reorder_point) {
+          replenishItems.push({ name: p.name, sku: p.sku, stock, reorderPoint: p.reorder_point });
+        }
+      });
+      replenishItems.sort((a, b) => a.stock - b.stock);
 
       const expiring = (lots || [])
         .filter((l) => l.expiration_date && l.quantity_on_hand > 0)
@@ -106,9 +131,12 @@ export default function DashboardPage() {
         totalProducts: productCount || 0,
         totalValue,
         lowStockCount,
+        stockOutCount: stockOutItems.length,
         expiringCount: expiring.length,
         recentMovements: (movements as unknown as StockMovement[]) || [],
         expiringLots: expiring,
+        stockOutItems: stockOutItems.slice(0, 5),
+        replenishItems: replenishItems.slice(0, 5),
       });
       setLoading(false);
     }
@@ -133,11 +161,17 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader title="Dashboard" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard title="Total Products" value={data?.totalProducts || 0} icon={Package} />
         <StatCard title="Inventory Value" value={formatCurrency(data?.totalValue || 0)} icon={DollarSign} />
         <StatCard
-          title="Low Stock Items"
+          title="Stock-Outs"
+          value={data?.stockOutCount || 0}
+          icon={XCircle}
+          className={data?.stockOutCount ? 'border-red-500/50' : ''}
+        />
+        <StatCard
+          title="Low Stock"
           value={data?.lowStockCount || 0}
           icon={AlertTriangle}
           className={data?.lowStockCount ? 'border-amber-500/50' : ''}
@@ -150,6 +184,61 @@ export default function DashboardPage() {
           className={data?.expiringCount ? 'border-red-500/50' : ''}
         />
       </div>
+
+      {/* Stock-out & Replenishment warnings */}
+      {((data?.stockOutItems?.length || 0) > 0 || (data?.replenishItems?.length || 0) > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(data?.stockOutItems?.length || 0) > 0 && (
+            <Card className="border-red-300 bg-red-50/50 dark:bg-red-950/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm text-red-700 dark:text-red-400">
+                  <XCircle className="h-4 w-4" /> Stock-Out Warnings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {data?.stockOutItems.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm py-1">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{item.sku}</span>
+                    </div>
+                  ))}
+                </div>
+                {(data?.stockOutCount || 0) > 5 && (
+                  <Button variant="link" className="p-0 h-auto text-xs text-red-600" onClick={() => router.push('/metrics')}>
+                    View all {data?.stockOutCount} stock-outs →
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {(data?.replenishItems?.length || 0) > 0 && (
+            <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                  <RefreshCw className="h-4 w-4" /> Replenishment Needed
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {data?.replenishItems.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm py-1">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs">
+                        <span className="text-amber-600 font-bold">{item.stock}</span>
+                        <span className="text-muted-foreground"> / {item.reorderPoint}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="link" className="p-0 h-auto text-xs text-amber-600" onClick={() => router.push('/reorder')}>
+                  View reorder suggestions →
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <Button onClick={() => router.push('/receive')}>
