@@ -45,6 +45,8 @@ import {
   Ruler,
   ShieldAlert,
   ScanBarcode,
+  CreditCard,
+  Zap,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
@@ -125,7 +127,9 @@ const toolsNavItems = [
   { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Integrations", href: "/integrations/quickbooks", icon: Plug },
+  { label: "Zapier", href: "/integrations/zapier", icon: Zap },
   { label: "Custom Fields", href: "/custom-fields", icon: Timer },
+  { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 
