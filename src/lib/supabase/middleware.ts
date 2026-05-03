@@ -61,6 +61,12 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // API routes handle their own auth
+  const isApiRoute = pathname.startsWith('/api');
+  if (isApiRoute) {
+    return supabaseResponse;
+  }
+
   // Admin routes: redirect unauthenticated users to login (except auth pages)
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
