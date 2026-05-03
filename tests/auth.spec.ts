@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('landing page loads', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Phocas IMS')).toBeVisible();
+  await expect(page.getByText('Phocas WMS')).toBeVisible();
 });
 
 test('login page loads', async ({ page }) => {

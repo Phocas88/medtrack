@@ -126,7 +126,7 @@ export async function POST(request: Request) {
       }
 
       // ── Send emails to recipients ──
-      const fromAddress = 'notifications@' + (process.env.NEXT_PUBLIC_APP_DOMAIN || 'phocasims.com');
+      const fromAddress = 'notifications@' + (process.env.NEXT_PUBLIC_APP_DOMAIN || 'phocaswms.com');
 
       for (const recipientEmail of recipients) {
         if (resend) {

@@ -1,7 +1,7 @@
 {
-  "name": "Phocas IMS",
-  "short_name": "Phocas IMS",
-  "description": "Inventory Management System",
+  "name": "Phocas WMS",
+  "short_name": "Phocas WMS",
+  "description": "Warehouse Management System",
   "start_url": "/scanner",
   "display": "standalone",
   "background_color": "#ffffff",

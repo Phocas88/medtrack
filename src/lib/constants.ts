@@ -1,5 +1,5 @@
 // App branding
-export const APP_NAME = 'Phocas IMS';
+export const APP_NAME = 'Phocas WMS';
 export const APP_FALLBACK_NAME = 'TrackFlow';
 
 // localStorage keys

@@ -27,7 +27,7 @@ export default function LandingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
               <Package className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight">Phocas IMS</span>
+            <span className="text-xl font-bold tracking-tight">Phocas WMS</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition">Features</a>
@@ -374,7 +374,7 @@ export default function LandingPage() {
               <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-900 text-white">
                 <Package className="h-3.5 w-3.5" />
               </div>
-              <span className="font-semibold">Phocas IMS</span>
+              <span className="font-semibold">Phocas WMS</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <a href="#features" className="hover:text-gray-900 transition">Features</a>
@@ -382,7 +382,7 @@ export default function LandingPage() {
               <Link href="/auth/login" className="hover:text-gray-900 transition">Sign In</Link>
             </div>
             <p className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} Phocas IMS. All rights reserved.
+              &copy; {new Date().getFullYear()} Phocas WMS. All rights reserved.
             </p>
           </div>
         </div>
