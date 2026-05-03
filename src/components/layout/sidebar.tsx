@@ -118,6 +118,10 @@ const complianceNavItems = [
   { label: "Audit Trail", href: "/audit", icon: ScanLine },
 ]
 
+const adminNavItems = [
+  { label: "User Management", href: "/admin/users", icon: Users },
+]
+
 const toolsNavItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Labor", href: "/labor", icon: Clock },
@@ -200,6 +204,8 @@ function SidebarContent() {
           <NavSection items={complianceNavItems} pathname={pathname} />
           <Separator />
           <NavSection items={toolsNavItems} pathname={pathname} />
+          <Separator />
+          <NavSection items={adminNavItems} pathname={pathname} />
         </nav>
       </ScrollArea>
 

@@ -49,6 +49,18 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Scanner route: redirect to login with redirect param
+  const isScanRoute = pathname.startsWith('/scan');
+  if (isScanRoute && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+  if (isScanRoute) {
+    return supabaseResponse;
+  }
+
   // Admin routes: redirect unauthenticated users to login (except auth pages)
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
