@@ -105,6 +105,37 @@ export async function POST() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function seedInventory(supabase: any, T: string, managerId: string, supIds?: string[], custIds?: string[]) {
   try {
+    // ── Ensure all demo auth users exist (associate, cashier, customer) ──
+    for (const [key, u] of Object.entries(DEMO_USERS)) {
+      // Check if auth user exists by trying to find them
+      const { data: existingUser } = await supabase.from('users').select('id').eq('email', u.email).limit(1);
+      if (existingUser && existingUser.length > 0) continue; // already exists
+
+      // Create auth user
+      const { data: authData } = await supabase.auth.admin.createUser({
+        email: u.email, password: u.password, email_confirm: true,
+      });
+
+      if (authData?.user && key !== 'customer') {
+        // Create WMS user record (not for customer — they use portal)
+        await supabase.from('users').insert({
+          id: authData.user.id, tenant_id: T, email: u.email,
+          full_name: u.name, role: u.role === 'customer' ? 'staff' : u.role,
+          is_active: true,
+        });
+      }
+    }
+
+    // Ensure customer record exists with portal email
+    const cu = DEMO_USERS.customer;
+    const { data: existingCust } = await supabase.from('customers').select('id').eq('tenant_id', T).eq('email', cu.email).limit(1);
+    if (!existingCust || existingCust.length === 0) {
+      await supabase.from('customers').insert({
+        tenant_id: T, name: 'Metro Grocery', contact_name: 'Jenny Park',
+        email: cu.email, phone: '555-1001', ship_to_address: '800 Retail Ave, Suite 200',
+      });
+    }
+
     // Get existing reference data if not passed
     if (!supIds) {
       const { data } = await supabase.from('suppliers').select('id').eq('tenant_id', T);
@@ -117,6 +148,26 @@ async function seedInventory(supabase: any, T: string, managerId: string, supIds
     if (!managerId) {
       const { data } = await supabase.from('users').select('id').eq('tenant_id', T).eq('role', 'admin').limit(1);
       managerId = data?.[0]?.id || '';
+    }
+
+    // Ensure suppliers exist
+    if (!supIds || supIds.length === 0) {
+      const newSupIds = [uid(), uid(), uid(), uid()];
+      await supabase.from('suppliers').insert([
+        { id: newSupIds[0], tenant_id: T, name: 'Global Packaging Inc.', contact_name: 'Sarah Johnson', email: 'orders@globalpack.com', phone: '555-0101' },
+        { id: newSupIds[1], tenant_id: T, name: 'MedSupply Direct', contact_name: 'Tom Richards', email: 'sales@medsupply.com', phone: '555-0202' },
+        { id: newSupIds[2], tenant_id: T, name: 'FreshSource Wholesale', contact_name: 'Amy Chen', email: 'orders@freshsource.com', phone: '555-0303' },
+        { id: newSupIds[3], tenant_id: T, name: 'CleanPro Distributors', contact_name: 'Mark Davis', email: 'supply@cleanpro.com', phone: '555-0404' },
+      ]);
+      supIds = newSupIds;
+    }
+
+    // Fix products missing supplier_id
+    const { data: noSupProds } = await supabase.from('products').select('id').eq('tenant_id', T).is('supplier_id', null);
+    if (noSupProds && noSupProds.length > 0) {
+      for (const p of noSupProds) {
+        await supabase.from('products').update({ supplier_id: pick(supIds!) }).eq('id', p.id);
+      }
     }
 
     const { data: staffData } = await supabase.from('users').select('id').eq('tenant_id', T).neq('role', 'admin');
