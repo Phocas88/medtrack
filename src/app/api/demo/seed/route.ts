@@ -40,22 +40,8 @@ export async function POST() {
         return NextResponse.json({ status: 'ready', message: 'Demo data exists' });
       }
 
-      // Data is incomplete — delete ALL data and reseed
+      // Data is incomplete — add missing data (don't delete, stock_movements are immutable)
       const tid = existing[0].tenant_id;
-      // Clean up in strict FK dependency order — log errors
-      const tables = [
-        'scan_logs', 'scan_tasks', 'bin_inventory', 'promotions',
-        'stock_movements', 'shipment_lines', 'shipments',
-        'sales_order_lines', 'sales_orders', 'po_lines', 'purchase_orders',
-        'serial_numbers', 'lots', 'bins', 'products', 'locations',
-        'customers', 'suppliers',
-      ];
-      for (const table of tables) {
-        const { error } = await supabase.from(table).delete().eq('tenant_id', tid);
-        if (error) console.error(`Delete ${table}:`, error.message);
-      }
-
-      // Don't delete users/tenant — just reseed data
       return await seedData(supabase, tid, existing[0].id);
     }
 
@@ -220,38 +206,50 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
       image_url: p.img,
     };
   });
-  const { error: prodErr } = await supabase.from('products').insert(prodInserts);
-  if (prodErr) console.error('Products insert error:', prodErr.message);
+  // Only insert products that don't already exist (by SKU)
+  const { data: existingProds } = await supabase.from('products').select('id, sku').eq('tenant_id', T);
+  const existingSKUs = new Set((existingProds || []).map((p: { sku: string }) => p.sku));
+  const newProdInserts = prodInserts.filter((p) => !existingSKUs.has(p.sku));
+  if (newProdInserts.length > 0) {
+    const { error: prodErr } = await supabase.from('products').insert(newProdInserts);
+    if (prodErr) console.error('Products insert error:', prodErr.message);
+  }
+
+  // Rebuild prodIds from actual DB state
+  const { data: dbProds } = await supabase.from('products').select('id, cost, price, is_lot_tracked').eq('tenant_id', T);
+  const finalProdIds = (dbProds || []).map((p: { id: string }) => p.id);
+  const finalProdData = (dbProds || []) as { id: string; cost: number; price: number; is_lot_tracked: boolean }[];
 
   // ── Lots (2-4 per product, with real quantities) ──
   // Make some products low stock, some expiring soon
   const lotInserts = [];
   const lotIds: string[] = [];
   const lotProductMap: Record<string, string[]> = {};
-  for (let i = 0; i < prodIds.length; i++) {
+  for (let i = 0; i < finalProdIds.length; i++) {
+    const p = finalProdData[i];
+    if (!p) continue;
     const numLots = rand(2, 4);
-    lotProductMap[prodIds[i]] = [];
+    lotProductMap[p.id] = [];
     for (let j = 0; j < numLots; j++) {
       const lid = id();
       lotIds.push(lid);
-      lotProductMap[prodIds[i]].push(lid);
+      lotProductMap[p.id].push(lid);
       // Make first 3 products low stock (small quantities)
       const qty = i < 3 ? rand(2, 8) : rand(30, 300);
-      // Make some lots expire within 30 days, some within 60, rest 100+
+      // Make some lots expire soon
       let expDate: string | null = null;
-      if (prods[i].lot) {
-        if (i < 2 && j === 0) expDate = days(rand(5, 20)); // expiring very soon
-        else if (i < 5 && j === 0) expDate = days(rand(20, 60)); // expiring somewhat soon
-        else expDate = days(rand(90, 400)); // normal
+      if (p.is_lot_tracked) {
+        if (i < 2 && j === 0) expDate = days(rand(5, 20));
+        else if (i < 5 && j === 0) expDate = days(rand(20, 60));
+        else expDate = days(rand(90, 400));
       }
       lotInserts.push({
-        id: lid, tenant_id: T, product_id: prodIds[i],
+        id: lid, tenant_id: T, product_id: p.id,
         lot_number: `LOT-${String(i + 1).padStart(3, '0')}-${String(j + 1).padStart(2, '0')}`,
         quantity_on_hand: qty,
         received_date: ago(rand(5, 120)),
-        cost_at_receipt: prods[i].cost,
+        cost_at_receipt: p.cost,
         expiration_date: expDate,
-        location_id: pick(locIds),
         status: 'active',
       });
     }
@@ -265,14 +263,14 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   // ── Bin Inventory (spread products across bins) ──
   const biInserts = [];
   const pickBins = binIds.slice(0, 13); // pick bins only
-  for (let i = 0; i < prodIds.length; i++) {
+  for (let i = 0; i < finalProdIds.length; i++) {
     const numBins = rand(1, 3);
-    const lotsForProd = lotProductMap[prodIds[i]] || [];
+    const lotsForProd = lotProductMap[finalProdIds[i]] || [];
     for (let b = 0; b < numBins; b++) {
       biInserts.push({
         tenant_id: T,
         bin_id: pickBins[(i * 3 + b) % pickBins.length],
-        product_id: prodIds[i],
+        product_id: finalProdIds[i],
         lot_id: lotsForProd.length > 0 ? pick(lotsForProd) : null,
         quantity: rand(10, 100),
       });
@@ -287,11 +285,11 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   const allUserIds = [userId, ...(staffIds || [])];
   const mvTypes: string[] = ['receive', 'ship', 'ship', 'ship', 'adjust', 'return'];
   for (let i = 0; i < 60; i++) {
-    const pIdx = rand(0, prodIds.length - 1);
+    const pIdx = rand(0, finalProdIds.length - 1);
     const mType = pick(mvTypes);
     const qty = mType === 'ship' ? -rand(1, 30) : mType === 'return' ? rand(1, 10) : rand(5, 80);
     mvInserts.push({
-      tenant_id: T, product_id: prodIds[pIdx],
+      tenant_id: T, product_id: finalProdIds[pIdx],
       user_id: pick(allUserIds),
       quantity: qty,
       movement_type: mType,
@@ -322,13 +320,13 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
     // Order lines
     const numLines = rand(1, 4);
     for (let l = 0; l < numLines; l++) {
-      const pIdx = rand(0, prodIds.length - 1);
+      const pIdx = rand(0, finalProdIds.length - 1);
       const qty = rand(5, 50);
       await supabase.from('sales_order_lines').insert({
-        tenant_id: T, order_id: orderId, product_id: prodIds[pIdx],
+        tenant_id: T, order_id: orderId, product_id: finalProdIds[pIdx],
         quantity_ordered: qty,
         quantity_shipped: orderStatuses[i] === 'shipped' ? qty : 0,
-        unit_price: prods[pIdx].price,
+        unit_price: (finalProdData[pIdx] as Record<string, unknown>)?.price as number || 9.99,
       });
     }
   }
@@ -368,17 +366,17 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
       scanned_quantity: status === 'completed' ? rand(5, 50) : null,
       priority: rand(2, 9),
       bin_id: pick(binIds),
-      product_id: pick(prodIds),
+      product_id: pick(finalProdIds),
     });
   }
 
   // ── Promotions (3 active, 1 scheduled, 1 ended) ──
   await supabase.from('promotions').insert([
-    { tenant_id: T, product_id: prodIds[0], name: 'Spring PPE Sale', sale_price: 11.99, original_price: 14.99, start_date: ago(3), end_date: days(14), status: 'active', created_by: userId },
-    { tenant_id: T, product_id: prodIds[7], name: 'Bulk Paper Goods Clearance', sale_price: 8.99, original_price: 11.99, start_date: ago(5), end_date: days(10), status: 'active', created_by: userId },
-    { tenant_id: T, product_id: prodIds[2], name: 'Buy More Save More — Sanitizer', sale_price: 3.49, original_price: 4.99, start_date: ago(1), end_date: days(21), status: 'active', created_by: userId },
-    { tenant_id: T, product_id: prodIds[22], name: 'Summer N95 Promo', sale_price: 3.99, original_price: 5.99, start_date: days(7), end_date: days(30), status: 'scheduled', created_by: userId },
-    { tenant_id: T, product_id: prodIds[14], name: 'Last Month Trash Bag Deal', sale_price: 12.99, original_price: 16.99, start_date: ago(35), end_date: ago(5), status: 'ended', created_by: userId },
+    { tenant_id: T, product_id: finalProdIds[0], name: 'Spring PPE Sale', sale_price: 11.99, original_price: 14.99, start_date: ago(3), end_date: days(14), status: 'active', created_by: userId },
+    { tenant_id: T, product_id: finalProdIds[7 % finalProdIds.length], name: 'Bulk Paper Goods Clearance', sale_price: 8.99, original_price: 11.99, start_date: ago(5), end_date: days(10), status: 'active', created_by: userId },
+    { tenant_id: T, product_id: finalProdIds[2 % finalProdIds.length], name: 'Buy More Save More — Sanitizer', sale_price: 3.49, original_price: 4.99, start_date: ago(1), end_date: days(21), status: 'active', created_by: userId },
+    { tenant_id: T, product_id: finalProdIds[12 % finalProdIds.length], name: 'Summer N95 Promo', sale_price: 3.99, original_price: 5.99, start_date: days(7), end_date: days(30), status: 'scheduled', created_by: userId },
+    { tenant_id: T, product_id: finalProdIds[14 % finalProdIds.length], name: 'Last Month Trash Bag Deal', sale_price: 12.99, original_price: 16.99, start_date: ago(35), end_date: ago(5), status: 'ended', created_by: userId },
   ]);
 
   // Verify counts
