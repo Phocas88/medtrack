@@ -73,7 +73,7 @@ export async function POST() {
 
     // ── Customer portal user ──
     const cu = DEMO_USERS.customer;
-    const { data: custAuth } = await supabase.auth.admin.createUser({ email: cu.email, password: cu.password, email_confirm: true });
+    await supabase.auth.admin.createUser({ email: cu.email, password: cu.password, email_confirm: true });
     // Don't create a users record — portal matches by customer.email
 
     // ── Suppliers (4, no dupes) ──
