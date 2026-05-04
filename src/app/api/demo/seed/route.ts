@@ -40,26 +40,20 @@ export async function POST() {
         return NextResponse.json({ status: 'ready', message: 'Demo data exists' });
       }
 
-      // Data is incomplete — delete and reseed
+      // Data is incomplete — delete ALL data and reseed
       const tid = existing[0].tenant_id;
-      // Clean up in dependency order
-      await supabase.from('scan_logs').delete().eq('tenant_id', tid);
-      await supabase.from('scan_tasks').delete().eq('tenant_id', tid);
-      await supabase.from('bin_inventory').delete().eq('tenant_id', tid);
-      await supabase.from('promotions').delete().eq('tenant_id', tid);
-      await supabase.from('stock_movements').delete().eq('tenant_id', tid);
-      await supabase.from('shipment_lines').delete().eq('tenant_id', tid);
-      await supabase.from('shipments').delete().eq('tenant_id', tid);
-      await supabase.from('sales_order_lines').delete().eq('tenant_id', tid);
-      await supabase.from('sales_orders').delete().eq('tenant_id', tid);
-      await supabase.from('po_lines').delete().eq('tenant_id', tid);
-      await supabase.from('purchase_orders').delete().eq('tenant_id', tid);
-      await supabase.from('lots').delete().eq('tenant_id', tid);
-      await supabase.from('bins').delete().eq('tenant_id', tid);
-      await supabase.from('products').delete().eq('tenant_id', tid);
-      await supabase.from('locations').delete().eq('tenant_id', tid);
-      await supabase.from('customers').delete().eq('tenant_id', tid);
-      await supabase.from('suppliers').delete().eq('tenant_id', tid);
+      // Clean up in strict FK dependency order — log errors
+      const tables = [
+        'scan_logs', 'scan_tasks', 'bin_inventory', 'promotions',
+        'stock_movements', 'shipment_lines', 'shipments',
+        'sales_order_lines', 'sales_orders', 'po_lines', 'purchase_orders',
+        'serial_numbers', 'lots', 'bins', 'products', 'locations',
+        'customers', 'suppliers',
+      ];
+      for (const table of tables) {
+        const { error } = await supabase.from(table).delete().eq('tenant_id', tid);
+        if (error) console.error(`Delete ${table}:`, error.message);
+      }
 
       // Don't delete users/tenant — just reseed data
       return await seedData(supabase, tid, existing[0].id);
@@ -226,7 +220,8 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
       image_url: p.img,
     };
   });
-  await supabase.from('products').insert(prodInserts);
+  const { error: prodErr } = await supabase.from('products').insert(prodInserts);
+  if (prodErr) console.error('Products insert error:', prodErr.message);
 
   // ── Lots (2-4 per product, with real quantities) ──
   // Make some products low stock, some expiring soon
