@@ -49,15 +49,16 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Scanner route: redirect to login with redirect param
+  // Scanner + POS routes: redirect to login with redirect param, but stay in their own UI
   const isScanRoute = pathname.startsWith('/scan');
-  if (isScanRoute && !user) {
+  const isPosRoute = pathname.startsWith('/pos');
+  if ((isScanRoute || isPosRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/auth/login';
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
-  if (isScanRoute) {
+  if (isScanRoute || isPosRoute) {
     return supabaseResponse;
   }
 

@@ -140,7 +140,6 @@ const navSections: NavSection[] = [
       { label: "Pricing", href: "/pricing", icon: DollarSign },
       { label: "Promotions", href: "/promotions", icon: Tag },
       { label: "Customer Portal", href: "/customer-portal", icon: Globe },
-      { label: "Point of Sale", href: "/pos", icon: CreditCard },
     ],
   },
   {
