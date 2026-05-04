@@ -174,9 +174,10 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
     const bid = id();
     binIds.push(bid);
     const bt = code.startsWith('RECV') ? 'staging' : code.startsWith('SHIP') ? 'staging' : code.startsWith('QC') ? 'returns' : code.startsWith('C') ? 'bulk' : code.startsWith('B') ? 'secondary' : 'primary';
-    return { id: bid, tenant_id: T, bin_code: code, bin_type: bt, location_id: locIds[0], zone: code.charAt(0), is_active: true };
+    return { id: bid, tenant_id: T, bin_code: code, bin_type: bt, location_id: locIds[0], is_active: true };
   });
-  await supabase.from('bins').insert(binInserts);
+  const { error: binErr } = await supabase.from('bins').insert(binInserts);
+  if (binErr) console.error('Bins insert error:', binErr.message);
 
   // ── Products (25 items with realistic data) ──
   const prods = [
@@ -262,7 +263,8 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   }
   // Insert lots in batches
   for (let i = 0; i < lotInserts.length; i += 20) {
-    await supabase.from('lots').insert(lotInserts.slice(i, i + 20));
+    const { error: lotErr } = await supabase.from('lots').insert(lotInserts.slice(i, i + 20));
+    if (lotErr) console.error(`Lots batch ${i} error:`, lotErr.message);
   }
 
   // ── Bin Inventory (spread products across bins) ──
@@ -384,10 +386,17 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
     { tenant_id: T, product_id: prodIds[14], name: 'Last Month Trash Bag Deal', sale_price: 12.99, original_price: 16.99, start_date: ago(35), end_date: ago(5), status: 'ended', created_by: userId },
   ]);
 
+  // Verify counts
+  const { count: lotCount } = await supabase.from('lots').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+  const { count: binCount } = await supabase.from('bins').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+  const { count: prodCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+  const { count: mvCount } = await supabase.from('stock_movements').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+
   return NextResponse.json({
     status: 'seeded',
-    message: 'Demo data created — 25 products, lots, 20 bins, 60 movements, 8 orders, 5 POs, 12 tasks, 5 promotions',
+    message: 'Demo data created',
     tenant: DEMO_TENANT_NAME,
+    counts: { products: prodCount, lots: lotCount, bins: binCount, movements: mvCount },
   });
   } catch (seedErr) {
     console.error('Seed data error:', seedErr);
