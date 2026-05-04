@@ -124,6 +124,7 @@ export async function POST() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function seedData(supabase: any, tenantId: string, userId: string, staffIds?: string[]) {
+  try {
   const T = tenantId;
 
   // If no staffIds provided, fetch them
@@ -154,12 +155,12 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   // ── Locations ──
   const locIds = [id(), id(), id()];
   await supabase.from('locations').insert([
-    { id: locIds[0], tenant_id: T, name: 'Main Warehouse', code: 'WH-A', type: 'warehouse', is_active: true },
-    { id: locIds[1], tenant_id: T, name: 'Cold Storage', code: 'COLD-1', type: 'cold_storage', is_active: true },
-    { id: locIds[2], tenant_id: T, name: 'Overflow / Staging', code: 'STAGE-1', type: 'overflow', is_active: true },
+    { id: locIds[0], tenant_id: T, name: 'Main Warehouse', code: 'WH-A', is_active: true },
+    { id: locIds[1], tenant_id: T, name: 'Cold Storage', code: 'COLD-1', is_active: true },
+    { id: locIds[2], tenant_id: T, name: 'Overflow / Staging', code: 'STAGE-1', is_active: true },
   ]);
 
-  // ── Bins (20 bins) ──
+  // ── Bins (20 bins) — bin_type enum: primary | secondary | bulk | staging | returns ──
   const binData = [
     'A-01-01', 'A-01-02', 'A-01-03', 'A-02-01', 'A-02-02', 'A-02-03',
     'B-01-01', 'B-01-02', 'B-02-01', 'B-02-02',
@@ -172,8 +173,8 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   const binInserts = binData.map((code) => {
     const bid = id();
     binIds.push(bid);
-    const bt = code.startsWith('RECV') ? 'receiving' : code.startsWith('SHIP') ? 'shipping' : code.startsWith('QC') ? 'quarantine' : 'pick';
-    return { id: bid, tenant_id: T, bin_code: code, bin_type: bt, location_id: locIds[0], zone: code.charAt(0), is_active: true, min_quantity: bt === 'pick' ? 5 : null, max_quantity: bt === 'pick' ? 200 : null };
+    const bt = code.startsWith('RECV') ? 'staging' : code.startsWith('SHIP') ? 'staging' : code.startsWith('QC') ? 'returns' : code.startsWith('C') ? 'bulk' : code.startsWith('B') ? 'secondary' : 'primary';
+    return { id: bid, tenant_id: T, bin_code: code, bin_type: bt, location_id: locIds[0], zone: code.charAt(0), is_active: true };
   });
   await supabase.from('bins').insert(binInserts);
 
@@ -227,6 +228,7 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
   await supabase.from('products').insert(prodInserts);
 
   // ── Lots (2-4 per product, with real quantities) ──
+  // Make some products low stock, some expiring soon
   const lotInserts = [];
   const lotIds: string[] = [];
   const lotProductMap: Record<string, string[]> = {};
@@ -237,8 +239,15 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
       const lid = id();
       lotIds.push(lid);
       lotProductMap[prodIds[i]].push(lid);
-      const qty = rand(20, 300);
-      const expDate = prods[i].lot ? days(rand(15, 400)) : null;
+      // Make first 3 products low stock (small quantities)
+      const qty = i < 3 ? rand(2, 8) : rand(30, 300);
+      // Make some lots expire within 30 days, some within 60, rest 100+
+      let expDate: string | null = null;
+      if (prods[i].lot) {
+        if (i < 2 && j === 0) expDate = days(rand(5, 20)); // expiring very soon
+        else if (i < 5 && j === 0) expDate = days(rand(20, 60)); // expiring somewhat soon
+        else expDate = days(rand(90, 400)); // normal
+      }
       lotInserts.push({
         id: lid, tenant_id: T, product_id: prodIds[i],
         lot_number: `LOT-${String(i + 1).padStart(3, '0')}-${String(j + 1).padStart(2, '0')}`,
@@ -377,7 +386,11 @@ async function seedData(supabase: any, tenantId: string, userId: string, staffId
 
   return NextResponse.json({
     status: 'seeded',
-    message: 'Demo data created — 25 products, 70+ lots, 20 bins, 60 movements, 8 orders, 5 POs, 12 tasks, 5 promotions',
+    message: 'Demo data created — 25 products, lots, 20 bins, 60 movements, 8 orders, 5 POs, 12 tasks, 5 promotions',
     tenant: DEMO_TENANT_NAME,
   });
+  } catch (seedErr) {
+    console.error('Seed data error:', seedErr);
+    return NextResponse.json({ error: 'Seed data partially failed — some data may be missing', detail: String(seedErr) }, { status: 500 });
+  }
 }
