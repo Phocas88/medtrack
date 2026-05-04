@@ -67,6 +67,11 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Demo page is public
+  if (pathname.startsWith('/demo')) {
+    return supabaseResponse;
+  }
+
   // Admin routes: redirect unauthenticated users to login (except auth pages)
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
