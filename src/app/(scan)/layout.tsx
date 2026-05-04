@@ -3,7 +3,7 @@
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { Package, LogOut, Wifi, WifiOff, ClipboardList, Search } from 'lucide-react';
+import { Package, LogOut, Wifi, WifiOff, ClipboardList, Search, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
   const tabs = [
     { label: 'Tasks', href: '/scan', icon: ClipboardList },
     { label: 'Find Item', href: '/scan/find', icon: Search },
+    { label: 'My Stats', href: '/scan/stats', icon: BarChart3 },
   ];
 
   return (

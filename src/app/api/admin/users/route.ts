@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { tenant_id, email, full_name, role, access_level } = body;
 
-    if (!tenant_id || !email || !full_name) {
+    if (!tenant_id || !full_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -66,9 +66,13 @@ export async function POST(request: Request) {
     const serviceClient = createServiceClient();
     const tempPassword = generateTempPassword();
 
+    // Generate a username-based email if none provided (for floor associates)
+    const username = body.username || full_name.toLowerCase().replace(/[^a-z0-9]/g, '.').replace(/\.+/g, '.').replace(/^\.|\.$/, '');
+    const loginEmail = email || `${username}@${tenant_id.slice(0, 8)}.wms.local`;
+
     // Create auth user
     const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
-      email,
+      email: loginEmail,
       password: tempPassword,
       email_confirm: true,
     });
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
       .insert({
         id: authData.user.id,
         tenant_id,
-        email,
+        email: loginEmail,
         full_name,
         role: role || 'staff',
         is_active: true,
@@ -102,20 +106,23 @@ export async function POST(request: Request) {
       user_id: authUser.id,
       quantity: 0,
       movement_type: 'adjust',
-      reason: `IT: Created user ${full_name} (${email}) with role ${role || 'staff'}, access: ${access_level || 'full'}`,
+      reason: `IT: Created user ${full_name} (${loginEmail}) with role ${role || 'staff'}, access: ${access_level || 'full'}`,
       reference_number: `USER-NEW-${authData.user.id.slice(0, 8)}`,
       metadata: {
         action: 'user_create',
         target_user_id: authData.user.id,
-        target_user_email: email,
+        target_user_email: loginEmail,
+        has_real_email: !!email,
         role: role || 'staff',
         access_level: access_level || 'full',
       },
     });
 
     return NextResponse.json({
-      user: { id: authData.user.id, email, full_name, role: role || 'staff' },
+      user: { id: authData.user.id, email: loginEmail, full_name, role: role || 'staff' },
       temp_password: tempPassword,
+      username: !email ? username : undefined,
+      login_note: !email ? `No email provided. User logs in with: ${loginEmail} / ${tempPassword}` : undefined,
     }, { status: 201 });
   } catch (err) {
     console.error('Admin create user error:', err);

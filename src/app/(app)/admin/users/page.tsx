@@ -159,7 +159,14 @@ export default function AdminUsersPage() {
       if (!response.ok) {
         toast.error(result.error || 'Failed to create user');
       } else {
-        toast.success(`User ${newUser.full_name} created. Temp password sent to ${newUser.email}`);
+        if (result.login_note) {
+          toast.success(result.login_note, { duration: 10000 });
+        } else {
+          toast.success(`User ${newUser.full_name} created. Temp password: check email.`);
+        }
+        if (result.temp_password) {
+          toast.info(`Temp password: ${result.temp_password}`, { duration: 15000 });
+        }
         setCreateOpen(false);
         setNewUser({ email: '', full_name: '', role: 'staff', access_level: 'full' });
         loadUsers();
@@ -436,7 +443,7 @@ export default function AdminUsersPage() {
           <DialogHeader>
             <DialogTitle>Create New User</DialogTitle>
             <DialogDescription>
-              A temporary password will be generated and emailed to the user.
+              A temporary password will be generated. Email is optional for floor associates.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -449,13 +456,18 @@ export default function AdminUsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email *</Label>
+              <Label>Email <span className="text-muted-foreground text-xs">(optional for staff)</span></Label>
               <Input
                 type="email"
                 value={newUser.email}
                 onChange={(e) => setNewUser(p => ({ ...p, email: e.target.value }))}
-                placeholder="john@company.com"
+                placeholder="john@company.com or leave blank"
               />
+              {!newUser.email && newUser.full_name && (
+                <p className="text-xs text-muted-foreground">
+                  No email? A username login will be auto-generated from the name.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Role</Label>
@@ -492,7 +504,7 @@ export default function AdminUsersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateUser} disabled={creating || !newUser.email || !newUser.full_name}>
+            <Button onClick={handleCreateUser} disabled={creating || !newUser.full_name}>
               {creating ? 'Creating...' : 'Create User'}
             </Button>
           </DialogFooter>

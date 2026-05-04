@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -47,10 +48,12 @@ import {
   ScanBarcode,
   CreditCard,
   Zap,
+  ChevronDown,
+  Tag,
+  Star,
 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Sheet,
@@ -65,136 +68,245 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-
-const mainNavItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Metrics", href: "/metrics", icon: BarChart3 },
-  { label: "Analytics", href: "/analytics", icon: TrendingUp },
-  { label: "Products", href: "/products", icon: Package },
-  { label: "Units & Parts", href: "/uom", icon: Ruler },
-  { label: "Lots", href: "/lots", icon: Layers },
-  { label: "Movements", href: "/movements", icon: ArrowLeftRight },
-  { label: "Product Matrix", href: "/product-matrix", icon: LayoutGrid },
-]
-
-const operationNavItems = [
-  { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
-  { label: "Receive", href: "/receive", icon: PackagePlus },
-  { label: "Put-Away", href: "/put-away", icon: PackageOpen },
-  { label: "Wave Picking", href: "/wave-picking", icon: Layers },
-  { label: "Ship", href: "/ship", icon: Truck },
-  { label: "Cross-Dock", href: "/cross-dock", icon: ArrowRightLeft },
-  { label: "Dock Schedule", href: "/dock-scheduling", icon: CalendarDays },
-  { label: "Returns", href: "/returns", icon: RotateCcw },
-  { label: "Reorder", href: "/reorder", icon: RefreshCw },
-]
-
-const warehouseNavItems = [
-  { label: "Locations", href: "/locations", icon: Warehouse },
-  { label: "Transfers", href: "/transfers", icon: ArrowRightLeft },
-  { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
-  { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
-  { label: "Kitting", href: "/kitting", icon: Boxes, module: "kitting" },
-  { label: "Bins", href: "/bins", icon: Grid3X3 },
-  { label: "Scanner", href: "/scanner", icon: Smartphone },
-  { label: "Consignment", href: "/consignment", icon: Handshake, module: "consignment" },
-  { label: "Expiration", href: "/expiration", icon: Timer },
-]
-
-const managementNavItems = [
-  { label: "Customers", href: "/customers", icon: Users },
-  { label: "Suppliers", href: "/suppliers", icon: Building2 },
-  { label: "Pricing", href: "/pricing", icon: DollarSign },
-  { label: "Promotions", href: "/promotions", icon: DollarSign },
-  { label: "Documents", href: "/documents", icon: FileText },
-  { label: "Customer Portal", href: "/customer-portal", icon: Globe },
-]
-
-const complianceNavItems = [
-  { label: "Controlled Substances", href: "/controlled-substances", icon: Shield, module: "controlled_substances" },
-  { label: "DSCSA", href: "/dscsa", icon: ScrollText, module: "dscsa_tracking" },
-  { label: "Prop 65", href: "/prop65", icon: AlertTriangle },
-  { label: "Recall Monitor", href: "/recall-monitor", icon: ShieldAlert },
-  { label: "GS1 Compliance", href: "/gs1-compliance", icon: ScanBarcode },
-  { label: "Compliance", href: "/compliance", icon: ListChecks },
-  { label: "Audit Trail", href: "/audit", icon: ScanLine },
-]
-
-const adminNavItems = [
-  { label: "User Management", href: "/admin/users", icon: Users },
-]
-
-const toolsNavItems = [
-  { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Labor", href: "/labor", icon: Clock },
-  { label: "Slotting", href: "/slotting", icon: ArrowUpDown },
-  { label: "ABC Analysis", href: "/abc-analysis", icon: BarChart3 },
-  { label: "Import / Export", href: "/import-export", icon: ArrowUpDown },
-  { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
-  { label: "Notifications", href: "/notifications", icon: Bell },
-  { label: "Integrations", href: "/integrations/quickbooks", icon: Plug },
-  { label: "Zapier", href: "/integrations/zapier", icon: Zap },
-  { label: "Custom Fields", href: "/custom-fields", icon: Timer },
-  { label: "Billing", href: "/billing", icon: CreditCard },
-  { label: "Settings", href: "/settings", icon: Settings },
-]
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 type NavItem = { label: string; href: string; icon: typeof LayoutDashboard; module?: string }
 
-interface NavSectionProps {
+interface NavSection {
+  title: string
   items: NavItem[]
-  pathname: string
-  enabledModules?: Record<string, boolean>
+  defaultOpen?: boolean
 }
 
-function NavSection({ items, pathname, enabledModules }: NavSectionProps) {
+const navSections: NavSection[] = [
+  {
+    title: "Overview",
+    defaultOpen: true,
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Metrics", href: "/metrics", icon: BarChart3 },
+      { label: "Analytics", href: "/analytics", icon: TrendingUp },
+    ],
+  },
+  {
+    title: "Inventory",
+    defaultOpen: true,
+    items: [
+      { label: "Products", href: "/products", icon: Package },
+      { label: "Lots & Serials", href: "/lots", icon: Layers },
+      { label: "Stock Movements", href: "/movements", icon: ArrowLeftRight },
+      { label: "Product Matrix", href: "/product-matrix", icon: LayoutGrid },
+      { label: "Units & Parts", href: "/uom", icon: Ruler },
+      { label: "Expiration", href: "/expiration", icon: Timer },
+      { label: "Custom Fields", href: "/custom-fields", icon: Timer },
+    ],
+  },
+  {
+    title: "Orders & Fulfillment",
+    items: [
+      { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
+      { label: "Receive", href: "/receive", icon: PackagePlus },
+      { label: "Put-Away", href: "/put-away", icon: PackageOpen },
+      { label: "Wave Picking", href: "/wave-picking", icon: Layers },
+      { label: "Ship", href: "/ship", icon: Truck },
+      { label: "Returns", href: "/returns", icon: RotateCcw },
+      { label: "Reorder", href: "/reorder", icon: RefreshCw },
+    ],
+  },
+  {
+    title: "Warehouse",
+    items: [
+      { label: "Locations", href: "/locations", icon: Warehouse },
+      { label: "Bins", href: "/bins", icon: Grid3X3 },
+      { label: "Transfers", href: "/transfers", icon: ArrowRightLeft },
+      { label: "Cross-Dock", href: "/cross-dock", icon: ArrowRightLeft },
+      { label: "Dock Schedule", href: "/dock-scheduling", icon: CalendarDays },
+      { label: "Cycle Counts", href: "/cycle-counts", icon: ClipboardCheck },
+      { label: "Quarantine", href: "/quarantine", icon: ShieldCheck },
+      { label: "Scanner", href: "/scanner", icon: Smartphone },
+      { label: "Task Board", href: "/task-board", icon: ClipboardList },
+      { label: "Kitting", href: "/kitting", icon: Boxes, module: "kitting" },
+      { label: "Consignment", href: "/consignment", icon: Handshake, module: "consignment" },
+    ],
+  },
+  {
+    title: "Sales & Customers",
+    items: [
+      { label: "Customers", href: "/customers", icon: Users },
+      { label: "Pricing", href: "/pricing", icon: DollarSign },
+      { label: "Promotions", href: "/promotions", icon: Tag },
+      { label: "Customer Portal", href: "/customer-portal", icon: Globe },
+      { label: "Point of Sale", href: "/pos", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Suppliers",
+    items: [
+      { label: "Suppliers", href: "/suppliers", icon: Building2 },
+      { label: "Documents", href: "/documents", icon: FileText },
+    ],
+  },
+  {
+    title: "Compliance",
+    items: [
+      { label: "Audit Trail", href: "/audit", icon: ScanLine },
+      { label: "Compliance Reports", href: "/compliance", icon: ListChecks },
+      { label: "Controlled Substances", href: "/controlled-substances", icon: Shield, module: "controlled_substances" },
+      { label: "DSCSA", href: "/dscsa", icon: ScrollText, module: "dscsa_tracking" },
+      { label: "Prop 65", href: "/prop65", icon: AlertTriangle },
+      { label: "Recall Monitor", href: "/recall-monitor", icon: ShieldAlert },
+      { label: "GS1 Compliance", href: "/gs1-compliance", icon: ScanBarcode },
+    ],
+  },
+  {
+    title: "Tools & Reports",
+    items: [
+      { label: "Reports", href: "/reports", icon: BarChart3 },
+      { label: "ABC Analysis", href: "/abc-analysis", icon: BarChart3 },
+      { label: "Labor", href: "/labor", icon: Clock },
+      { label: "Slotting", href: "/slotting", icon: ArrowUpDown },
+      { label: "Import / Export", href: "/import-export", icon: ArrowUpDown },
+      { label: "Recall Lookup", href: "/recall", icon: AlertTriangle },
+      { label: "Notifications", href: "/notifications", icon: Bell },
+    ],
+  },
+  {
+    title: "Integrations",
+    items: [
+      { label: "QuickBooks", href: "/integrations/quickbooks", icon: Plug },
+      { label: "Zapier", href: "/integrations/zapier", icon: Zap },
+      { label: "Billing", href: "/billing", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Admin",
+    items: [
+      { label: "User Management", href: "/admin/users", icon: Users },
+      { label: "Settings", href: "/settings", icon: Settings },
+    ],
+  },
+]
+
+function CollapsibleNavSection({
+  section,
+  pathname,
+  enabledModules,
+  favorites,
+  onToggleFavorite,
+}: {
+  section: NavSection
+  pathname: string
+  enabledModules?: Record<string, boolean>
+  favorites?: string[]
+  onToggleFavorite?: (href: string) => void
+}) {
   const hasModuleConfig = enabledModules && Object.keys(enabledModules).length > 0
 
-  const filteredItems = items.filter((item) => {
-    // If item doesn't require a module, always show it
+  const filteredItems = section.items.filter((item) => {
     if (!item.module) return true
-    // If no module config exists, show all items (default = everything on)
     if (!hasModuleConfig) return true
-    // Otherwise, only show if the module is explicitly enabled
     return enabledModules![item.module] === true
   })
+
+  const hasActiveChild = filteredItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  )
+
+  const [open, setOpen] = useState(section.defaultOpen || hasActiveChild)
 
   if (filteredItems.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-0.5">
-      {filteredItems.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground"
-            )}
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {item.label}
-          </Link>
-        )
-      })}
-    </div>
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+        {section.title}
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          {filteredItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+            const isFav = favorites?.includes(item.href)
+            return (
+              <div key={item.href} className="group flex items-center">
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex-1 flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </Link>
+                {onToggleFavorite && (
+                  <button
+                    onClick={() => onToggleFavorite(item.href)}
+                    className={cn(
+                      "shrink-0 p-1 rounded transition-opacity",
+                      isFav ? "opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
+                    )}
+                  >
+                    <Star className={cn("h-3 w-3", isFav ? "fill-amber-500 text-amber-500" : "text-muted-foreground")} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
+}
+
+function useFavorites() {
+  const [favorites, setFavorites] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('wms_favorites')
+      if (stored) setFavorites(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const toggle = (href: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(href) ? prev.filter((f) => f !== href) : [...prev, href]
+      localStorage.setItem('wms_favorites', JSON.stringify(next))
+      return next
+    })
+  }
+
+  return { favorites, toggle }
 }
 
 function SidebarContent() {
   const pathname = usePathname()
   const { user, tenantName, enabledModules, role, signOut } = useAuth()
+  const { favorites, toggle: toggleFavorite } = useFavorites()
 
   const initials = user?.full_name
     ?.split(' ')
     .map((n) => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2) || 'MT'
+    .slice(0, 2) || 'WM'
+
+  // Get favorite items from all sections
+  const allItems = navSections.flatMap((s) => s.items)
+  const favoriteItems = favorites.map((href) => allItems.find((i) => i.href === href)).filter(Boolean) as NavItem[]
+
+  // Filter admin section for non-admins
+  const sections = navSections.filter((s) => {
+    if (s.title === "Admin" && role !== "admin") return false
+    return true
+  })
 
   return (
     <div className="flex h-full flex-col">
@@ -203,38 +315,54 @@ function SidebarContent() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Package className="h-4 w-4" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">{tenantName || 'TrackFlow'}</span>
+        <span className="text-lg font-semibold tracking-tight">{tenantName || 'Phocas WMS'}</span>
       </div>
 
-      <Separator />
-
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-3">
-        <nav className="flex flex-col gap-4">
-          <NavSection items={mainNavItems} pathname={pathname} enabledModules={enabledModules} />
-          <Separator />
-          <NavSection items={operationNavItems} pathname={pathname} enabledModules={enabledModules} />
-          <Separator />
-          <NavSection items={warehouseNavItems} pathname={pathname} enabledModules={enabledModules} />
-          <Separator />
-          <NavSection items={managementNavItems} pathname={pathname} enabledModules={enabledModules} />
-          <Separator />
-          <NavSection items={complianceNavItems} pathname={pathname} enabledModules={enabledModules} />
-          <Separator />
-          <NavSection items={toolsNavItems} pathname={pathname} enabledModules={enabledModules} />
-          {role === 'admin' && (
-            <>
-              <Separator />
-              <NavSection items={adminNavItems} pathname={pathname} enabledModules={enabledModules} />
-            </>
+      <ScrollArea className="flex-1 px-2 py-2">
+        <nav className="flex flex-col gap-1">
+          {/* Favorites */}
+          {favoriteItems.length > 0 && (
+            <div className="mb-1">
+              <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-600 flex items-center gap-1">
+                <Star className="h-3 w-3 fill-amber-500" /> Favorites
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {favoriteItems.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
           )}
+
+          {sections.map((section) => (
+            <CollapsibleNavSection
+              key={section.title}
+              section={section}
+              pathname={pathname}
+              enabledModules={enabledModules}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+            />
+          ))}
         </nav>
       </ScrollArea>
 
-      <Separator />
-
       {/* User Menu */}
-      <div className="p-3">
+      <div className="border-t p-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors">
             <Avatar className="h-7 w-7">
@@ -246,6 +374,12 @@ function SidebarContent() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <Users className="mr-2 h-4 w-4" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">
                 <Settings className="mr-2 h-4 w-4" />
