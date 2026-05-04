@@ -33,9 +33,16 @@ export async function POST() {
         supabase.from('bin_inventory').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
         supabase.from('scan_tasks').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
       ]);
-      const isComplete = !!(lotR.count && lotR.count >= 20 && binR.count && binR.count >= 10 && biR.count && biR.count >= 10 && taskR.count && taskR.count >= 5);
+      // Check all demo users exist
+      const { data: allDemoUsers } = await supabase.from('users').select('email').eq('tenant_id', tid).in('email', [DEMO_USERS.manager.email, DEMO_USERS.associate.email, DEMO_USERS.cashier.email]);
+      const demoUserCount = allDemoUsers?.length || 0;
+
+      // Check products have suppliers
+      const { count: noSupCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).is('supplier_id', null);
+
+      const isComplete = !!(lotR.count && lotR.count >= 20 && binR.count && binR.count >= 10 && biR.count && biR.count >= 10 && taskR.count && taskR.count >= 5 && demoUserCount >= 3 && (!noSupCount || noSupCount === 0));
       if (isComplete) {
-        return NextResponse.json({ status: 'ready', v: 2, counts: { lots: lotR.count, bins: binR.count, bi: biR.count, tasks: taskR.count } });
+        return NextResponse.json({ status: 'ready' });
       }
       // Incomplete — add missing data
       return await seedInventory(supabase, tid, ex[0].id);
