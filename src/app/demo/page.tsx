@@ -117,15 +117,15 @@ export default function DemoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="min-h-screen bg-white">
       {/* Hero */}
       <div className="text-center pt-12 pb-8 px-4">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
           <Package className="h-8 w-8" />
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-white">Phocas WMS</h1>
-        <p className="text-slate-400 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
-        <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-400">
+        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Phocas WMS</h1>
+        <p className="text-slate-500 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
+        <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-500">
           <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 80+ pages</span>
           <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-green-400" /> 100% WMS compliant</span>
           <span className="flex items-center gap-1"><Layers className="h-4 w-4 text-purple-400" /> 43 database tables</span>
@@ -136,22 +136,22 @@ export default function DemoPage() {
       <div className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
         {/* Error */}
         {error && (
-          <div className="max-w-md mx-auto bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 text-center">
+          <div className="max-w-md mx-auto bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
             {error}
           </div>
         )}
 
         {/* Try Demo — 4 role cards */}
         <div>
-          <h2 className="text-xl font-bold text-white text-center mb-2">Try the Live Demo</h2>
-          <p className="text-slate-400 text-center mb-6 text-sm">Pick a role — each sees only what they need. No signup required.</p>
+          <h2 className="text-xl font-bold text-slate-900 text-center mb-2">Try the Live Demo</h2>
+          <p className="text-slate-500 text-center mb-6 text-sm">Pick a role — each sees only what they need. No signup required.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {ROLES.map((role) => {
               const isLoading = loading === role.key;
               return (
                 <Card
                   key={role.key}
-                  className={`bg-slate-900/60 border-2 ${role.color} transition-all cursor-pointer backdrop-blur`}
+                  className={`bg-white border-2 shadow-sm ${role.color} transition-all cursor-pointer `}
                   onClick={() => !loading && handleLaunch(role.key)}
                 >
                   <CardHeader className="pb-2">
@@ -159,13 +159,13 @@ export default function DemoPage() {
                       <div className={`p-2.5 rounded-xl ${role.bgColor}`}>
                         <role.icon className={`h-5 w-5 ${role.iconColor}`} />
                       </div>
-                      {isLoading ? <Loader2 className="h-5 w-5 text-slate-400 animate-spin" /> : <ArrowRight className="h-5 w-5 text-slate-600" />}
+                      {isLoading ? <Loader2 className="h-5 w-5 text-slate-400 animate-spin" /> : <ArrowRight className="h-5 w-5 text-slate-500" />}
                     </div>
-                    <CardTitle className="text-white text-base mt-2">{role.title}</CardTitle>
-                    <CardDescription className="text-slate-500 text-[11px] uppercase tracking-wide">{role.subtitle}</CardDescription>
+                    <CardTitle className="text-slate-900 text-base mt-2">{role.title}</CardTitle>
+                    <CardDescription className="text-slate-400 text-[11px] uppercase tracking-wide">{role.subtitle}</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <p className="text-sm text-slate-400 leading-relaxed">{role.description}</p>
+                    <p className="text-sm text-slate-500 leading-relaxed">{role.description}</p>
                   </CardContent>
                 </Card>
               );
@@ -175,13 +175,13 @@ export default function DemoPage() {
 
         {/* Feature Specs */}
         <div>
-          <h2 className="text-xl font-bold text-white text-center mb-2">Complete Feature Set</h2>
-          <p className="text-slate-400 text-center mb-6 text-sm">Everything included — no add-ons, no per-module pricing</p>
+          <h2 className="text-xl font-bold text-slate-900 text-center mb-2">Complete Feature Set</h2>
+          <p className="text-slate-500 text-center mb-6 text-sm">Everything included — no add-ons, no per-module pricing</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURE_SECTIONS.map((section) => (
-              <Card key={section.title} className="bg-slate-900/40 border-slate-800 backdrop-blur">
+              <Card key={section.title} className="bg-slate-50 border-slate-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <CardTitle className="text-slate-900 text-sm flex items-center gap-2">
                     <section.icon className="h-4 w-4 text-primary" />
                     {section.title}
                   </CardTitle>
@@ -189,7 +189,7 @@ export default function DemoPage() {
                 <CardContent className="pt-0">
                   <ul className="space-y-1">
                     {section.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
+                      <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
                         <span className="text-green-500 mt-0.5 shrink-0">&#10003;</span>
                         {f}
                       </li>
@@ -202,12 +202,12 @@ export default function DemoPage() {
         </div>
 
         {/* How it maps */}
-        <Card className="bg-slate-900/40 border-slate-800 backdrop-blur">
+        <Card className="bg-slate-50 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-white text-base">How it maps to your operation</CardTitle>
+            <CardTitle className="text-slate-900 text-base">How it maps to your operation</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700">
               <div className="space-y-3">
                 <p><span className="text-blue-400 font-semibold">Management</span> — Store managers, ops directors, IT. Full visibility: inventory levels, metrics, compliance, team performance, promotions, billing. Think: the back office at Walmart corporate.</p>
                 <p><span className="text-green-400 font-semibold">Associates</span> — Zebra/Honeywell handheld scanners. Pick orders, restock shelves, count inventory, process receiving. Only see their task queue. Think: Walmart associate with a TC-52.</p>
@@ -221,30 +221,30 @@ export default function DemoPage() {
         </Card>
 
         {/* Competitive pricing */}
-        <Card className="bg-slate-900/40 border-slate-800 backdrop-blur">
+        <Card className="bg-slate-50 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-white text-base">Competitive Pricing</CardTitle>
+            <CardTitle className="text-slate-900 text-base">Competitive Pricing</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="text-left text-slate-400 py-2 text-xs">System</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">Price</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">WMS</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">POS</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">Scanner</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">Portal</th>
-                    <th className="text-center text-slate-400 py-2 text-xs">Compliance</th>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left text-slate-500 py-2 text-xs">System</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">Price</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">WMS</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">POS</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">Scanner</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">Portal</th>
+                    <th className="text-center text-slate-500 py-2 text-xs">Compliance</th>
                   </tr>
                 </thead>
-                <tbody className="text-slate-300">
-                  <tr className="border-b border-slate-800"><td className="py-2">Fishbowl</td><td className="text-center">$329+</td><td className="text-center">70%</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td></tr>
-                  <tr className="border-b border-slate-800"><td className="py-2">Cin7</td><td className="text-center">$349+</td><td className="text-center">65%</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-amber-400">Partial</td></tr>
-                  <tr className="border-b border-slate-800"><td className="py-2">NetSuite</td><td className="text-center">$999+</td><td className="text-center">85%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td></tr>
-                  <tr className="border-b border-slate-800"><td className="py-2">SAP EWM</td><td className="text-center">$1,500+</td><td className="text-center">95%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
-                  <tr className="bg-green-950/30 rounded"><td className="py-2 font-bold text-white">Phocas WMS</td><td className="text-center font-bold text-green-400">$49-199</td><td className="text-center text-green-400 font-bold">100%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
+                <tbody className="text-slate-700">
+                  <tr className="border-b border-slate-100"><td className="py-2">Fishbowl</td><td className="text-center">$329+</td><td className="text-center">70%</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2">Cin7</td><td className="text-center">$349+</td><td className="text-center">65%</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-amber-400">Partial</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2">NetSuite</td><td className="text-center">$999+</td><td className="text-center">85%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td></tr>
+                  <tr className="border-b border-slate-100"><td className="py-2">SAP EWM</td><td className="text-center">$1,500+</td><td className="text-center">95%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
+                  <tr className="bg-green-50 rounded"><td className="py-2 font-bold text-slate-900">Phocas WMS</td><td className="text-center font-bold text-green-400">$49-199</td><td className="text-center text-green-400 font-bold">100%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
                 </tbody>
               </table>
             </div>
@@ -253,8 +253,8 @@ export default function DemoPage() {
 
         {/* Footer */}
         <div className="text-center">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">← Back to Phocas WMS</a>
-          <p className="text-xs text-slate-600 mt-2">Demo data is shared and resets periodically.</p>
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">← Back to Phocas WMS</a>
+          <p className="text-xs text-slate-500 mt-2">Demo data is shared and resets periodically.</p>
         </div>
       </div>
     </div>
