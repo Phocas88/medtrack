@@ -31,19 +31,24 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         return;
       }
 
-      const { data: customerRecord, error } = await supabase
-        .from('customers')
-        .select('id, tenant_id, name, email, phone, address, price_tier_id, notes')
-        .eq('email', user.email!)
-        .maybeSingle();
-
-      if (error || !customerRecord) {
+      // Use API route to bypass RLS for customer lookup
+      const res = await fetch('/api/portal/lookup');
+      if (!res.ok) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
+      const { customer: customerRecord } = await res.json();
+      if (!customerRecord) {
         setAccessDenied(true);
         setLoading(false);
         return;
       }
 
-      setCustomer(customerRecord);
+      setCustomer({
+        ...customerRecord,
+        address: customerRecord.ship_to_address || null,
+      });
       setLoading(false);
     }
 

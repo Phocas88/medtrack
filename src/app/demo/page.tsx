@@ -5,13 +5,10 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Package,
-  Loader2,
-  Monitor,
-  Smartphone,
-  ShoppingCart,
-  Globe,
-  ArrowRight,
+  Package, Loader2, Monitor, Smartphone, ShoppingCart, Globe, ArrowRight,
+  BarChart3, ShieldCheck, Warehouse, ScanBarcode, CreditCard,
+  Layers, Truck, Tag, Zap,
+  Target,
 } from 'lucide-react';
 
 const DEMO_CREDS: Record<string, { email: string; password: string; redirect: string }> = {
@@ -23,44 +20,76 @@ const DEMO_CREDS: Record<string, { email: string; password: string; redirect: st
 
 const ROLES = [
   {
-    key: 'manager',
-    icon: Monitor,
-    title: 'Management',
-    subtitle: 'Director / Operations Manager',
-    description: 'Full desktop application — dashboard, metrics, inventory, orders, compliance, reporting, team management, billing.',
-    color: 'border-blue-500/50 hover:border-blue-500',
-    iconColor: 'text-blue-500',
-    bgColor: 'bg-blue-500/10',
+    key: 'manager', icon: Monitor, title: 'Management Desktop',
+    subtitle: 'Directors, Operations, IT',
+    description: 'Full system — dashboard, metrics, inventory, orders, compliance, team management, analytics, billing.',
+    color: 'border-blue-500/50 hover:border-blue-500', iconColor: 'text-blue-500', bgColor: 'bg-blue-500/10',
   },
   {
-    key: 'associate',
-    icon: Smartphone,
-    title: 'Floor / Warehouse Associate',
+    key: 'associate', icon: Smartphone, title: 'Floor / Warehouse Associate',
     subtitle: 'Handheld scanner device',
-    description: 'Scanner-only UI — pick tasks, put-away, cycle counts, replenishments, bin transfers. Track time and KPIs.',
-    color: 'border-green-500/50 hover:border-green-500',
-    iconColor: 'text-green-500',
-    bgColor: 'bg-green-500/10',
+    description: 'Task queue, barcode scanning, pick/putaway/replenish/cycle count workflows, product locator, daily KPIs.',
+    color: 'border-green-500/50 hover:border-green-500', iconColor: 'text-green-500', bgColor: 'bg-green-500/10',
   },
   {
-    key: 'cashier',
-    icon: ShoppingCart,
-    title: 'Cashier',
-    subtitle: 'Point of sale register',
-    description: 'Checkout interface — scan items, apply promotions, process sales, print receipts. Auto-decrements inventory.',
-    color: 'border-amber-500/50 hover:border-amber-500',
-    iconColor: 'text-amber-500',
-    bgColor: 'bg-amber-500/10',
+    key: 'cashier', icon: ShoppingCart, title: 'Cashier Register',
+    subtitle: 'Point of sale terminal',
+    description: 'Scan checkout, payment types (card/cash/check), tax calc, discounts, hold/recall, sale promotions, receipts.',
+    color: 'border-amber-500/50 hover:border-amber-500', iconColor: 'text-amber-500', bgColor: 'bg-amber-500/10',
   },
   {
-    key: 'customer',
-    icon: Globe,
-    title: 'Customer Portal',
-    subtitle: 'B2B partner login',
-    description: 'Self-service ordering — browse products, check pricing, place orders, view order history and shipment tracking.',
-    color: 'border-purple-500/50 hover:border-purple-500',
-    iconColor: 'text-purple-500',
-    bgColor: 'bg-purple-500/10',
+    key: 'customer', icon: Globe, title: 'Customer Portal',
+    subtitle: 'B2B partner self-service',
+    description: 'Browse catalog, negotiated pricing, place orders, order history, shipment tracking.',
+    color: 'border-purple-500/50 hover:border-purple-500', iconColor: 'text-purple-500', bgColor: 'bg-purple-500/10',
+  },
+];
+
+const FEATURE_SECTIONS = [
+  {
+    title: 'Inventory Management',
+    icon: Package,
+    features: ['Product catalog with images, SKU, UPC', 'Lot & serial number tracking', 'FEFO/FIFO picking enforcement', 'Expiration management & alerts', 'Multi-location warehouse support', 'UOM conversions & multi-part products', 'Custom fields per product', 'ABC analysis & velocity ranking'],
+  },
+  {
+    title: 'Warehouse Operations',
+    icon: Warehouse,
+    features: ['Purchase order management', 'Receiving & put-away workflows', 'Wave / batch picking', 'Cross-docking & dock scheduling', 'Bin management (primary + secondary)', 'Min/max replenishment triggers', 'Cycle counting with variance posting', 'Quarantine & QA release', 'Kitting & BOM assembly', 'Transfers between locations'],
+  },
+  {
+    title: 'Mobile Scanner',
+    icon: ScanBarcode,
+    features: ['Standalone handheld device UI', 'Task-based workflows (pick, putaway, replenish, count)', 'Barcode scanning with camera', 'Product locator — aisle, section, bin', 'Real-time task assignment from managers', 'Associate KPI tracking (tasks/hour, accuracy)', 'Works offline-ready as PWA'],
+  },
+  {
+    title: 'Point of Sale',
+    icon: CreditCard,
+    features: ['Barcode scanning checkout', 'Payment types: card, cash, check', 'Automatic tax calculation', 'Order-level & item-level discounts', 'Hold / recall transactions', 'Product search by name or category', 'Sale promotions auto-applied', 'Change calculation for cash', 'Transaction history & daily count', 'Customer name association'],
+  },
+  {
+    title: 'Orders & Fulfillment',
+    icon: Truck,
+    features: ['Sales orders with line items', 'Shipment tracking & packing slips', 'Returns / RMA processing', 'Reorder suggestions with auto-PO', 'Customer portal self-service ordering', 'PDF invoices & packing slips', 'Consignment inventory at customer sites'],
+  },
+  {
+    title: 'Compliance & Regulatory',
+    icon: ShieldCheck,
+    features: ['Immutable audit trail', 'DEA controlled substances (Schedules II-V)', 'DSCSA serialization & verification', 'California Proposition 65 tracking', 'FDA & CPSC recall monitoring', 'GS1 barcode standards', 'Cold chain / temperature monitoring', 'Document management (COA, SDS, licenses)'],
+  },
+  {
+    title: 'Analytics & Metrics',
+    icon: BarChart3,
+    features: ['Metrics command center (5-tab)', 'Inventory health — stock-outs, low stock, dead stock', 'Sales velocity — top/slow movers', 'Financial — COGS, margins, revenue potential', 'Supplier performance & on-time %', 'Expiration forecasting (FIFO)', 'CSV export on every report'],
+  },
+  {
+    title: 'Retail & Promotions',
+    icon: Tag,
+    features: ['Schedule sale start/end dates', 'Track markdown loss', 'Promotions auto-applied at POS', 'Online + in-store + wholesale channels', 'Customer pricing tiers', 'Average discount tracking'],
+  },
+  {
+    title: 'Platform & Integrations',
+    icon: Zap,
+    features: ['Stripe billing & subscription management', 'QuickBooks accounting sync', 'Zapier (5,000+ app connections)', 'Email notifications via Resend', 'White-label multi-tenancy', 'Role-based access control (RBAC)', 'Module-based feature toggles', 'IT user provisioning (email optional)', 'Sentry error monitoring', 'Rate limiting & CSP security headers'],
   },
 ];
 
@@ -72,50 +101,39 @@ export default function DemoPage() {
   const handleLaunch = async (roleKey: string) => {
     setLoading(roleKey);
     setError(null);
-
     try {
-      // Seed data (idempotent — skips if already seeded)
       await fetch('/api/demo/seed', { method: 'POST' });
-
-      // Sign out first (in case another demo session is active)
       const supabase = createClient();
       await supabase.auth.signOut();
-
-      // Sign in as the selected role
       const creds = DEMO_CREDS[roleKey];
-      const { error: authErr } = await supabase.auth.signInWithPassword({
-        email: creds.email,
-        password: creds.password,
-      });
-
-      if (authErr) {
-        setError(`Login failed: ${authErr.message}`);
-        setLoading(null);
-        return;
-      }
-
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: creds.email, password: creds.password });
+      if (authErr) { setError(`Login failed: ${authErr.message}`); setLoading(null); return; }
       router.push(creds.redirect);
       router.refresh();
     } catch {
-      setError('Something went wrong. Please try again.');
+      setError('Something went wrong.');
       setLoading(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center pt-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
-            <Package className="h-8 w-8" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Phocas WMS — Live Demo</h1>
-          <p className="text-slate-400 mt-3 max-w-2xl mx-auto text-lg">
-            See how each role experiences the system. Pick a view below — no signup required.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Hero */}
+      <div className="text-center pt-12 pb-8 px-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
+          <Package className="h-8 w-8" />
         </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-white">Phocas WMS</h1>
+        <p className="text-slate-400 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
+        <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-400">
+          <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 80+ pages</span>
+          <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-green-400" /> 100% WMS compliant</span>
+          <span className="flex items-center gap-1"><Layers className="h-4 w-4 text-purple-400" /> 43 database tables</span>
+          <span className="flex items-center gap-1"><Target className="h-4 w-4 text-amber-400" /> $49-199/mo</span>
+        </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
         {/* Error */}
         {error && (
           <div className="max-w-md mx-auto bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-400 text-center">
@@ -123,64 +141,119 @@ export default function DemoPage() {
           </div>
         )}
 
-        {/* Role cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {ROLES.map((role) => {
-            const isLoading = loading === role.key;
-            return (
-              <Card
-                key={role.key}
-                className={`bg-slate-900/60 border-2 ${role.color} transition-all cursor-pointer backdrop-blur`}
-                onClick={() => !loading && handleLaunch(role.key)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className={`p-3 rounded-xl ${role.bgColor}`}>
-                      <role.icon className={`h-6 w-6 ${role.iconColor}`} />
+        {/* Try Demo — 4 role cards */}
+        <div>
+          <h2 className="text-xl font-bold text-white text-center mb-2">Try the Live Demo</h2>
+          <p className="text-slate-400 text-center mb-6 text-sm">Pick a role — each sees only what they need. No signup required.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {ROLES.map((role) => {
+              const isLoading = loading === role.key;
+              return (
+                <Card
+                  key={role.key}
+                  className={`bg-slate-900/60 border-2 ${role.color} transition-all cursor-pointer backdrop-blur`}
+                  onClick={() => !loading && handleLaunch(role.key)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className={`p-2.5 rounded-xl ${role.bgColor}`}>
+                        <role.icon className={`h-5 w-5 ${role.iconColor}`} />
+                      </div>
+                      {isLoading ? <Loader2 className="h-5 w-5 text-slate-400 animate-spin" /> : <ArrowRight className="h-5 w-5 text-slate-600" />}
                     </div>
-                    {isLoading ? (
-                      <Loader2 className="h-5 w-5 text-slate-400 animate-spin" />
-                    ) : (
-                      <ArrowRight className="h-5 w-5 text-slate-500" />
-                    )}
-                  </div>
-                  <CardTitle className="text-white text-lg mt-3">{role.title}</CardTitle>
-                  <CardDescription className="text-slate-400 text-xs uppercase tracking-wide">
-                    {role.subtitle}
-                  </CardDescription>
+                    <CardTitle className="text-white text-base mt-2">{role.title}</CardTitle>
+                    <CardDescription className="text-slate-500 text-[11px] uppercase tracking-wide">{role.subtitle}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-slate-400 leading-relaxed">{role.description}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Feature Specs */}
+        <div>
+          <h2 className="text-xl font-bold text-white text-center mb-2">Complete Feature Set</h2>
+          <p className="text-slate-400 text-center mb-6 text-sm">Everything included — no add-ons, no per-module pricing</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FEATURE_SECTIONS.map((section) => (
+              <Card key={section.title} className="bg-slate-900/40 border-slate-800 backdrop-blur">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <section.icon className="h-4 w-4 text-primary" />
+                    {section.title}
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-slate-300 leading-relaxed">{role.description}</p>
+                <CardContent className="pt-0">
+                  <ul className="space-y-1">
+                    {section.features.map((f, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-slate-400">
+                        <span className="text-green-500 mt-0.5 shrink-0">&#10003;</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
         {/* How it maps */}
         <Card className="bg-slate-900/40 border-slate-800 backdrop-blur">
           <CardHeader>
-            <CardTitle className="text-white text-base">How it maps to a real operation</CardTitle>
+            <CardTitle className="text-white text-base">How it maps to your operation</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
-              <div className="space-y-2">
-                <p><span className="text-blue-400 font-semibold">Management</span> — Store managers, operations directors, IT admins. They see everything: inventory levels, metrics, compliance, team performance, promotions, billing.</p>
-                <p><span className="text-green-400 font-semibold">Associates</span> — Floor workers with handheld scanners. They pick orders, restock shelves, count inventory, process receiving. Only see their task queue — no access to the full system.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300">
+              <div className="space-y-3">
+                <p><span className="text-blue-400 font-semibold">Management</span> — Store managers, ops directors, IT. Full visibility: inventory levels, metrics, compliance, team performance, promotions, billing. Think: the back office at Walmart corporate.</p>
+                <p><span className="text-green-400 font-semibold">Associates</span> — Zebra/Honeywell handheld scanners. Pick orders, restock shelves, count inventory, process receiving. Only see their task queue. Think: Walmart associate with a TC-52.</p>
               </div>
-              <div className="space-y-2">
-                <p><span className="text-amber-400 font-semibold">Cashiers</span> — Checkout registers. Scan items, see sale prices, process transactions. Inventory auto-decrements on sale. Simple, fast interface.</p>
-                <p><span className="text-purple-400 font-semibold">Customers</span> — B2B partner portal. Wholesale buyers browse your catalog, see their negotiated pricing, place orders, and track shipments. Self-service.</p>
+              <div className="space-y-3">
+                <p><span className="text-amber-400 font-semibold">Cashiers</span> — Register terminal. Scan items, process payments, apply discounts. Inventory auto-decrements. Think: the self-checkout or staffed lane at Target.</p>
+                <p><span className="text-purple-400 font-semibold">Customers</span> — B2B wholesale portal. Partners browse your catalog at their negotiated pricing, place orders, track shipments. Think: how Walgreens orders from McKesson.</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Competitive pricing */}
+        <Card className="bg-slate-900/40 border-slate-800 backdrop-blur">
+          <CardHeader>
+            <CardTitle className="text-white text-base">Competitive Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <th className="text-left text-slate-400 py-2 text-xs">System</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">Price</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">WMS</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">POS</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">Scanner</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">Portal</th>
+                    <th className="text-center text-slate-400 py-2 text-xs">Compliance</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-300">
+                  <tr className="border-b border-slate-800"><td className="py-2">Fishbowl</td><td className="text-center">$329+</td><td className="text-center">70%</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td><td className="text-center text-red-400">&#10007;</td></tr>
+                  <tr className="border-b border-slate-800"><td className="py-2">Cin7</td><td className="text-center">$349+</td><td className="text-center">65%</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-amber-400">Partial</td></tr>
+                  <tr className="border-b border-slate-800"><td className="py-2">NetSuite</td><td className="text-center">$999+</td><td className="text-center">85%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td></tr>
+                  <tr className="border-b border-slate-800"><td className="py-2">SAP EWM</td><td className="text-center">$1,500+</td><td className="text-center">95%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
+                  <tr className="bg-green-950/30 rounded"><td className="py-2 font-bold text-white">Phocas WMS</td><td className="text-center font-bold text-green-400">$49-199</td><td className="text-center text-green-400 font-bold">100%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Footer */}
-        <div className="text-center pb-8">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-            ← Back to Phocas WMS
-          </a>
+        <div className="text-center">
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-300 transition-colors">← Back to Phocas WMS</a>
           <p className="text-xs text-slate-600 mt-2">Demo data is shared and resets periodically.</p>
         </div>
       </div>
