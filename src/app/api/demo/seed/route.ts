@@ -27,9 +27,13 @@ export async function POST() {
 
     if (ex && ex.length > 0) {
       const tid = ex[0].tenant_id;
-      const { count: lotCount } = await supabase.from('lots').select('*', { count: 'exact', head: true }).eq('tenant_id', tid);
-      const { count: binCount } = await supabase.from('bins').select('*', { count: 'exact', head: true }).eq('tenant_id', tid);
-      if (lotCount && lotCount >= 20 && binCount && binCount >= 10) {
+      const [lotR, binR, biR, taskR] = await Promise.all([
+        supabase.from('lots').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+        supabase.from('bins').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+        supabase.from('bin_inventory').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+        supabase.from('scan_tasks').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+      ]);
+      if (lotR.count && lotR.count >= 20 && binR.count && binR.count >= 10 && biR.count && biR.count >= 10 && taskR.count && taskR.count >= 5) {
         return NextResponse.json({ status: 'ready' });
       }
       // Incomplete — add missing data
