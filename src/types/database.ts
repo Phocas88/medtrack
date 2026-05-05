@@ -87,6 +87,65 @@ export interface Promotion {
   product?: Product;
 }
 
+// Work Orders / Service Tickets
+export type WorkOrderStatus = 'draft' | 'scheduled' | 'in_progress' | 'completed' | 'invoiced' | 'cancelled';
+export type WorkOrderLineType = 'part' | 'service';
+
+export interface ServiceItem {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  default_price: number;
+  estimated_minutes: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  tenant_id: string;
+  order_number: string;
+  customer_id: string | null;
+  customer_name: string | null;
+  status: WorkOrderStatus;
+  priority: number;
+  description: string | null;
+  asset_info: string | null; // vehicle, equipment, serial — flexible text
+  assigned_to: string | null;
+  scheduled_date: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  parts_total: number;
+  labor_total: number;
+  tax: number;
+  grand_total: number;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  customer?: Customer;
+  assigned_user?: User;
+  lines?: WorkOrderLine[];
+}
+
+export interface WorkOrderLine {
+  id: string;
+  tenant_id: string;
+  work_order_id: string;
+  line_type: WorkOrderLineType;
+  product_id: string | null;
+  service_id: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  created_at: string;
+  product?: Product;
+  service?: ServiceItem;
+}
+
 export interface Supplier {
   id: string;
   tenant_id: string;

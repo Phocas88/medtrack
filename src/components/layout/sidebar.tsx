@@ -109,6 +109,8 @@ const navSections: NavSection[] = [
   {
     title: "Orders & Fulfillment",
     items: [
+      { label: "Work Orders", href: "/work-orders", icon: ClipboardList },
+      { label: "Services", href: "/services", icon: Boxes },
       { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
       { label: "Receive", href: "/receive", icon: PackagePlus },
       { label: "Put-Away", href: "/put-away", icon: PackageOpen },
