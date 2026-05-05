@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 
 // ── Demo credentials for each role ──
 const DEMO_USERS = {
-  manager: { email: 'demo@phocas-wms.com', password: 'demo1234!', name: 'Alex Morgan', role: 'admin' },
-  associate: { email: 'associate@phocas-wms.com', password: 'demo1234!', name: 'Maria Santos', role: 'staff' },
-  cashier: { email: 'cashier@phocas-wms.com', password: 'demo1234!', name: 'James Cooper', role: 'staff' },
+  manager: { email: 'demo@stokora-wms.com', password: 'demo1234!', name: 'Alex Morgan', role: 'admin' },
+  associate: { email: 'associate@stokora-wms.com', password: 'demo1234!', name: 'Maria Santos', role: 'staff' },
+  cashier: { email: 'cashier@stokora-wms.com', password: 'demo1234!', name: 'James Cooper', role: 'staff' },
   customer: { email: 'buyer@metrogrocery.com', password: 'demo1234!', name: 'Metro Grocery Purchasing', role: 'customer' },
 };
 

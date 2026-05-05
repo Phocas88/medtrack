@@ -3,11 +3,11 @@
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Package, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function POSShell({ children }: { children: React.ReactNode }) {
-  const { user, tenantName, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +20,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-950 text-white">
         <div className="animate-pulse flex flex-col items-center gap-3">
-          <Package className="h-10 w-10" />
+          <img src="/stokora-logo.png" alt="Loading" className="h-10 brightness-0 invert" />
           <span className="text-sm">Loading register...</span>
         </div>
       </div>
@@ -31,10 +31,9 @@ function POSShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-screen bg-background">
       {/* Register top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-slate-950 text-white shrink-0">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          <span className="font-semibold text-sm">{tenantName || 'Phocas WMS'}</span>
-          <span className="text-xs text-slate-500 ml-2">Point of Sale</span>
+        <div className="flex items-center gap-3">
+          <img src="/stokora-logo.png" alt="Stokora WMS" className="h-6 brightness-0 invert" />
+          <span className="text-xs text-slate-500">Point of Sale</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-slate-400">

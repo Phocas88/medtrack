@@ -3,13 +3,13 @@
 import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { Package, LogOut, Wifi, WifiOff, ClipboardList, Search, BarChart3 } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, ClipboardList, Search, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 function ScannerShell({ children }: { children: React.ReactNode }) {
-  const { user, tenantName, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -23,7 +23,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-950 text-white">
         <div className="animate-pulse flex flex-col items-center gap-3">
-          <Package className="h-10 w-10" />
+          <img src="/stokora-logo.png" alt="Loading" className="h-8 brightness-0 invert" />
           <span className="text-sm">Loading scanner...</span>
         </div>
       </div>
@@ -41,8 +41,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
       {/* Minimal top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-slate-950 text-white shrink-0">
         <div className="flex items-center gap-2">
-          <Package className="h-5 w-5" />
-          <span className="font-semibold text-sm">{tenantName || 'Phocas WMS'}</span>
+          <img src="/stokora-logo.png" alt="Stokora WMS" className="h-6 brightness-0 invert" />
         </div>
         <div className="flex items-center gap-3">
           <OnlineIndicator />

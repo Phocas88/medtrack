@@ -1,6 +1,6 @@
 {
-  "name": "Phocas WMS",
-  "short_name": "Phocas WMS",
+  "name": "Stokora WMS",
+  "short_name": "Stokora WMS",
   "description": "Warehouse Management System",
   "start_url": "/scanner",
   "display": "standalone",

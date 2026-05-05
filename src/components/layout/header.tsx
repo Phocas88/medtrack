@@ -91,7 +91,7 @@ function getPageTitle(pathname: string): string {
   for (const [route, title] of Object.entries(pageTitles)) {
     if (pathname.startsWith(route + "/")) return title
   }
-  return "Phocas WMS"
+  return "Stokora WMS"
 }
 
 interface HeaderProps {

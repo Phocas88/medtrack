@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Phocas WMS | Warehouse Management System",
+  title: "Stokora WMS | Warehouse Management System",
   description: "Complete inventory management for every industry. Lot tracking, bin management, mobile scanning, compliance, and more. Start free.",
 }
 

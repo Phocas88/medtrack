@@ -120,10 +120,8 @@ export default function DemoPage() {
     <div className="min-h-screen bg-white">
       {/* Hero */}
       <div className="text-center pt-12 pb-8 px-4">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
-          <Package className="h-8 w-8" />
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Phocas WMS</h1>
+        <img src="/stokora-logo.png" alt="Stokora WMS" className="h-16 mx-auto mb-4" />
+        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Stokora WMS</h1>
         <p className="text-slate-500 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
         <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-500">
           <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 80+ pages</span>
@@ -244,7 +242,7 @@ export default function DemoPage() {
                   <tr className="border-b border-slate-100"><td className="py-2">Cin7</td><td className="text-center">$349+</td><td className="text-center">65%</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td><td className="text-center text-amber-400">Partial</td></tr>
                   <tr className="border-b border-slate-100"><td className="py-2">NetSuite</td><td className="text-center">$999+</td><td className="text-center">85%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-amber-400">Partial</td></tr>
                   <tr className="border-b border-slate-100"><td className="py-2">SAP EWM</td><td className="text-center">$1,500+</td><td className="text-center">95%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
-                  <tr className="bg-green-50 rounded"><td className="py-2 font-bold text-slate-900">Phocas WMS</td><td className="text-center font-bold text-green-400">$49-199</td><td className="text-center text-green-400 font-bold">100%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
+                  <tr className="bg-green-50 rounded"><td className="py-2 font-bold text-slate-900">Stokora WMS</td><td className="text-center font-bold text-green-400">$49-199</td><td className="text-center text-green-400 font-bold">100%</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td><td className="text-center text-green-400">&#10003;</td></tr>
                 </tbody>
               </table>
             </div>
@@ -253,7 +251,7 @@ export default function DemoPage() {
 
         {/* Footer */}
         <div className="text-center">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">← Back to Phocas WMS</a>
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">← Back to Stokora WMS</a>
           <p className="text-xs text-slate-500 mt-2">Demo data is shared and resets periodically.</p>
         </div>
       </div>

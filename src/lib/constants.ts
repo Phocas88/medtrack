@@ -1,13 +1,13 @@
 // App branding
-export const APP_NAME = 'Phocas WMS';
-export const APP_FALLBACK_NAME = 'TrackFlow';
+export const APP_NAME = 'Stokora WMS';
+export const APP_FALLBACK_NAME = 'Stokora WMS';
 
 // localStorage keys
 export const STORAGE_KEYS = {
-  FEATURES: 'phocas_features',
-  ONBOARDING: 'phocas_onboarding',
-  RECON_PREFIX: 'phocas_recon_',
-  CART: 'phocas_cart',
+  FEATURES: 'stokora_features',
+  ONBOARDING: 'stokora_onboarding',
+  RECON_PREFIX: 'stokora_recon_',
+  CART: 'stokora_cart',
 } as const;
 
 // API endpoints

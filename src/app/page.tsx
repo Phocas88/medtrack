@@ -23,11 +23,8 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
-              <Package className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">Phocas WMS</span>
+          <div className="flex items-center gap-2">
+            <img src="/stokora-logo.png" alt="Stokora WMS" className="h-10" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition">Features</a>
@@ -374,7 +371,7 @@ export default function LandingPage() {
               <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-900 text-white">
                 <Package className="h-3.5 w-3.5" />
               </div>
-              <span className="font-semibold">Phocas WMS</span>
+              <span className="font-semibold">Stokora WMS</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <a href="#features" className="hover:text-gray-900 transition">Features</a>
@@ -382,7 +379,7 @@ export default function LandingPage() {
               <Link href="/auth/login" className="hover:text-gray-900 transition">Sign In</Link>
             </div>
             <p className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} Phocas WMS. All rights reserved.
+              &copy; {new Date().getFullYear()} Stokora WMS. All rights reserved.
             </p>
           </div>
         </div>

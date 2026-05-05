@@ -287,7 +287,7 @@ function useFavorites() {
 
 function SidebarContent() {
   const pathname = usePathname()
-  const { user, tenantName, enabledModules, role, signOut } = useAuth()
+  const { user, enabledModules, role, signOut } = useAuth()
   const { favorites, toggle: toggleFavorite } = useFavorites()
 
   const initials = user?.full_name
@@ -310,11 +310,8 @@ function SidebarContent() {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Package className="h-4 w-4" />
-        </div>
-        <span className="text-lg font-semibold tracking-tight">{tenantName || 'Phocas WMS'}</span>
+      <div className="flex h-14 items-center px-4">
+        <img src="/stokora-logo.png" alt="Stokora WMS" className="h-8" />
       </div>
 
       {/* Navigation */}

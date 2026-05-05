@@ -239,7 +239,7 @@ export default function ZapierIntegrationPage() {
           Zapier Integration
         </h2>
         <p className="text-muted-foreground mt-1">
-          Connect TrackFlow to 6,000+ apps via Zapier webhooks.
+          Connect Stokora to 6,000+ apps via Zapier webhooks.
         </p>
       </div>
 
@@ -408,7 +408,7 @@ export default function ZapierIntegrationPage() {
               Supported Triggers
             </CardTitle>
             <CardDescription>
-              Events that fire from TrackFlow to Zapier.
+              Events that fire from Stokora to Zapier.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -435,7 +435,7 @@ export default function ZapierIntegrationPage() {
               Supported Actions
             </CardTitle>
             <CardDescription>
-              Actions that Zapier can perform in TrackFlow.
+              Actions that Zapier can perform in Stokora.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -464,7 +464,7 @@ export default function ZapierIntegrationPage() {
             Setup Instructions
           </CardTitle>
           <CardDescription>
-            Step-by-step guide to connect TrackFlow with Zapier.
+            Step-by-step guide to connect Stokora with Zapier.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -488,7 +488,7 @@ export default function ZapierIntegrationPage() {
             <li className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
               <div>
-                <p className="font-medium">Set Up a Trigger (TrackFlow &rarr; other app)</p>
+                <p className="font-medium">Set Up a Trigger (Stokora &rarr; other app)</p>
                 <p className="text-muted-foreground">
                   Choose &quot;Webhooks by Zapier&quot; as the trigger, select &quot;Retrieve Poll&quot;, and paste the <strong>Trigger URL</strong> above. Add header <code>x-api-key</code> with your API key.
                 </p>
@@ -497,7 +497,7 @@ export default function ZapierIntegrationPage() {
             <li className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">4</span>
               <div>
-                <p className="font-medium">Set Up an Action (other app &rarr; TrackFlow)</p>
+                <p className="font-medium">Set Up an Action (other app &rarr; Stokora)</p>
                 <p className="text-muted-foreground">
                   Choose &quot;Webhooks by Zapier&quot; as the action, select &quot;POST&quot;, and paste the <strong>Action URL</strong> above.
                   Set the body to JSON with <code>action</code>, <code>data</code>, and <code>api_key</code> fields.

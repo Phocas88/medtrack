@@ -4,7 +4,7 @@ test.describe('SEO & Meta', () => {
   test('landing page has proper meta tags', async ({ page }) => {
     await page.goto('/');
     const title = await page.title();
-    expect(title).toContain('Phocas WMS');
+    expect(title).toContain('Stokora WMS');
 
     const description = await page.locator('meta[name="description"]').getAttribute('content');
     expect(description).toBeTruthy();
