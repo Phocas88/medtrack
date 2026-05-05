@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Package, LogOut, Loader2 } from 'lucide-react';
+import { LogOut, Loader2 } from 'lucide-react';
+import { StokoraLogo } from '@/components/ui/stokora-logo';
 import { PortalContext, type CustomerInfo } from './portal-context';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -78,9 +79,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return (
       <div className="flex min-h-screen items-center justify-center bg-white px-4">
         <div className="text-center space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-            <Package className="h-6 w-6" />
-          </div>
+          <StokoraLogo variant="mark" theme="light" className="h-12 w-12 mx-auto" />
           <h1 className="text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground max-w-md">
             No customer account is associated with your email address. Please contact your supplier to request portal access.
@@ -99,11 +98,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         {/* Header */}
         <header className="sticky top-0 z-50 border-b bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Package className="h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <StokoraLogo variant="mark" theme="light" className="h-7 w-7" />
+              <div>
+                <StokoraLogo variant="text" theme="light" className="text-base" />
+                <p className="text-[10px] text-muted-foreground -mt-0.5">Customer Portal</p>
               </div>
-              <span className="text-lg font-semibold">Customer Portal</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline">

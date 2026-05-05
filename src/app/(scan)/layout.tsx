@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { LogOut, Wifi, WifiOff, ClipboardList, Search, BarChart3 } from 'lucide-react';
+import { StokoraLogo } from '@/components/ui/stokora-logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-950 text-white">
         <div className="animate-pulse flex flex-col items-center gap-3">
-          <img src="/stokora-logo.png" alt="Loading" className="h-8 brightness-0 invert" />
+          <StokoraLogo theme="dark" className="scale-75" />
           <span className="text-sm">Loading scanner...</span>
         </div>
       </div>
@@ -41,7 +42,8 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
       {/* Minimal top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-slate-950 text-white shrink-0">
         <div className="flex items-center gap-2">
-          <img src="/stokora-logo.png" alt="Stokora WMS" className="h-6 brightness-0 invert" />
+          <StokoraLogo variant="mark" theme="dark" className="h-5 w-5" />
+          <StokoraLogo variant="text" theme="dark" className="text-sm" />
         </div>
         <div className="flex items-center gap-3">
           <OnlineIndicator />

@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { StokoraLogo } from '@/components/ui/stokora-logo';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -54,7 +55,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/stokora-logo.png" alt="Stokora WMS" className="h-10 mx-auto mb-2" />
+          <div className="flex justify-center mb-2"><StokoraLogo theme="light" /></div>
           <CardTitle className="text-2xl font-bold">Stokora WMS</CardTitle>
           <CardDescription>
             Warehouse Management System. Sign in to your account.

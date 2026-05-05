@@ -68,6 +68,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { StokoraLogo } from "@/components/ui/stokora-logo"
 import {
   Collapsible,
   CollapsibleContent,
@@ -311,7 +312,7 @@ function SidebarContent() {
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-14 items-center px-4">
-        <img src="/stokora-logo.png" alt="Stokora WMS" className="h-8" />
+        <StokoraLogo theme="light" />
       </div>
 
       {/* Navigation */}
