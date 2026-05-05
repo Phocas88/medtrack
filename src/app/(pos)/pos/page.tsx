@@ -34,15 +34,31 @@ import {
   Clock,
   User,
   DollarSign,
+  ClipboardList,
+  Wrench,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import type { Product } from '@/types/database';
 
 interface CartItem {
-  product: Product;
+  product: Product | null; // null for service/labor lines
+  productId: string | null;
+  label: string;
+  sku: string;
+  lineType: 'product' | 'service';
   quantity: number;
   unitPrice: number;
-  discount: number; // per-item discount amount
+  originalPrice: number;
+  discount: number;
+}
+
+interface WOResult {
+  id: string;
+  order_number: string;
+  customer_name: string | null;
+  asset_info: string | null;
+  status: string;
+  grand_total: number;
 }
 
 type PaymentMethod = 'card' | 'cash' | 'check';
@@ -63,6 +79,10 @@ export default function POSRegisterPage() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [searchMode, setSearchMode] = useState(false);
   const [transactionCount, setTransactionCount] = useState(0);
+  const [woDialogOpen, setWoDialogOpen] = useState(false);
+  const [woSearch, setWoSearch] = useState('');
+  const [woResults, setWoResults] = useState<WOResult[]>([]);
+  const [woLoading, setWoLoading] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
   const TAX_RATE = 0.0825; // 8.25%
@@ -106,13 +126,16 @@ export default function POSRegisterPage() {
     const unitPrice = promos && promos.length > 0 ? promos[0].sale_price : product.price;
 
     setCart((prev) => {
-      const idx = prev.findIndex((i) => i.product.id === product.id);
+      const idx = prev.findIndex((i) => i.productId === product.id && i.lineType === 'product');
       if (idx >= 0) {
         const up = [...prev];
         up[idx] = { ...up[idx], quantity: up[idx].quantity + 1 };
         return up;
       }
-      return [...prev, { product, quantity: 1, unitPrice, discount: 0 }];
+      return [...prev, {
+        product, productId: product.id, label: product.name, sku: product.sku,
+        lineType: 'product', quantity: 1, unitPrice, originalPrice: product.price, discount: 0,
+      }];
     });
     toast.success(product.name);
   }, [tenantId]);
@@ -140,12 +163,62 @@ export default function POSRegisterPage() {
     setSearchResults(data || []);
   };
 
-  const updateQty = (pid: string, delta: number) => {
-    setCart((prev) => prev.map((i) => {
-      if (i.product.id !== pid) return i;
-      const q = i.quantity + delta;
-      return q <= 0 ? null as unknown as CartItem : { ...i, quantity: q };
+  const updateQty = (idx: number, delta: number) => {
+    setCart((prev) => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const q = item.quantity + delta;
+      return q <= 0 ? null as unknown as CartItem : { ...item, quantity: q };
     }).filter(Boolean));
+  };
+
+  // ── Work Order Lookup ──
+  const searchWorkOrders = async () => {
+    if (!tenantId || !woSearch.trim()) return;
+    setWoLoading(true);
+    const supabase = createClient();
+    const q = woSearch.trim();
+    const { data } = await supabase
+      .from('work_orders')
+      .select('id, order_number, customer_name, asset_info, status, grand_total')
+      .eq('tenant_id', tenantId)
+      .in('status', ['completed', 'in_progress'])
+      .or(`order_number.ilike.%${q}%,customer_name.ilike.%${q}%`)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    setWoResults((data as WOResult[]) || []);
+    setWoLoading(false);
+  };
+
+  const loadWorkOrderIntoCart = async (woId: string) => {
+    if (!tenantId) return;
+    const supabase = createClient();
+
+    // Get work order
+    const { data: wo } = await supabase.from('work_orders').select('*').eq('id', woId).single();
+    if (!wo) { toast.error('Work order not found'); return; }
+
+    // Get lines
+    const { data: lines } = await supabase.from('work_order_lines').select('*').eq('work_order_id', woId);
+
+    // Add each line to cart
+    const newItems: CartItem[] = (lines || []).map((l: Record<string, unknown>) => ({
+      product: null,
+      productId: (l.product_id as string) || null,
+      label: l.description as string,
+      sku: l.line_type === 'service' ? 'LABOR' : (l.product_id as string)?.slice(0, 8) || 'PART',
+      lineType: (l.line_type as string) === 'service' ? 'service' as const : 'product' as const,
+      quantity: l.quantity as number,
+      unitPrice: l.unit_price as number,
+      originalPrice: l.unit_price as number,
+      discount: 0,
+    }));
+
+    setCart(newItems);
+    setCustomerName(wo.customer_name || '');
+    setWoDialogOpen(false);
+    setWoSearch('');
+    setWoResults([]);
+    toast.success(`Loaded ${wo.order_number} — ${newItems.length} lines`);
   };
 
   const subtotal = cart.reduce((s, i) => s + (i.unitPrice - i.discount) * i.quantity, 0);
@@ -189,20 +262,51 @@ export default function POSRegisterPage() {
     const supabase = createClient();
     const ref = `POS-${Date.now().toString(36).toUpperCase()}`;
 
+    // Process card payment via Stripe if applicable
+    if (paymentMethod === 'card') {
+      try {
+        const chargeRes = await fetch('/api/pos/charge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: total,
+            description: `POS Sale ${ref}`,
+            metadata: { reference: ref, customer: customerName || 'Walk-in', items: cart.length },
+          }),
+        });
+        const chargeData = await chargeRes.json();
+        if (!chargeRes.ok) {
+          toast.error(chargeData.error || 'Card payment failed');
+          setProcessing(false);
+          return;
+        }
+        if (chargeData.demo) {
+          toast.info('Demo mode — card not actually charged');
+        }
+      } catch {
+        toast.error('Payment processing failed');
+        setProcessing(false);
+        return;
+      }
+    }
+
+    // Record stock movements for product lines
     for (const item of cart) {
-      await supabase.from('stock_movements').insert({
-        tenant_id: tenantId, product_id: item.product.id, user_id: user.id,
-        quantity: -item.quantity, movement_type: 'ship', reason: 'POS in-store sale',
-        reference_number: ref,
-        metadata: {
-          channel: 'in_store', payment_method: paymentMethod,
-          unit_price: item.unitPrice, item_discount: item.discount,
-          line_total: (item.unitPrice - item.discount) * item.quantity,
-          customer_name: customerName || null,
-          order_discount_pct: orderDiscount,
-          tax_rate: TAX_RATE,
-        },
-      });
+      if (item.lineType === 'product' && item.productId) {
+        await supabase.from('stock_movements').insert({
+          tenant_id: tenantId, product_id: item.productId, user_id: user.id,
+          quantity: -item.quantity, movement_type: 'ship', reason: 'POS in-store sale',
+          reference_number: ref,
+          metadata: {
+            channel: 'in_store', payment_method: paymentMethod,
+            unit_price: item.unitPrice, item_discount: item.discount,
+            line_total: (item.unitPrice - item.discount) * item.quantity,
+            customer_name: customerName || null,
+            order_discount_pct: orderDiscount,
+            tax_rate: TAX_RATE,
+          },
+        });
+      }
     }
 
     setProcessing(false);
@@ -303,13 +407,14 @@ export default function POSRegisterPage() {
 
           {/* Cart line items */}
           {cart.map((item, idx) => (
-            <div key={item.product.id} className="flex items-center gap-2 p-2 rounded-lg border bg-card">
+            <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-card">
               <span className="text-xs text-muted-foreground w-6 text-right shrink-0">{idx + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{item.product.name}</p>
+                <p className="text-sm font-medium truncate">{item.label}</p>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-mono">{item.product.sku}</span>
-                  {item.unitPrice < item.product.price && (
+                  {item.lineType === 'service' && <Badge variant="outline" className="text-[9px] px-1 py-0"><Wrench className="h-2 w-2 mr-0.5" />Labor</Badge>}
+                  <span className="text-xs text-muted-foreground font-mono">{item.sku}</span>
+                  {item.unitPrice < item.originalPrice && (
                     <Badge className="bg-red-500 text-white text-[9px] px-1 py-0">SALE</Badge>
                   )}
                   {item.discount > 0 && (
@@ -318,25 +423,37 @@ export default function POSRegisterPage() {
                 </div>
               </div>
               <div className="flex items-center gap-0.5">
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => updateQty(item.product.id, -1)}>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => updateQty(idx, -1)}>
                   <Minus className="h-3 w-3" />
                 </Button>
                 <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => updateQty(item.product.id, 1)}>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => updateQty(idx, 1)}>
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
               <p className="text-sm font-bold w-20 text-right shrink-0">
                 {formatCurrency((item.unitPrice - item.discount) * item.quantity)}
               </p>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive shrink-0" onClick={() => setCart((p) => p.filter((i) => i.product.id !== item.product.id))}>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive shrink-0" onClick={() => setCart((p) => p.filter((_, i) => i !== idx))}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           ))}
         </div>
 
-        {/* Bottom actions bar */}
+        {/* Work order + actions bar */}
+        {cart.length === 0 && (
+          <div className="border-t p-2 flex gap-2 bg-muted/30">
+            <Button variant="outline" size="sm" className="h-9" onClick={() => setWoDialogOpen(true)}>
+              <ClipboardList className="h-3.5 w-3.5 mr-1" /> Ring Up Work Order
+            </Button>
+            {heldTransactions.length > 0 && (
+              <Button variant="outline" size="sm" className="h-9" onClick={() => recallTransaction(heldTransactions[heldTransactions.length - 1].id)}>
+                <Play className="h-3.5 w-3.5 mr-1" /> Recall ({heldTransactions.length})
+              </Button>
+            )}
+          </div>
+        )}
         {cart.length > 0 && (
           <div className="border-t p-2 flex gap-2 bg-muted/30">
             <Button variant="outline" size="sm" className="h-9" onClick={holdTransaction}>
@@ -488,6 +605,51 @@ export default function POSRegisterPage() {
             <Button variant="outline" onClick={() => setDiscountDialogOpen(false)}>Cancel</Button>
             <Button onClick={applyDiscount}>Apply</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Work Order lookup dialog */}
+      <Dialog open={woDialogOpen} onOpenChange={setWoDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Ring Up Work Order</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex gap-2">
+              <Input
+                value={woSearch}
+                onChange={(e) => setWoSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') searchWorkOrders(); }}
+                placeholder="Search by WO# or customer name..."
+                autoFocus
+              />
+              <Button onClick={searchWorkOrders} disabled={woLoading}>
+                {woLoading ? '...' : 'Search'}
+              </Button>
+            </div>
+            {woResults.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {woResults.map((wo) => (
+                  <div
+                    key={wo.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                    onClick={() => loadWorkOrderIntoCart(wo.id)}
+                  >
+                    <div>
+                      <p className="font-mono font-medium text-sm">{wo.order_number}</p>
+                      <p className="text-xs text-muted-foreground">{wo.customer_name || 'No customer'}</p>
+                      {wo.asset_info && <p className="text-xs text-muted-foreground">{wo.asset_info}</p>}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{formatCurrency(wo.grand_total)}</p>
+                      <Badge variant="outline" className="text-[10px]">{wo.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {woResults.length === 0 && woSearch && !woLoading && (
+              <p className="text-sm text-muted-foreground text-center py-4">No work orders found</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
