@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Download, PackageCheck, Printer } from 'lucide-react';
+import { Plus, Download, PackageCheck, Printer, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { generatePurchaseOrderPDF } from '@/lib/pdf';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { exportToCSV } from '@/lib/csv';
@@ -225,6 +226,32 @@ export default function PurchaseOrdersPage() {
             >
               <Printer className="h-4 w-4" />
             </Button>
+            {['draft', 'approved', 'pending_approval'].includes(row.status) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  toast.loading('Sending to vendor...');
+                  const res = await fetch('/api/po/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ po_id: row.id }),
+                  });
+                  toast.dismiss();
+                  const data = await res.json();
+                  if (res.ok) {
+                    toast.success(`PO sent to ${data.sent_to}`);
+                    loadOrders();
+                  } else {
+                    toast.error(data.error || 'Failed to send');
+                  }
+                }}
+              >
+                <Send className="h-4 w-4 mr-1" />
+                Send
+              </Button>
+            )}
             {canReceive && (
               <Button
                 variant="ghost"

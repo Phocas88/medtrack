@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
-import { AlertTriangle, ShoppingCart, Package, TrendingDown } from 'lucide-react';
+import { AlertTriangle, ShoppingCart, Package, TrendingDown, Zap } from 'lucide-react';
 import { formatNumber, formatCurrency } from '@/lib/format';
 import { exportToCSV } from '@/lib/csv';
 import { toast } from 'sonner';
@@ -219,6 +219,81 @@ export default function ReorderPage() {
     setItems((prev) => prev.map((item) => ({ ...item, selected: false })));
   }
 
+  // Auto-generate POs for ALL items and send to vendors
+  async function autoGenerateAndSend() {
+    if (!tenantId || !user || items.length === 0) return;
+    setGenerating(true);
+
+    // Select all items
+    const allItems = items.filter((i) => i.supplier);
+    if (allItems.length === 0) {
+      toast.error('No items with assigned suppliers');
+      setGenerating(false);
+      return;
+    }
+
+    const supabase = createClient();
+
+    // Group by supplier
+    const bySupplier = new Map<string, ReorderItem[]>();
+    for (const item of allItems) {
+      const sid = item.supplier!.id;
+      const existing = bySupplier.get(sid) || [];
+      existing.push(item);
+      bySupplier.set(sid, existing);
+    }
+
+    let created = 0;
+    let sent = 0;
+
+    for (const [supplierId, supplierItems] of Array.from(bySupplier.entries())) {
+      const poNumber = `PO-AUTO-${Date.now().toString(36).toUpperCase()}-${created + 1}`;
+      const totalAmount = supplierItems.reduce((sum, item) => sum + item.suggestedQty * item.product.cost, 0);
+
+      const { data: po, error } = await supabase
+        .from('purchase_orders')
+        .insert({
+          tenant_id: tenantId,
+          po_number: poNumber,
+          supplier_id: supplierId,
+          status: 'draft',
+          order_date: new Date().toISOString().split('T')[0],
+          expected_date: new Date(Date.now() + (supplierItems[0].leadTimeDays || 7) * 86400000).toISOString().split('T')[0],
+          total_amount: totalAmount,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error || !po) continue;
+
+      await supabase.from('po_lines').insert(
+        supplierItems.map((item) => ({
+          tenant_id: tenantId,
+          po_id: po.id,
+          product_id: item.product.id,
+          quantity_ordered: item.suggestedQty,
+          quantity_received: 0,
+          unit_cost: item.product.cost,
+        }))
+      );
+
+      created++;
+
+      // Send to vendor
+      const sendRes = await fetch('/api/po/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ po_id: po.id }),
+      });
+      if (sendRes.ok) sent++;
+    }
+
+    toast.success(`Created ${created} POs, sent ${sent} to vendors`);
+    setGenerating(false);
+    setItems((prev) => prev.map((item) => ({ ...item, selected: false })));
+  }
+
   const selectedCount = items.filter((i) => i.selected).length;
   const criticalCount = items.filter((i) => i.currentStock === 0).length;
 
@@ -310,7 +385,16 @@ export default function ReorderPage() {
         title="Reorder Management"
         description="Products below reorder point that need restocking"
         actions={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="default"
+              onClick={autoGenerateAndSend}
+              disabled={items.length === 0 || generating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              {generating ? 'Processing...' : `Auto-Order All (${items.length})`}
+            </Button>
             <Button
               variant="outline"
               onClick={() =>
