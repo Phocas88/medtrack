@@ -129,8 +129,8 @@ export default function FindItemPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Search bar */}
-      <div className="bg-slate-50 dark:bg-slate-900 px-4 py-4 border-b shrink-0">
-        <p className="text-lg font-bold mb-2">Find Item</p>
+      <div className="bg-slate-50 dark:bg-slate-900 px-3 py-2.5 border-b shrink-0">
+        <p className="text-sm font-bold mb-1.5">Find Item</p>
         <div className="flex gap-2">
           <Input
             ref={inputRef}
@@ -138,17 +138,17 @@ export default function FindItemPage() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
             placeholder="Scan barcode or type SKU / name..."
-            className="h-14 text-lg font-mono"
+            className="h-11 text-base font-mono"
             autoFocus
           />
-          <Button onClick={handleSearch} disabled={searching} className="h-14 w-14 shrink-0" size="lg">
+          <Button onClick={handleSearch} disabled={searching} className="h-11 w-11 shrink-0" size="lg">
             <ScanBarcode className="h-6 w-6" />
           </Button>
         </div>
       </div>
 
       {/* Result */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {searching && (
           <div className="text-center py-12 text-muted-foreground">Searching...</div>
         )}
@@ -168,7 +168,7 @@ export default function FindItemPage() {
               <CardContent className="p-4">
                 <div className="flex gap-4">
                   {/* Product image */}
-                  <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                     {result.product.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -181,7 +181,7 @@ export default function FindItemPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
-                    <p className="font-bold text-lg leading-tight">{result.product.name}</p>
+                    <p className="font-bold text-sm leading-tight">{result.product.name}</p>
                     <p className="text-sm text-muted-foreground font-mono">{result.product.sku}</p>
                     {result.product.category && (
                       <Badge variant="outline" className="text-xs">{result.product.category}</Badge>
@@ -210,7 +210,7 @@ export default function FindItemPage() {
                     <Navigation className="h-8 w-8 text-blue-500 shrink-0" />
                     <div>
                       {result.product.aisle && (
-                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
                           Aisle {result.product.aisle}
                         </p>
                       )}

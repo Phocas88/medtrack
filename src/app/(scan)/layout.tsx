@@ -63,7 +63,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Bottom tab bar */}
+      {/* Bottom tab bar — compact for small devices */}
       <nav className="flex items-center border-t bg-background shrink-0 safe-area-pb">
         {tabs.map((tab) => {
           const isActive = pathname === tab.href;
@@ -72,11 +72,11 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors',
+                'flex-1 flex flex-col items-center gap-0 py-1.5 text-[10px] font-medium transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
-              <tab.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+              <tab.icon className={cn('h-4 w-4', isActive && 'text-primary')} />
               {tab.label}
             </Link>
           );

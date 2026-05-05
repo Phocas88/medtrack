@@ -496,11 +496,11 @@ export default function ScannerAppPage() {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {/* Scan input */}
           {!showSubmit && (
             <div className="space-y-2">
-              <p className="text-base font-semibold">{prompt}</p>
+              <p className="text-sm font-semibold">{prompt}</p>
               <div className="flex gap-2">
                 <Input
                   ref={scanInputRef}
@@ -508,12 +508,12 @@ export default function ScannerAppPage() {
                   onChange={(e) => setScanInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleScan(); }}
                   placeholder={currentStep === 2 ? 'Enter quantity...' : 'Scan barcode...'}
-                  className="h-16 text-xl font-mono"
+                  className="h-11 text-base font-mono"
                   autoFocus
                   inputMode={currentStep === 2 ? 'numeric' : 'text'}
                 />
-                <Button onClick={handleScan} className="h-16 w-16 shrink-0" size="lg">
-                  <ScanBarcode className="h-6 w-6" />
+                <Button onClick={handleScan} className="h-11 w-11 shrink-0" size="lg">
+                  <ScanBarcode className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -559,12 +559,12 @@ export default function ScannerAppPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <div><p className="text-[10px] uppercase text-muted-foreground">Source</p><p className="font-mono font-bold text-lg">{scannedBinCode || '—'}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-foreground">Source</p><p className="font-mono font-bold text-base">{scannedBinCode || '—'}</p></div>
                   <div className="flex items-center justify-center"><ArrowRightLeft className="h-5 w-5 text-muted-foreground" /></div>
-                  <div><p className="text-[10px] uppercase text-muted-foreground">Target</p><p className="font-mono font-bold text-lg">{targetBinCode || '—'}</p></div>
+                  <div><p className="text-[10px] uppercase text-muted-foreground">Target</p><p className="font-mono font-bold text-base">{targetBinCode || '—'}</p></div>
                 </div>
                 {scannedProductSku && <div className="text-center mt-2"><p className="text-xs text-muted-foreground">Product</p><p className="font-medium">{scannedProductSku}</p></div>}
-                {enteredQty && <div className="text-center mt-1"><p className="text-3xl font-bold">{enteredQty}</p></div>}
+                {enteredQty && <div className="text-center mt-1"><p className="text-xl font-bold">{enteredQty}</p></div>}
               </CardContent>
             </Card>
           )}
@@ -585,16 +585,16 @@ export default function ScannerAppPage() {
               <CardContent className="p-4 text-center space-y-2">
                 {scannedBinCode && <p className="font-mono font-bold">{scannedBinCode}</p>}
                 {scannedProductSku && <p className="font-medium">{scannedProductSku}</p>}
-                {enteredQty && <p className="text-3xl font-bold">{enteredQty}</p>}
+                {enteredQty && <p className="text-xl font-bold">{enteredQty}</p>}
               </CardContent>
             </Card>
           )}
 
           {/* Verify bin confirmation */}
           {activeTask.task_type === 'verify_bin' && currentStep === 1 && (
-            <div className="text-center py-6">
-              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-              <p className="text-xl font-bold mt-3">Bin {scannedBinCode} Verified</p>
+            <div className="text-center py-4">
+              <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
+              <p className="text-base font-bold mt-2">Bin {scannedBinCode} Verified</p>
             </div>
           )}
 
@@ -608,7 +608,7 @@ export default function ScannerAppPage() {
 
           {/* Submit button */}
           {showSubmit && (
-            <Button onClick={handleCompleteTask} disabled={completing} className="w-full h-16 text-lg font-bold" size="lg">
+            <Button onClick={handleCompleteTask} disabled={completing} className="w-full h-11 text-sm font-bold" size="lg">
               {completing ? 'Submitting...' : 'Complete Task'}
               {!completing && <Check className="h-5 w-5 ml-2" />}
             </Button>
@@ -638,18 +638,18 @@ export default function ScannerAppPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Stats bar */}
-      <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b shrink-0">
+      <div className="bg-slate-50 dark:bg-slate-900 px-3 py-2 border-b shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold">{tasks.length}</p>
-            <p className="text-xs text-muted-foreground">Tasks pending</p>
+            <p className="text-lg font-bold">{tasks.length}</p>
+            <p className="text-[10px] text-muted-foreground">Pending</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-green-600">{completedToday}</p>
-            <p className="text-xs text-muted-foreground">Completed today</p>
+            <p className="text-lg font-bold text-green-600">{completedToday}</p>
+            <p className="text-[10px] text-muted-foreground">Done today</p>
           </div>
-          <Button variant="outline" size="sm" className="h-10 w-10" onClick={() => { setLoading(true); loadTasks(); }}>
-            <RotateCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" className="h-8 w-8" onClick={() => { setLoading(true); loadTasks(); }}>
+            <RotateCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
@@ -659,10 +659,10 @@ export default function ScannerAppPage() {
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Loading tasks...</div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-16">
-            <ScanBarcode className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-semibold">No tasks</p>
-            <p className="text-sm text-muted-foreground mt-1">Check back soon or pull to refresh</p>
+          <div className="text-center py-10">
+            <ScanBarcode className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-semibold">No tasks</p>
+            <p className="text-xs text-muted-foreground mt-1">Check back soon</p>
           </div>
         ) : (
           tasks.map((task) => {
@@ -683,8 +683,8 @@ export default function ScannerAppPage() {
                       {task.bin && <p className="text-xs text-muted-foreground font-mono">{task.bin.bin_code}</p>}
                       {task.product && <p className="text-xs text-muted-foreground truncate">{task.product.name}</p>}
                     </div>
-                    <Button onClick={() => handleStartTask(task)} className="h-14 w-14 shrink-0 rounded-xl" size="lg">
-                      <Play className="h-6 w-6" />
+                    <Button onClick={() => handleStartTask(task)} className="h-10 w-10 shrink-0 rounded-lg" size="lg">
+                      <Play className="h-5 w-5" />
                     </Button>
                   </div>
                 </CardContent>
