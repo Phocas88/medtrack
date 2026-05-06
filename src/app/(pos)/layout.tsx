@@ -33,8 +33,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
       {/* Register top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-slate-950 text-white shrink-0">
         <div className="flex items-center gap-3">
-          <StokoraLogo variant="mark" theme="dark" className="h-5 w-5" />
-          <StokoraLogo variant="text" theme="dark" className="text-sm" />
+          <StokoraLogo theme="dark" size="sm" />
           <span className="text-[10px] text-slate-500 ml-1">POS</span>
         </div>
         <div className="flex items-center gap-3">

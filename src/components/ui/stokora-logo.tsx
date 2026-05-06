@@ -2,52 +2,58 @@ import { cn } from '@/lib/utils';
 
 interface LogoProps {
   variant?: 'full' | 'mark' | 'text';
-  theme?: 'light' | 'dark' | 'auto';
+  theme?: 'light' | 'dark';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-/**
- * Stokora WMS logo component.
- * - "full": icon + wordmark (default)
- * - "mark": just the S hexagon icon
- * - "text": just the wordmark
- *
- * theme:
- * - "light": dark text (for white/light backgrounds)
- * - "dark": white text (for dark backgrounds)
- * - "auto": uses CSS dark mode detection
- */
-export function StokoraLogo({ variant = 'full', theme = 'auto', className }: LogoProps) {
-  // Brand colors from logo: navy #1a2744, teal #14b8a6
-  const navy = theme === 'dark' ? '#ffffff' : theme === 'light' ? '#1a2744' : undefined;
+const SIZES = {
+  sm: { mark: 'h-6', text: 'text-sm', gap: 'gap-1.5' },
+  md: { mark: 'h-7', text: 'text-lg', gap: 'gap-2' },
+  lg: { mark: 'h-10', text: 'text-2xl', gap: 'gap-3' },
+};
+
+export function StokoraLogo({ variant = 'full', theme = 'light', size = 'md', className }: LogoProps) {
+  const s = SIZES[size];
   const teal = '#14b8a6';
 
   if (variant === 'mark') {
+    // Use actual PNG logo mark — on dark bg, wrap in white rounded pill
+    if (theme === 'dark') {
+      return (
+        <div className={cn('bg-white rounded-md p-0.5 shrink-0 flex items-center justify-center', className)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/stokora-logo.png" alt="Stokora" className={cn(s.mark, 'w-auto')} />
+        </div>
+      );
+    }
     return (
-      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn('shrink-0', className)}>
-        <path d="M20 2L36 11V29L20 38L4 29V11L20 2Z" fill={navy} className={!navy ? 'fill-slate-900 dark:fill-white' : ''} />
-        <path d="M20 6L32 13V27L20 34L8 27V13L20 6Z" fill="none" stroke={teal} strokeWidth="1.5" />
-        <rect x="15" y="15" width="4" height="4" rx="0.5" fill={teal} />
-        <rect x="21" y="15" width="4" height="4" rx="0.5" fill={teal} opacity="0.7" />
-        <rect x="18" y="20" width="4" height="4" rx="0.5" fill={teal} opacity="0.5" />
-      </svg>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/stokora-logo.png" alt="Stokora" className={cn(s.mark, 'w-auto shrink-0', className)} />
     );
   }
 
   if (variant === 'text') {
+    const color = theme === 'dark' ? '#ffffff' : '#1a2744';
     return (
-      <span className={cn('font-bold tracking-tight', className)} style={navy ? { color: navy } : undefined}>
-        <span className={!navy ? 'text-slate-900 dark:text-white' : ''}>Stokora</span>
-        <span style={{ color: teal }} className="ml-1 font-medium text-[0.7em]">WMS</span>
+      <span className={cn('font-bold tracking-tight', s.text, className)} style={{ color }}>
+        Stokora<span style={{ color: teal }} className="ml-1 font-medium text-[0.7em]">WMS</span>
       </span>
     );
   }
 
-  // Full: mark + text
+  // Full: PNG logo (already has icon + text in the image)
+  if (theme === 'dark') {
+    return (
+      <div className={cn('bg-white/95 rounded-lg px-2 py-1 shrink-0', className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/stokora-logo.png" alt="Stokora WMS" className={cn(s.mark, 'w-auto')} />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <StokoraLogo variant="mark" theme={theme} className="h-7 w-7" />
-      <StokoraLogo variant="text" theme={theme} className="text-lg" />
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/stokora-logo.png" alt="Stokora WMS" className={cn(s.mark, 'w-auto shrink-0', className)} />
   );
 }
