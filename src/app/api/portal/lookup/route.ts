@@ -29,17 +29,17 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data: customer, error } = await svc
+    const { data: customers, error } = await svc
       .from('customers')
       .select('id, tenant_id, name, email, phone, ship_to_address, price_tier_id, notes')
       .eq('email', user.email)
-      .maybeSingle();
+      .limit(1);
 
-    if (error || !customer) {
+    if (error || !customers || customers.length === 0) {
       return NextResponse.json({ error: 'No customer account found' }, { status: 404 });
     }
 
-    return NextResponse.json({ customer });
+    return NextResponse.json({ customer: customers[0] });
   } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
