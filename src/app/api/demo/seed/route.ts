@@ -27,20 +27,19 @@ export async function POST() {
 
     if (ex && ex.length > 0) {
       const tid = ex[0].tenant_id;
-      const [lotR, binR, biR, taskR] = await Promise.all([
+      const [lotR, binR, biR, taskR, svcR, woR] = await Promise.all([
         supabase.from('lots').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
         supabase.from('bins').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
         supabase.from('bin_inventory').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
         supabase.from('scan_tasks').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+        supabase.from('service_items').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+        supabase.from('work_orders').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
       ]);
-      // Check all demo users exist
       const { data: allDemoUsers } = await supabase.from('users').select('email').eq('tenant_id', tid).in('email', [DEMO_USERS.manager.email, DEMO_USERS.associate.email, DEMO_USERS.cashier.email]);
       const demoUserCount = allDemoUsers?.length || 0;
-
-      // Check products have suppliers
       const { count: noSupCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).is('supplier_id', null);
 
-      const isComplete = !!(lotR.count && lotR.count >= 20 && binR.count && binR.count >= 10 && biR.count && biR.count >= 10 && taskR.count && taskR.count >= 5 && demoUserCount >= 3 && (!noSupCount || noSupCount === 0));
+      const isComplete = !!(lotR.count && lotR.count >= 20 && binR.count && binR.count >= 10 && biR.count && biR.count >= 10 && taskR.count && taskR.count >= 5 && demoUserCount >= 3 && (!noSupCount || noSupCount === 0) && svcR.count && svcR.count >= 3 && woR.count && woR.count >= 3);
       if (isComplete) {
         return NextResponse.json({ status: 'ready' });
       }
@@ -460,6 +459,93 @@ async function seedInventory(supabase: any, T: string, managerId: string, supIds
         { tenant_id: T, product_id: products[1].id, name: 'Sanitizer BOGO', sale_price: 3.49, original_price: 4.99, start_date: ago(1), end_date: days(21), status: 'active', created_by: managerId },
         { tenant_id: T, product_id: products[13 % products.length].id, name: 'Summer N95 Promo', sale_price: 3.99, original_price: 5.99, start_date: days(7), end_date: days(30), status: 'scheduled', created_by: managerId },
       ]);
+    }
+
+    // ── Service Items ──
+    const { count: existingSvc } = await supabase.from('service_items').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+    const svcIds: string[] = [];
+    if (!existingSvc || existingSvc < 3) {
+      const svcs = [
+        { name: 'Mount & Balance (per tire)', default_price: 25.00, estimated_minutes: 20, description: 'Remove old tire, mount new tire, balance wheel, torque to spec' },
+        { name: 'Wheel Alignment', default_price: 89.99, estimated_minutes: 45, description: 'Four-wheel alignment with printout' },
+        { name: 'Oil Change (Conventional)', default_price: 39.99, estimated_minutes: 30, description: 'Drain old oil, replace filter, fill with conventional oil, check fluids' },
+        { name: 'Oil Change (Synthetic)', default_price: 69.99, estimated_minutes: 30, description: 'Full synthetic oil change with filter' },
+        { name: 'Brake Inspection', default_price: 0, estimated_minutes: 15, description: 'Visual inspection of pads, rotors, calipers, lines' },
+        { name: 'Flat Repair', default_price: 19.99, estimated_minutes: 20, description: 'Plug or patch punctured tire' },
+        { name: 'Battery Test & Install', default_price: 29.99, estimated_minutes: 15, description: 'Test battery, replace if purchased' },
+        { name: 'General Labor (per hour)', default_price: 85.00, estimated_minutes: 60, description: 'Hourly labor rate for miscellaneous work' },
+      ];
+      for (const s of svcs) {
+        const sid = uid();
+        svcIds.push(sid);
+        await supabase.from('service_items').insert({ id: sid, tenant_id: T, ...s, is_active: true });
+      }
+    } else {
+      const { data: existingSvcs } = await supabase.from('service_items').select('id').eq('tenant_id', T);
+      (existingSvcs || []).forEach((s: { id: string }) => svcIds.push(s.id));
+    }
+
+    // ── Work Orders (6 in various states) ──
+    const { count: existingWO } = await supabase.from('work_orders').select('*', { count: 'exact', head: true }).eq('tenant_id', T);
+    if (!existingWO || existingWO < 3) {
+      const woData = [
+        { customer_name: 'John Martinez', asset_info: '2019 Honda Civic — VIN: 2HGFC2F5', description: 'Mount & balance 4 new tires + alignment', status: 'completed', parts_total: 599.96, labor_total: 189.99, grand_total: 789.95 },
+        { customer_name: 'Sarah Kim', asset_info: '2022 Toyota RAV4', description: 'Oil change + brake inspection', status: 'completed', parts_total: 42.50, labor_total: 39.99, grand_total: 82.49 },
+        { customer_name: 'Metro Grocery', asset_info: 'Delivery Van #3 — Ford Transit', description: 'Two rear tires + alignment', status: 'in_progress', parts_total: 319.98, labor_total: 139.99, grand_total: 459.97 },
+        { customer_name: 'David Chen', asset_info: '2020 BMW X5', description: 'Synthetic oil change', status: 'scheduled', parts_total: 0, labor_total: 69.99, grand_total: 69.99 },
+        { customer_name: 'EcoClean Services', asset_info: 'Fleet vehicle — Chevy Silverado', description: 'Flat repair + tire rotation', status: 'draft', parts_total: 0, labor_total: 19.99, grand_total: 19.99 },
+        { customer_name: 'Walk-in Customer', asset_info: '2018 Ford F-150', description: 'Battery test and replacement', status: 'invoiced', parts_total: 149.99, labor_total: 29.99, grand_total: 179.98 },
+      ];
+
+      for (let i = 0; i < woData.length; i++) {
+        const wo = woData[i];
+        const woId = uid();
+        const assignee = staffIds.length > 0 ? staffIds[i % staffIds.length] : null;
+        await supabase.from('work_orders').insert({
+          id: woId, tenant_id: T,
+          order_number: `WO-2026-${String(100 + i)}`,
+          customer_id: custIds && custIds.length > 0 ? custIds[i % custIds.length] : null,
+          customer_name: wo.customer_name,
+          status: wo.status,
+          priority: rand(3, 8),
+          description: wo.description,
+          asset_info: wo.asset_info,
+          assigned_to: assignee,
+          scheduled_date: wo.status === 'scheduled' ? days(rand(1, 5)) : null,
+          started_at: ['in_progress', 'completed', 'invoiced'].includes(wo.status) ? ago(rand(0, 3)) : null,
+          completed_at: ['completed', 'invoiced'].includes(wo.status) ? ago(rand(0, 2)) : null,
+          parts_total: wo.parts_total,
+          labor_total: wo.labor_total,
+          grand_total: wo.grand_total,
+          created_by: managerId,
+        });
+
+        // Add 2-4 line items per work order
+        const numLines = rand(2, 4);
+        for (let l = 0; l < numLines; l++) {
+          const isService = l === 0 || Math.random() > 0.5;
+          if (isService && svcIds.length > 0) {
+            const svcIdx = l % svcIds.length;
+            await supabase.from('work_order_lines').insert({
+              tenant_id: T, work_order_id: woId, line_type: 'service',
+              service_id: svcIds[svcIdx], product_id: null,
+              description: ['Mount & Balance', 'Alignment', 'Oil Change', 'Flat Repair', 'Labor'][l % 5],
+              quantity: l === 0 ? rand(1, 4) : 1,
+              unit_price: [25, 89.99, 39.99, 19.99, 85][l % 5],
+              line_total: [25, 89.99, 39.99, 19.99, 85][l % 5] * (l === 0 ? rand(1, 4) : 1),
+            });
+          } else if (products.length > 0) {
+            const p = products[rand(0, products.length - 1)];
+            const qty = rand(1, 4);
+            await supabase.from('work_order_lines').insert({
+              tenant_id: T, work_order_id: woId, line_type: 'part',
+              product_id: p.id, service_id: null,
+              description: p.name, quantity: qty,
+              unit_price: p.price, line_total: p.price * qty,
+            });
+          }
+        }
+      }
     }
 
     // ── Verify final counts ──
