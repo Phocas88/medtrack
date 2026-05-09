@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -12,6 +12,14 @@ import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { StokoraLogo } from '@/components/ui/stokora-logo';
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p>Loading...</p></div>}>
+      <ResetForm />
+    </Suspense>
+  );
+}
+
+function ResetForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isCallback = searchParams.get('type') === 'recovery';
