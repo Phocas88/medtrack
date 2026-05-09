@@ -46,8 +46,10 @@ import {
   Package,
   User,
   Car,
+  Printer,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatRelativeDate } from '@/lib/format';
+import { generateWorkOrderInvoicePDF } from '@/lib/pdf';
 import type { Customer, Product, ServiceItem, WorkOrderStatus } from '@/types/database';
 
 interface WORow {
@@ -506,6 +508,30 @@ export default function WorkOrdersPage() {
                 )}
               </div>
               <DialogFooter className="flex-wrap gap-2">
+                {['completed', 'invoiced'].includes(detailOrder.status) && (
+                  <Button variant="outline" onClick={async () => {
+                    const supabase = createClient();
+                    const { data: tenant } = await supabase.from('tenants').select('name, settings').eq('id', tenantId).single();
+                    const s = (tenant?.settings || {}) as Record<string, string>;
+                    generateWorkOrderInvoicePDF({
+                      companyName: tenant?.name || 'Company',
+                      companyAddress: s.address || '',
+                      orderNumber: detailOrder.order_number,
+                      date: formatDate(detailOrder.created_at),
+                      customerName: detailOrder.customer_name || 'Walk-in',
+                      assetInfo: detailOrder.asset_info,
+                      lines: detailLines.map((l) => ({ description: l.description, lineType: l.line_type, quantity: l.quantity, unitPrice: l.unit_price, lineTotal: l.unit_price * l.quantity })),
+                      partsTotal: detailOrder.parts_total || 0,
+                      laborTotal: detailOrder.labor_total || 0,
+                      tax: detailOrder.grand_total ? detailOrder.grand_total * 0.0825 : 0,
+                      grandTotal: detailOrder.grand_total || 0,
+                      technicianName: detailOrder.assigned_user?.full_name || null,
+                      notes: null,
+                    });
+                  }}>
+                    <Printer className="h-4 w-4 mr-1" /> Print Invoice
+                  </Button>
+                )}
                 {detailOrder.status === 'draft' && (
                   <Button onClick={() => updateStatus(detailOrder.id, 'scheduled')}><Play className="h-4 w-4 mr-1" /> Schedule</Button>
                 )}

@@ -96,11 +96,14 @@ export default function LoginPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
+            <Link href="/auth/reset" className="text-sm text-primary hover:underline">
+              Forgot password?
+            </Link>
             <p className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{' '}
               <Link href="/auth/signup" className="font-medium text-primary hover:underline">

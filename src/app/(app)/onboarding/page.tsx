@@ -37,9 +37,14 @@ const TOTAL_STEPS = 5;
 const INDUSTRIES = [
   'Medical Supply',
   'Food & Beverage',
-  'Auto Parts',
+  'Auto Parts / Tire Shop',
   'Electronics',
   'General Wholesale',
+  'Retail / Grocery',
+  'HVAC / Plumbing',
+  'Manufacturing',
+  'Property Management',
+  'Distribution / 3PL',
   'Other',
 ];
 
@@ -67,6 +72,7 @@ const STORAGE_REQUIREMENTS = [
 interface OnboardingState {
   step: number;
   companyName: string;
+  companyAddress: string;
   industry: string;
   locationName: string;
   locationCode: string;
@@ -91,6 +97,7 @@ interface OnboardingState {
 const DEFAULT_STATE: OnboardingState = {
   step: 1,
   companyName: '',
+  companyAddress: '',
   industry: '',
   locationName: '',
   locationCode: '',
@@ -194,7 +201,7 @@ export default function OnboardingPage() {
         .from('tenants')
         .update({
           name: state.companyName,
-          settings: { industry: state.industry },
+          settings: { industry: state.industry, address: state.companyAddress || '' },
         })
         .eq('id', tenantId);
       if (error) throw error;
@@ -392,6 +399,16 @@ export default function OnboardingPage() {
                   value={state.companyName}
                   onChange={(e) => updateState({ companyName: e.target.value })}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companyAddress">Company Address</Label>
+                <Input
+                  id="companyAddress"
+                  placeholder="123 Main St, City, State ZIP"
+                  value={state.companyAddress || ''}
+                  onChange={(e) => updateState({ companyAddress: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Used on invoices, purchase orders, and shipping documents</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>

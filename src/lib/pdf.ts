@@ -875,6 +875,102 @@ export function generateReceivingDocumentPDF(data: ReceivingDocumentData): void 
   openPrintWindow(html);
 }
 
+// ── Work Order Invoice ──
+
+interface WorkOrderInvoiceData {
+  companyName: string;
+  companyAddress: string;
+  orderNumber: string;
+  date: string;
+  customerName: string;
+  assetInfo: string | null;
+  lines: { description: string; lineType: string; quantity: number; unitPrice: number; lineTotal: number }[];
+  partsTotal: number;
+  laborTotal: number;
+  tax: number;
+  grandTotal: number;
+  technicianName: string | null;
+  notes: string | null;
+}
+
+export function generateWorkOrderInvoicePDF(data: WorkOrderInvoiceData): void {
+  const linesHtml = data.lines.map((l) => `
+    <tr>
+      <td><span class="badge ${l.lineType === 'service' ? 'badge-labor' : 'badge-part'}">${l.lineType === 'service' ? 'Labor' : 'Part'}</span></td>
+      <td>${escapeHtml(l.description)}</td>
+      <td class="center">${l.quantity}</td>
+      <td class="right">${formatMoney(l.unitPrice)}</td>
+      <td class="right">${formatMoney(l.lineTotal)}</td>
+    </tr>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Work Order Invoice ${escapeHtml(data.orderNumber)}</title>
+  <style>
+    ${baseStyles}
+    .badge { padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+    .badge-labor { background: #dbeafe; color: #1e40af; }
+    .badge-part { background: #f0fdf4; color: #166534; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; font-size: 13px; }
+    .info-grid dt { color: #6b7280; }
+    .info-grid dd { font-weight: 600; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="company-name">${escapeHtml(data.companyName)}</div>
+      <div class="company-address">${escapeHtml(data.companyAddress)}</div>
+    </div>
+    <div class="doc-info">
+      <div class="doc-title">Work Order Invoice</div>
+      <div class="doc-meta">
+        <strong>#</strong> ${escapeHtml(data.orderNumber)}<br>
+        <strong>Date:</strong> ${escapeHtml(data.date)}
+      </div>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div><dt>Customer</dt><dd>${escapeHtml(data.customerName)}</dd></div>
+    ${data.assetInfo ? `<div><dt>Vehicle / Asset</dt><dd>${escapeHtml(data.assetInfo)}</dd></div>` : ''}
+    ${data.technicianName ? `<div><dt>Technician</dt><dd>${escapeHtml(data.technicianName)}</dd></div>` : ''}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:60px">Type</th>
+        <th>Description</th>
+        <th class="center">Qty</th>
+        <th class="right">Price</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>${linesHtml}</tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-table">
+      <div class="totals-row"><span>Parts</span><span>${formatMoney(data.partsTotal)}</span></div>
+      <div class="totals-row"><span>Labor</span><span>${formatMoney(data.laborTotal)}</span></div>
+      ${data.tax > 0 ? `<div class="totals-row"><span>Tax</span><span>${formatMoney(data.tax)}</span></div>` : ''}
+      <div class="totals-row total"><span>Total Due</span><span>${formatMoney(data.grandTotal)}</span></div>
+    </div>
+  </div>
+
+  ${data.notes ? `<div style="margin-top:16px;padding:10px;background:#f9fafb;border-radius:6px;font-size:13px;color:#4b5563"><strong>Notes:</strong> ${escapeHtml(data.notes)}</div>` : ''}
+
+  <div class="footer">Thank you for your business! &mdash; Powered by Stokora WMS</div>
+</body>
+</html>`;
+
+  openPrintWindow(html);
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')

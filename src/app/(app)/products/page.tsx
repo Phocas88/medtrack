@@ -8,7 +8,8 @@ import { DataTable, type Column } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ExpiryBadge } from '@/components/ui/expiry-badge';
-import { Plus, Archive, ArchiveRestore } from 'lucide-react';
+import { Plus, Archive, ArchiveRestore, Upload } from 'lucide-react';
+import { ImportDialog } from './import-dialog';
 import { formatCurrency, storageLabel } from '@/lib/format';
 import { ProductDialog } from './product-dialog';
 import type { Product } from '@/types/database';
@@ -19,6 +20,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
 
   async function loadProducts() {
@@ -146,6 +148,9 @@ export default function ProductsPage() {
             >
               {showArchived ? 'Show Active' : 'Show Archived'}
             </Button>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" /> Import CSV
+            </Button>
             <Button onClick={() => { setEditProduct(null); setDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" /> Add Product
             </Button>
@@ -167,6 +172,12 @@ export default function ProductsPage() {
         onOpenChange={setDialogOpen}
         product={editProduct}
         onSaved={loadProducts}
+      />
+
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={loadProducts}
       />
     </div>
   );
