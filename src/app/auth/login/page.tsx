@@ -55,7 +55,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-2"><StokoraLogo theme="light" /></div>
+          <div className="flex justify-center mb-3"><StokoraLogo theme="light" size="lg" /></div>
           <CardTitle className="text-2xl font-bold">Stokora WMS</CardTitle>
           <CardDescription>
             Warehouse Management System. Sign in to your account.

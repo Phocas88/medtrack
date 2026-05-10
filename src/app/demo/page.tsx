@@ -121,7 +121,7 @@ export default function DemoPage() {
     <div className="min-h-screen bg-white">
       {/* Hero */}
       <div className="text-center pt-12 pb-8 px-4">
-        <div className="flex justify-center mb-4"><StokoraLogo theme="light" size="lg" /></div>
+        <div className="flex justify-center mb-4"><StokoraLogo theme="light" size="xl" /></div>
         <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Stokora WMS</h1>
         <p className="text-slate-500 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
         <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-500">

@@ -80,6 +80,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <div className="flex min-h-screen items-center justify-center bg-white px-4">
         <div className="text-center space-y-4">
           <div className="flex justify-center"><StokoraLogo theme="light" size="lg" /></div>
+
           <h1 className="text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground max-w-md">
             No customer account is associated with your email address. Please contact your supplier to request portal access.
