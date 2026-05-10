@@ -70,7 +70,7 @@ const FEATURE_SECTIONS = [
   {
     title: 'Orders & Fulfillment',
     icon: Truck,
-    features: ['Sales orders with line items', 'Shipment tracking & packing slips', 'Returns / RMA processing', 'Reorder suggestions with auto-PO', 'Customer portal self-service ordering', 'PDF invoices & packing slips', 'Consignment inventory at customer sites'],
+    features: ['Sales orders with line items', 'Work orders — parts + labor + technician assignment', 'Services catalog with pricing & estimated time', 'Dropship orders — auto-PO to supplier with customer ship-to', 'Returns / RMA processing', 'Auto-PO generation — one click emails vendors', 'Customer portal self-service ordering', 'PDF invoices for work orders & shipments', 'Consignment inventory at customer sites'],
   },
   {
     title: 'Compliance & Regulatory',
@@ -85,12 +85,12 @@ const FEATURE_SECTIONS = [
   {
     title: 'Retail & Promotions',
     icon: Tag,
-    features: ['Schedule sale start/end dates', 'Track markdown loss', 'Promotions auto-applied at POS', 'Online + in-store + wholesale channels', 'Customer pricing tiers', 'Average discount tracking'],
+    features: ['Schedule sale start/end dates', 'Track markdown loss', 'Promotions auto-applied at POS', 'Online + in-store + wholesale channels', 'Customer pricing tiers', 'Average discount tracking', 'CSV product bulk import'],
   },
   {
     title: 'Platform & Integrations',
     icon: Zap,
-    features: ['Stripe billing & subscription management', 'QuickBooks accounting sync', 'Zapier (5,000+ app connections)', 'Email notifications via Resend', 'White-label multi-tenancy', 'Role-based access control (RBAC)', 'Module-based feature toggles', 'IT user provisioning (email optional)', 'Sentry error monitoring', 'Rate limiting & CSP security headers'],
+    features: ['Shopify integration — products, orders, inventory sync', 'EasyPost shipping — UPS/FedEx/USPS rates, labels, pickup', 'Stripe billing & payment processing', 'QuickBooks accounting sync', 'Zapier (5,000+ app connections)', 'Email notifications via Resend', 'White-label multi-tenancy', 'Role-based access control (RBAC)', 'Module-based feature toggles', 'IT user provisioning (email optional)', 'Password reset flow', 'Sentry error monitoring', 'Rate limiting & CSP security headers'],
   },
 ];
 
@@ -125,9 +125,9 @@ export default function DemoPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Stokora WMS</h1>
         <p className="text-slate-500 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
         <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-500">
-          <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 80+ pages</span>
+          <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 97 routes</span>
           <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-green-400" /> 100% WMS compliant</span>
-          <span className="flex items-center gap-1"><Layers className="h-4 w-4 text-purple-400" /> 43 database tables</span>
+          <span className="flex items-center gap-1"><Layers className="h-4 w-4 text-purple-400" /> 4 separate UIs</span>
           <span className="flex items-center gap-1"><Target className="h-4 w-4 text-amber-400" /> $49-199/mo</span>
         </div>
       </div>

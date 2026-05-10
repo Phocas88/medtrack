@@ -15,6 +15,11 @@ import {
   Globe,
   Clock,
   Star,
+  Wrench,
+  CreditCard,
+  ShoppingBag,
+  Tag,
+  Send,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -30,6 +35,7 @@ export default function LandingPage() {
             <a href="#features" className="hover:text-gray-900 transition">Features</a>
             <a href="#industries" className="hover:text-gray-900 transition">Industries</a>
             <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
+            <Link href="/demo" className="text-emerald-600 hover:text-emerald-700 font-semibold transition">Live Demo</Link>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition hidden sm:block">
@@ -93,8 +99,8 @@ export default function LandingPage() {
       <section className="border-y bg-gray-50">
         <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div>
-            <div className="text-3xl font-bold">39+</div>
-            <div className="text-sm text-gray-500 mt-1">Feature Modules</div>
+            <div className="text-3xl font-bold">97+</div>
+            <div className="text-sm text-gray-500 mt-1">App Routes</div>
           </div>
           <div>
             <div className="text-3xl font-bold">100%</div>
@@ -180,9 +186,44 @@ export default function LandingPage() {
                 desc: "Auto-quarantine expiring lots, track destructions with witness logs, manage donations of near-expiry stock.",
               },
               {
+                icon: Wrench,
+                title: "Work Orders",
+                desc: "Service tickets with parts + labor. Assign technicians, track jobs, auto-decrement inventory on completion. Invoice PDF generation.",
+              },
+              {
+                icon: CreditCard,
+                title: "Point of Sale",
+                desc: "Cashier register with barcode scanning, tax, discounts, hold/recall, cash/card/check payments. Separate UI for checkout staff.",
+              },
+              {
+                icon: ShoppingBag,
+                title: "Shopify Integration",
+                desc: "Sync products, orders, and inventory with your Shopify store. Real-time webhooks. Two-way stock levels.",
+              },
+              {
+                icon: Send,
+                title: "Dropship & Shipping",
+                desc: "Dropship orders auto-forward to suppliers. EasyPost integration for UPS/FedEx/USPS rate shopping, labels, and pickup scheduling.",
+              },
+              {
+                icon: Tag,
+                title: "Promotions & Sales",
+                desc: "Schedule sales with start/end dates, track markdown loss, auto-apply discounts at POS and customer portal.",
+              },
+              {
                 icon: Star,
                 title: "White-Label Ready",
-                desc: "Your company name and logo throughout the app. Custom fields, pricing tiers, and feature toggles per account.",
+                desc: "Your company name and logo throughout. Custom fields, pricing tiers, feature toggles, and module-based access per tenant.",
+              },
+              {
+                icon: Zap,
+                title: "Auto-PO to Vendors",
+                desc: "One click generates purchase orders grouped by supplier and emails them directly. Full procurement loop automated.",
+              },
+              {
+                icon: Users,
+                title: "4 Separate UIs",
+                desc: "Management desktop, handheld scanner, cashier POS, and B2B customer portal — each role sees only what they need.",
               },
             ].map((feature) => (
               <div key={feature.title} className="group rounded-xl border p-6 hover:border-gray-300 hover:shadow-sm transition">
@@ -215,14 +256,18 @@ export default function LandingPage() {
               "Auto Parts",
               "Electronics",
               "Industrial Supply",
+              "Tire & Auto Service",
+              "HVAC / Plumbing",
+              "Retail / Grocery",
+              "E-Commerce / Dropship",
               "Veterinary",
               "Cannabis / Hemp",
               "Lab & Scientific",
-              "Dental Supply",
+              "Property Maintenance",
               "Cosmetics",
               "Building Materials",
-              "Restaurant Supply",
-              "Agricultural",
+              "Print / Packaging",
+              "3PL / Distribution",
               "Janitorial",
               "General Wholesale",
             ].map((industry) => (
@@ -238,8 +283,47 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Demo CTA */}
+      <section className="py-16 md:py-20">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">See it in action</h2>
+          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+            Try each interface — no signup required. See what managers, floor associates, cashiers, and customers experience.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="rounded-xl border p-4 text-center">
+              <BarChart3 className="h-6 w-6 mx-auto mb-2 text-blue-600" />
+              <p className="text-sm font-semibold">Management</p>
+              <p className="text-xs text-gray-500 mt-1">Full desktop app</p>
+            </div>
+            <div className="rounded-xl border p-4 text-center">
+              <Smartphone className="h-6 w-6 mx-auto mb-2 text-green-600" />
+              <p className="text-sm font-semibold">Scanner</p>
+              <p className="text-xs text-gray-500 mt-1">Handheld device</p>
+            </div>
+            <div className="rounded-xl border p-4 text-center">
+              <CreditCard className="h-6 w-6 mx-auto mb-2 text-amber-600" />
+              <p className="text-sm font-semibold">Cashier POS</p>
+              <p className="text-xs text-gray-500 mt-1">Checkout register</p>
+            </div>
+            <div className="rounded-xl border p-4 text-center">
+              <Globe className="h-6 w-6 mx-auto mb-2 text-purple-600" />
+              <p className="text-sm font-semibold">Customer Portal</p>
+              <p className="text-xs text-gray-500 mt-1">B2B ordering</p>
+            </div>
+          </div>
+          <Link
+            href="/demo"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 transition shadow-lg shadow-emerald-200"
+          >
+            Launch Live Demo
+            <ArrowRight className="h-5 w-5" />
+          </Link>
+        </div>
+      </section>
+
       {/* Pricing */}
-      <section id="pricing" className="py-20 md:py-28">
+      <section id="pricing" className="py-20 md:py-28 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
