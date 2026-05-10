@@ -179,6 +179,7 @@ const navSections: NavSection[] = [
   {
     title: "Integrations",
     items: [
+      { label: "Shopify", href: "/integrations/shopify", icon: Plug },
       { label: "QuickBooks", href: "/integrations/quickbooks", icon: Plug },
       { label: "Zapier", href: "/integrations/zapier", icon: Zap },
       { label: "Billing", href: "/billing", icon: CreditCard },
