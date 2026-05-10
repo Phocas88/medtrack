@@ -229,13 +229,22 @@ export interface StockMovement {
   user?: User;
 }
 
+export type FulfillmentType = 'warehouse' | 'dropship';
+
 export interface SalesOrder {
   id: string;
   tenant_id: string;
   order_number: string;
   customer_id: string;
   status: OrderStatus;
+  fulfillment_type: FulfillmentType;
   ship_date: string | null;
+  tracking_number: string | null;
+  carrier: string | null;
+  shipping_label_url: string | null;
+  shipping_rate: number | null;
+  ship_to_name: string | null;
+  ship_to_address: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
