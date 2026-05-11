@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Card, CardContent } from '@/components/ui/card';
+import { LiteDashboard } from './lite-dashboard';
+import { ThreePLDashboard } from './threepl-dashboard';
 import {
   Package,
   DollarSign,
@@ -125,6 +127,14 @@ interface KPIData {
 }
 
 export default function DashboardPage() {
+  const { preset } = useAuth();
+
+  if (preset === 'lite') return <LiteDashboard />;
+  if (preset === '3pl') return <ThreePLDashboard />;
+  return <FullDashboard />;
+}
+
+function FullDashboard() {
   const { tenantId, role } = useAuth();
   const router = useRouter();
   const [kpi, setKpi] = useState<KPIData | null>(null);

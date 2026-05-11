@@ -69,6 +69,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { StokoraLogo } from "@/components/ui/stokora-logo"
+import { isSectionVisible } from "@/lib/presets"
 import {
   Collapsible,
   CollapsibleContent,
@@ -291,7 +292,7 @@ function useFavorites() {
 
 function SidebarContent() {
   const pathname = usePathname()
-  const { user, enabledModules, role, signOut } = useAuth()
+  const { user, enabledModules, role, preset, signOut } = useAuth()
   const { favorites, toggle: toggleFavorite } = useFavorites()
 
   const initials = user?.full_name
@@ -305,9 +306,10 @@ function SidebarContent() {
   const allItems = navSections.flatMap((s) => s.items)
   const favoriteItems = favorites.map((href) => allItems.find((i) => i.href === href)).filter(Boolean) as NavItem[]
 
-  // Filter admin section for non-admins
+  // Filter sections by preset + role
   const sections = navSections.filter((s) => {
     if (s.title === "Admin" && role !== "admin") return false
+    if (!isSectionVisible(s.title, preset)) return false
     return true
   })
 

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, UserRole } from '@/types/database';
+import type { TenantPreset } from '@/lib/presets';
 
 export type EnabledModules = Record<string, boolean>;
 
@@ -12,6 +13,7 @@ interface AuthContextValue {
   tenantId: string | null;
   tenantName: string | null;
   role: UserRole | null;
+  preset: TenantPreset;
   loading: boolean;
   enabledModules: EnabledModules;
   signOut: () => Promise<void>;
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextValue>({
   tenantId: null,
   tenantName: null,
   role: null,
+  preset: 'full',
   loading: true,
   enabledModules: {},
   signOut: async () => {},
@@ -32,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [enabledModules, setEnabledModules] = useState<EnabledModules>({});
+  const [preset, setPreset] = useState<TenantPreset>('full');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(data ?? null);
 
-        // Fetch tenant name + settings for white-label branding and module config
+        // Fetch tenant name + settings + preset for white-label branding and module config
         if (data?.tenant_id) {
           const { data: tenant } = await supabase
             .from('tenants')
@@ -66,10 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .single();
           setTenantName(tenant?.name ?? null);
 
-          // Extract enabled_modules from tenant settings
+          // Extract enabled_modules and preset from tenant settings
           const settings = (tenant?.settings as Record<string, unknown>) || {};
           const modules = (settings.enabled_modules as Record<string, boolean>) || {};
           setEnabledModules(modules);
+
+          // Read preset from settings (column may not exist yet — fallback to 'full')
+          const tenantPreset = (settings.preset as TenantPreset) || 'full';
+          setPreset(tenantPreset);
         }
       } catch {
         setUser(null);
@@ -104,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setTenantName(null);
     setEnabledModules({});
+    setPreset('full');
     router.push('/auth/login');
     router.refresh();
   }, [router]);
@@ -115,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId: user?.tenant_id ?? null,
         tenantName,
         role: user?.role ?? null,
+        preset,
         loading,
         enabledModules,
         signOut,
