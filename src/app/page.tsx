@@ -460,6 +460,10 @@ export default function LandingPage() {
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <a href="#features" className="hover:text-gray-900 transition">Features</a>
               <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
+              <Link href="/demo" className="hover:text-gray-900 transition">Demo</Link>
+              <Link href="/support" className="hover:text-gray-900 transition">Support</Link>
+              <Link href="/legal/privacy" className="hover:text-gray-900 transition">Privacy</Link>
+              <Link href="/legal/terms" className="hover:text-gray-900 transition">Terms</Link>
               <Link href="/auth/login" className="hover:text-gray-900 transition">Sign In</Link>
             </div>
             <p className="text-sm text-gray-400">

@@ -85,8 +85,8 @@ export default function ShopifyIntegrationPage() {
     setConnecting(true);
 
     try {
-      // Test the connection
-      const res = await fetch('/api/shopify/connect', {
+      // Connect, encrypt token, save, and register webhooks — all server-side
+      const res = await fetch('/api/shopify/save-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ store_url: state.store_url, access_token: state.access_token }),
@@ -98,26 +98,6 @@ export default function ShopifyIntegrationPage() {
         setConnecting(false);
         return;
       }
-
-      // Save to tenant settings
-      const supabase = createClient();
-      const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
-      const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-
-      await supabase.from('tenants').update({
-        settings: {
-          ...currentSettings,
-          shopify: {
-            store_url: state.store_url,
-            access_token: state.access_token,
-            shop_name: data.shop_name,
-            shop_domain: data.shop_domain,
-            auto_sync_orders: true,
-            auto_sync_inventory: true,
-            connected_at: new Date().toISOString(),
-          },
-        },
-      }).eq('id', tenantId);
 
       setState((prev) => ({
         ...prev,

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createShopifyClient } from '@/lib/shopify';
+import { decryptToken } from '@/lib/shopify-crypto';
 
 async function getAuthUser() {
   const cookieStore = await cookies();
@@ -32,7 +33,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Shopify not connected' }, { status: 400 });
     }
 
-    const client = createShopifyClient({ store_url: shopify.store_url, access_token: shopify.access_token });
+    const client = createShopifyClient({ store_url: shopify.store_url, access_token: decryptToken(shopify.access_token) });
     const { products: shopifyProducts } = await client.getProducts(250);
 
     let created = 0;

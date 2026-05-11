@@ -64,18 +64,27 @@ class ShopifyClient {
 
   constructor(config: ShopifyConfig) {
     const store = config.store_url.replace('https://', '').replace('http://', '').replace(/\/$/, '');
-    this.baseUrl = `https://${store}/admin/api/2024-01`;
+    this.baseUrl = `https://${store}/admin/api/2025-01`; // Latest stable API version
     this.headers = {
       'X-Shopify-Access-Token': config.access_token,
       'Content-Type': 'application/json',
     };
   }
 
-  private async request<T>(path: string, options?: RequestInit): Promise<T> {
+  private async request<T>(path: string, options?: RequestInit, retries = 3): Promise<T> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       ...options,
       headers: { ...this.headers, ...options?.headers },
     });
+
+    // Handle rate limiting with exponential backoff
+    if (res.status === 429 && retries > 0) {
+      const retryAfter = parseFloat(res.headers.get('Retry-After') || '2');
+      const waitMs = retryAfter * 1000 * (4 - retries); // exponential backoff
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      return this.request<T>(path, options, retries - 1);
+    }
+
     if (!res.ok) {
       const err = await res.text();
       throw new Error(`Shopify API error (${res.status}): ${err}`);
