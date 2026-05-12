@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
@@ -11,18 +12,18 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon: Icon, description, className }: StatCardProps) {
   return (
-    <Card className={className}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
+    <Card className={cn('overflow-hidden', className)}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground truncate">{title}</p>
+            <p className="text-xl font-bold mt-1 truncate">{value}</p>
             {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{description}</p>
             )}
           </div>
-          <div className="rounded-lg bg-muted p-3">
-            <Icon className="h-5 w-5 text-muted-foreground" />
+          <div className="rounded-lg bg-primary/10 p-2 shrink-0">
+            <Icon className="h-4 w-4 text-primary" />
           </div>
         </div>
       </CardContent>

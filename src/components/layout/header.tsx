@@ -157,10 +157,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Page title */}
-      <h1 className="text-lg font-semibold">{title}</h1>
-
-      {/* Spacer */}
-      <div className="flex-1" />
+      <h1 className="text-base font-semibold truncate min-w-0 flex-1">{title}</h1>
 
       {/* Search button */}
       <Button
@@ -210,9 +207,9 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">{user?.full_name || "User"}</p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <div className="px-2 py-1.5 max-w-[200px]">
+              <p className="text-sm font-medium truncate">{user?.full_name || "User"}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

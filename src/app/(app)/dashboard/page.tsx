@@ -186,48 +186,55 @@ function FullDashboard() {
     return true;
   });
 
+  const kpiItems = [
+    { label: 'Products', value: kpi?.totalProducts ?? '—', icon: Package, color: 'text-blue-600', bg: 'bg-blue-50', alert: false },
+    { label: 'Inventory Value', value: kpi ? formatCurrency(kpi.totalValue) : '—', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', alert: false },
+    { label: 'Stock-Outs', value: kpi?.stockOutCount ?? '—', icon: XCircle, color: 'text-red-600', bg: 'bg-red-50', alert: !!kpi?.stockOutCount },
+    { label: 'Low Stock', value: kpi?.lowStockCount ?? '—', icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50', alert: !!kpi?.lowStockCount },
+    { label: 'Expiring', value: kpi?.expiringCount ?? '—', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50', alert: !!kpi?.expiringCount },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* KPI Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card><CardContent className="p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-50"><Package className="h-4 w-4 text-blue-600" /></div>
-          <div><p className="text-xl font-bold">{kpi?.totalProducts ?? '—'}</p><p className="text-[10px] text-muted-foreground uppercase">Products</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-green-50"><DollarSign className="h-4 w-4 text-green-600" /></div>
-          <div><p className="text-xl font-bold">{kpi ? formatCurrency(kpi.totalValue) : '—'}</p><p className="text-[10px] text-muted-foreground uppercase">Inv. Value</p></div>
-        </CardContent></Card>
-        <Card className={kpi?.stockOutCount ? 'border-red-300' : ''}><CardContent className="p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-red-50"><XCircle className="h-4 w-4 text-red-600" /></div>
-          <div><p className="text-xl font-bold">{kpi?.stockOutCount ?? '—'}</p><p className="text-[10px] text-muted-foreground uppercase">Stock-Outs</p></div>
-        </CardContent></Card>
-        <Card className={kpi?.lowStockCount ? 'border-amber-300' : ''}><CardContent className="p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-amber-50"><AlertTriangle className="h-4 w-4 text-amber-600" /></div>
-          <div><p className="text-xl font-bold">{kpi?.lowStockCount ?? '—'}</p><p className="text-[10px] text-muted-foreground uppercase">Low Stock</p></div>
-        </CardContent></Card>
-        <Card className={kpi?.expiringCount ? 'border-orange-300' : ''}><CardContent className="p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-orange-50"><Clock className="h-4 w-4 text-orange-600" /></div>
-          <div><p className="text-xl font-bold">{kpi?.expiringCount ?? '—'}</p><p className="text-[10px] text-muted-foreground uppercase">Expiring</p></div>
-        </CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {kpiItems.map((k) => (
+          <Card key={k.label} className={`overflow-hidden ${k.alert ? 'ring-1 ring-' + k.color.replace('text-', '') + '/30' : ''}`}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-muted-foreground truncate">{k.label}</p>
+                  <p className="text-2xl font-bold mt-1 truncate">{k.value}</p>
+                </div>
+                <div className={`${k.bg} p-2 rounded-lg shrink-0`}>
+                  <k.icon className={`h-4 w-4 ${k.color}`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Module Groups */}
       {groups.map((group) => (
         <div key={group.title}>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{group.title}</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-px flex-1 bg-border" />
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-2">{group.title}</h2>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {group.tiles.map((tile) => (
               <Card
                 key={tile.href}
-                className={`cursor-pointer transition-all hover:shadow-md ${tile.color} border-transparent`}
+                className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 border hover:border-primary/20 overflow-hidden group"
                 onClick={() => router.push(tile.href)}
               >
-                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
-                  <div className="p-3 rounded-xl bg-white/70 shadow-sm">
-                    <tile.icon className={`h-6 w-6 ${tile.iconColor}`} />
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2.5">
+                  <div className={`p-3 rounded-xl ${tile.color} transition-transform group-hover:scale-110`}>
+                    <tile.icon className={`h-5 w-5 ${tile.iconColor}`} />
                   </div>
-                  <span className="text-sm font-medium text-slate-700">{tile.label}</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate w-full">{tile.label}</span>
                 </CardContent>
               </Card>
             ))}

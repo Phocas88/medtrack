@@ -88,19 +88,19 @@ export function ThreePLDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 mb-1"><Users className="h-4 w-4 text-blue-600" /><span className="text-xs text-muted-foreground">Active Clients</span></div>
-          <p className="text-2xl font-bold">{kpi?.totalClients || 0}</p>
+          <p className="text-xl font-bold truncate">{kpi?.totalClients || 0}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 mb-1"><Package className="h-4 w-4 text-green-600" /><span className="text-xs text-muted-foreground">Total SKUs</span></div>
-          <p className="text-2xl font-bold">{formatNumber(kpi?.totalSKUs || 0)}</p>
+          <p className="text-xl font-bold truncate">{formatNumber(kpi?.totalSKUs || 0)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 mb-1"><Truck className="h-4 w-4 text-amber-600" /><span className="text-xs text-muted-foreground">Orders (MTD)</span></div>
-          <p className="text-2xl font-bold">{kpi?.ordersThisMonth || 0}</p>
+          <p className="text-xl font-bold truncate">{kpi?.ordersThisMonth || 0}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
           <div className="flex items-center gap-2 mb-1"><DollarSign className="h-4 w-4 text-purple-600" /><span className="text-xs text-muted-foreground">Inv. Value</span></div>
-          <p className="text-2xl font-bold">{formatCurrency(kpi?.inventoryValue || 0)}</p>
+          <p className="text-xl font-bold truncate">{formatCurrency(kpi?.inventoryValue || 0)}</p>
         </CardContent></Card>
       </div>
 
