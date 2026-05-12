@@ -19,7 +19,7 @@ const nextConfig = {
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: blob: https:",
-            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://hooks.zapier.com https://*.sentry.io",
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://hooks.zapier.com https://*.sentry.io https://api.web3forms.com",
             "frame-src https://js.stripe.com https://hooks.stripe.com https://*.myshopify.com https://admin.shopify.com",
             "frame-ancestors 'self' https://*.myshopify.com https://admin.shopify.com",
             "worker-src 'self' blob:",
@@ -29,5 +29,4 @@ const nextConfig = {
     },
   ],
 };
-
 export default nextConfig;
