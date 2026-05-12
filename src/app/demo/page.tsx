@@ -4,12 +4,18 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StokoraLogo } from '@/components/ui/stokora-logo';
+import { toast } from 'sonner';
 import {
   Package, Loader2, Monitor, Smartphone, ShoppingCart, Globe, ArrowRight,
   BarChart3, ShieldCheck, Warehouse, ScanBarcode, CreditCard,
   Layers, Truck, Tag, Zap,
-  Target,
+  Target, Send, CheckCircle2,
 } from 'lucide-react';
 
 const DEMO_CREDS: Record<string, { email: string; password: string; redirect: string }> = {
@@ -98,6 +104,9 @@ export default function DemoPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', company: '', interest: '', message: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const handleLaunch = async (roleKey: string) => {
     setLoading(roleKey);
@@ -247,6 +256,119 @@ export default function DemoPage() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Form */}
+        <Card className="border-primary/20" id="contact">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl text-slate-900">Interested in Stokora WMS?</CardTitle>
+            <CardDescription>Have questions or ready to get started? Send us a message and we&#39;ll get back to you within 1 business day.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {sent ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <p className="text-lg font-semibold">Message Sent!</p>
+                <p className="text-sm text-muted-foreground mt-1">We&#39;ll get back to you shortly.</p>
+              </div>
+            ) : (
+              <form
+                className="max-w-lg mx-auto space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!contactForm.name || !contactForm.email || !contactForm.message) {
+                    toast.error('Please fill in name, email, and message');
+                    return;
+                  }
+                  setSending(true);
+                  try {
+                    const res = await fetch('/api/contact', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(contactForm),
+                    });
+                    if (res.ok) {
+                      setSent(true);
+                      toast.success('Message sent!');
+                    } else {
+                      toast.error('Failed to send. Please try again.');
+                    }
+                  } catch {
+                    toast.error('Something went wrong.');
+                  }
+                  setSending(false);
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-name">Name *</Label>
+                    <Input
+                      id="contact-name"
+                      value={contactForm.name}
+                      onChange={(e) => setContactForm((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="Your name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-email">Email *</Label>
+                    <Input
+                      id="contact-email"
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="you@company.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact-company">Company</Label>
+                    <Input
+                      id="contact-company"
+                      value={contactForm.company}
+                      onChange={(e) => setContactForm((p) => ({ ...p, company: e.target.value }))}
+                      placeholder="Company name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>I&#39;m interested in...</Label>
+                    <Select value={contactForm.interest} onValueChange={(v) => setContactForm((p) => ({ ...p, interest: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select one" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="demo">Getting a personalized demo</SelectItem>
+                        <SelectItem value="pricing">Pricing & plans</SelectItem>
+                        <SelectItem value="shopify">Shopify integration</SelectItem>
+                        <SelectItem value="3pl">3PL / multi-client warehousing</SelectItem>
+                        <SelectItem value="retail">Retail / POS</SelectItem>
+                        <SelectItem value="service">Service business (tire, auto, HVAC)</SelectItem>
+                        <SelectItem value="other">Something else</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-message">Message *</Label>
+                  <Textarea
+                    id="contact-message"
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm((p) => ({ ...p, message: e.target.value }))}
+                    placeholder="Tell us about your business and what you're looking for..."
+                    rows={4}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={sending}>
+                  {sending ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending...</>
+                  ) : (
+                    <><Send className="h-4 w-4 mr-2" /> Send Message</>
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
 
