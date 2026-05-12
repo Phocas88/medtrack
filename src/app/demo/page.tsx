@@ -283,10 +283,24 @@ export default function DemoPage() {
                   }
                   setSending(true);
                   try {
-                    const res = await fetch('/api/contact', {
+                    const res = await fetch('https://api.web3forms.com/submit', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(contactForm),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                      },
+                      body: JSON.stringify({
+                        access_key: process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY,
+                        subject: `New Stokora Inquiry from ${contactForm.name}${contactForm.company ? ` (${contactForm.company})` : ''}`,
+                        from_name: 'Stokora Demo Site',
+                        replyto: contactForm.email,
+                        name: contactForm.name,
+                        email: contactForm.email,
+                        company: contactForm.company || 'Not provided',
+                        interest: contactForm.interest || 'Not specified',
+                        message: contactForm.message,
+                        botcheck: false,
+                      }),
                     });
                     if (res.ok) {
                       setSent(true);
