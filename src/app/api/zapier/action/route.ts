@@ -21,8 +21,7 @@ async function validateApiKey(apiKey: string, supabase: ReturnType<typeof create
 
   if (error || !data) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenant = data.find((t: any) => {
+  const tenant = data.find((t: { id: string; settings: unknown }) => {
     const settings = t.settings as Record<string, unknown>;
     return settings?.zapier_api_key === apiKey;
   });

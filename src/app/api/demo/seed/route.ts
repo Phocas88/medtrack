@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ── Demo credentials for each role ──
 const DEMO_USERS = {
@@ -19,6 +19,11 @@ function pick<T>(a: T[]): T { return a[Math.floor(Math.random() * a.length)]; }
 function rand(a: number, b: number) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
 export async function POST() {
+  // Block demo seeding in production unless explicitly allowed
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') {
+    return NextResponse.json({ error: 'Demo seeding is disabled in production' }, { status: 403 });
+  }
+
   try {
     const supabase = svc();
 
@@ -108,8 +113,7 @@ export async function POST() {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function seedInventory(supabase: any, T: string, managerId: string, supIds?: string[], custIds?: string[]) {
+async function seedInventory(supabase: SupabaseClient, T: string, managerId: string, supIds?: string[], custIds?: string[]) {
   try {
     // ── Ensure all demo auth users exist (associate, cashier, customer) ──
     for (const [key, u] of Object.entries(DEMO_USERS)) {

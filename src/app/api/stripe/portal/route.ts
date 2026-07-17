@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let stripe: any = null;
+import type Stripe from 'stripe';
+
+let stripe: Stripe | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Stripe = require('stripe');
+  const StripeLib = require('stripe');
   if (process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    stripe = new StripeLib(process.env.STRIPE_SECRET_KEY) as Stripe;
   }
 } catch {
   /* stripe not installed */
@@ -55,9 +56,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const settings = (tenant.settings as Record<string, any>) || {};
-    const customerId = settings.billing?.stripe_customer_id;
+    const settings = (tenant.settings as Record<string, unknown>) || {};
+    const billing = settings.billing as Record<string, unknown> | undefined;
+    const customerId = billing?.stripe_customer_id as string | undefined;
 
     if (!customerId) {
       return NextResponse.json(
@@ -74,11 +75,10 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ url: portalSession.url });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
+  } catch (err) {
     console.error('Stripe portal error:', err);
     return NextResponse.json(
-      { error: err.message || 'Failed to create portal session' },
+      { error: err instanceof Error ? err.message : 'Failed to create portal session' },
       { status: 500 }
     );
   }

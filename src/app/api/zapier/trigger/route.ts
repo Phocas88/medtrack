@@ -21,8 +21,7 @@ async function validateApiKey(apiKey: string, supabase: ReturnType<typeof create
 
   if (error || !data) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tenant = data.find((t: any) => {
+  const tenant = data.find((t: { id: string; settings: unknown }) => {
     const settings = t.settings as Record<string, unknown>;
     return settings?.zapier_api_key === apiKey;
   });
@@ -72,8 +71,7 @@ export async function GET(request: NextRequest) {
       const { data } = await query;
       if (data) {
         events.push(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...data.map((row: any) => ({
+          ...data.map((row: Record<string, unknown>) => ({
             id: row.id,
             type: 'stock_movement' as const,
             timestamp: row.created_at,
@@ -99,8 +97,7 @@ export async function GET(request: NextRequest) {
       const { data } = await query;
       if (data) {
         events.push(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...data.map((row: any) => ({
+          ...data.map((row: Record<string, unknown>) => ({
             id: row.id,
             type: 'sales_order' as const,
             timestamp: row.created_at,
@@ -126,8 +123,7 @@ export async function GET(request: NextRequest) {
       const { data } = await query;
       if (data) {
         events.push(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...data.map((row: any) => ({
+          ...data.map((row: Record<string, unknown>) => ({
             id: row.id,
             type: 'purchase_order' as const,
             timestamp: row.created_at,

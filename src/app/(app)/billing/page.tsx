@@ -161,13 +161,13 @@ export default function BillingPage() {
         .eq("id", tenantId)
         .single()
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const settings = (tenant?.settings as Record<string, any>) || {}
+      const settings = (tenant?.settings as Record<string, unknown>) || {}
+      const billing = settings.billing as Record<string, unknown> | undefined
       setBilling({
-        plan: settings.billing?.plan || null,
-        status: settings.billing?.status || null,
-        stripe_customer_id: settings.billing?.stripe_customer_id || null,
-        stripe_subscription_id: settings.billing?.stripe_subscription_id || null,
+        plan: (billing?.plan as string) || null,
+        status: (billing?.status as string) || null,
+        stripe_customer_id: (billing?.stripe_customer_id as string) || null,
+        stripe_subscription_id: (billing?.stripe_subscription_id as string) || null,
       })
 
       // Fetch user count for this tenant

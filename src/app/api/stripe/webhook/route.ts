@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let stripe: any = null;
+import type Stripe from 'stripe';
+
+let stripe: Stripe | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Stripe = require('stripe');
+  const StripeLib = require('stripe');
   if (process.env.STRIPE_SECRET_KEY) {
-    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    stripe = new StripeLib(process.env.STRIPE_SECRET_KEY) as Stripe;
   }
 } catch {
   /* stripe not installed */
@@ -22,8 +23,7 @@ function createServiceClient() {
   return createClient(url, serviceKey);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function updateTenantBilling(tenantId: string, billingData: Record<string, any>) {
+async function updateTenantBilling(tenantId: string, billingData: Record<string, unknown>) {
   const supabase = createServiceClient();
 
   // Fetch current settings
@@ -38,12 +38,12 @@ async function updateTenantBilling(tenantId: string, billingData: Record<string,
     throw fetchError;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const currentSettings = (tenant?.settings as Record<string, any>) || {};
+  const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
+  const currentBilling = (currentSettings.billing as Record<string, unknown>) || {};
   const updatedSettings = {
     ...currentSettings,
     billing: {
-      ...(currentSettings.billing || {}),
+      ...currentBilling,
       ...billingData,
       updated_at: new Date().toISOString(),
     },
@@ -95,9 +95,8 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err instanceof Error ? err.message : err);
     return NextResponse.json(
       { error: 'Invalid signature' },
       { status: 400 }
