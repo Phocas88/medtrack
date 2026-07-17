@@ -19,9 +19,9 @@ import {
 } from 'lucide-react';
 
 const DEMO_CREDS: Record<string, { email: string; password: string; redirect: string }> = {
-  manager: { email: 'demo@stokora.com', password: 'demo1234!', redirect: '/dashboard' },
-  associate: { email: 'associate@stokora.com', password: 'demo1234!', redirect: '/scan' },
-  cashier: { email: 'cashier@stokora.com', password: 'demo1234!', redirect: '/pos' },
+  manager: { email: 'demo@stokora-wms.com', password: 'demo1234!', redirect: '/dashboard' },
+  associate: { email: 'associate@stokora-wms.com', password: 'demo1234!', redirect: '/scan' },
+  cashier: { email: 'cashier@stokora-wms.com', password: 'demo1234!', redirect: '/pos' },
   customer: { email: 'buyer@metrogrocery.com', password: 'demo1234!', redirect: '/portal' },
 };
 
