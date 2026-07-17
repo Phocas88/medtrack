@@ -119,7 +119,7 @@ const DEFAULT_STATE: OnboardingState = {
   createdSuppliers: 0,
 };
 
-const STORAGE_KEY = 'medtrack_onboarding';
+const STORAGE_KEY = 'stokora_onboarding';
 
 function generateCode(name: string): string {
   return name

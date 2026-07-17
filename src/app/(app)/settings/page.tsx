@@ -149,7 +149,7 @@ export default function SettingsPage() {
   const [features, setFeatures] = useState<FeatureFlags>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('medtrack_features');
+        const stored = localStorage.getItem('stokora_features');
         if (stored) return JSON.parse(stored);
       } catch { /* ignore */ }
     }
@@ -302,7 +302,7 @@ export default function SettingsPage() {
     setFeatures((prev) => {
       const updated = { ...prev, [key]: !prev[key] };
       try {
-        localStorage.setItem('medtrack_features', JSON.stringify(updated));
+        localStorage.setItem('stokora_features', JSON.stringify(updated));
       } catch { /* ignore */ }
       toast.success(`${featureToggles.find(f => f.key === key)?.label} ${updated[key] ? 'enabled' : 'disabled'}`);
       return updated;
@@ -371,7 +371,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `medtrack-export-${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `stokora-export-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

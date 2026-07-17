@@ -1,7 +1,7 @@
 /**
- * MedTrack Seed Script
+ * Stokora WMS Seed Script
  *
- * Seeds the database with sample medical supply data for demos.
+ * Seeds the database with sample inventory data for demos.
  * Requires SUPABASE_SERVICE_ROLE_KEY in environment.
  *
  * Usage:
@@ -30,10 +30,10 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 async function seed() {
-  console.log('Seeding MedTrack database...\n');
+  console.log('Seeding Stokora WMS database...\n');
 
   // ── Create demo auth user ──
-  const demoEmail = 'demo@medtrack.io';
+  const demoEmail = 'demo@stokora.com';
   const demoPassword = 'demo1234';
 
   const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({

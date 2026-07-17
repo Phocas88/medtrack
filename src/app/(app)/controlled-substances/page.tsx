@@ -245,7 +245,7 @@ export default function ControlledSubstancesPage() {
   // ── Load reconciliations from localStorage (simulated) ──
   const loadReconciliations = useCallback(() => {
     if (!tenantId) return;
-    const stored = localStorage.getItem(`medtrack_recon_${tenantId}`);
+    const stored = localStorage.getItem(`stokora_recon_${tenantId}`);
     if (stored) {
       try {
         setReconciliations(JSON.parse(stored));
@@ -257,7 +257,7 @@ export default function ControlledSubstancesPage() {
 
   function saveReconciliations(recons: Reconciliation[]) {
     if (!tenantId) return;
-    localStorage.setItem(`medtrack_recon_${tenantId}`, JSON.stringify(recons));
+    localStorage.setItem(`stokora_recon_${tenantId}`, JSON.stringify(recons));
     setReconciliations(recons);
   }
 
