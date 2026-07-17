@@ -111,7 +111,7 @@ export async function POST(request: Request) {
 
         if (tenantId && session.subscription) {
           // Retrieve subscription to get price info
-          const subscription = await stripe.subscriptions.retrieve(session.subscription);
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
           const priceId = subscription.items.data[0]?.price?.id;
 
           await updateTenantBilling(tenantId, {
@@ -156,7 +156,8 @@ export async function POST(request: Request) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
-        const subscriptionId = invoice.subscription;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subscriptionId = (invoice as any).subscription;
 
         if (subscriptionId) {
           // Look up the subscription to get tenant metadata

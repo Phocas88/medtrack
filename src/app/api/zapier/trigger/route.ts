@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
       if (data) {
         events.push(
           ...data.map((row: Record<string, unknown>) => ({
-            id: row.id,
+            id: row.id as string,
             type: 'stock_movement' as const,
-            timestamp: row.created_at,
-            data: row,
+            timestamp: row.created_at as string,
+            data: row as unknown,
           }))
         );
       }
@@ -98,10 +98,10 @@ export async function GET(request: NextRequest) {
       if (data) {
         events.push(
           ...data.map((row: Record<string, unknown>) => ({
-            id: row.id,
+            id: row.id as string,
             type: 'sales_order' as const,
-            timestamp: row.created_at,
-            data: row,
+            timestamp: row.created_at as string,
+            data: row as unknown,
           }))
         );
       }
@@ -124,10 +124,10 @@ export async function GET(request: NextRequest) {
       if (data) {
         events.push(
           ...data.map((row: Record<string, unknown>) => ({
-            id: row.id,
+            id: row.id as string,
             type: 'purchase_order' as const,
-            timestamp: row.created_at,
-            data: row,
+            timestamp: row.created_at as string,
+            data: row as unknown,
           }))
         );
       }

@@ -46,8 +46,11 @@ export default function SupportPage() {
               <div>
                 <h2 className="font-semibold text-lg">Documentation</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Guides and documentation are being prepared and will be available soon.
+                  Complete setup and user guide covering all modules, operations, and integrations.
                 </p>
+                <Link href="/guide" className="text-primary font-medium mt-2 inline-block hover:underline">
+                  View User Guide &rarr;
+                </Link>
               </div>
             </div>
           </div>
