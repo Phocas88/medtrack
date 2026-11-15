@@ -239,8 +239,9 @@ function CollapsibleNavSection({
               <div key={item.href} className="group flex items-center">
                 <Link
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex-1 flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    "flex-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -251,10 +252,12 @@ function CollapsibleNavSection({
                 </Link>
                 {onToggleFavorite && (
                   <button
+                    aria-label={`${isFav ? "Remove" : "Add"} ${item.label} ${isFav ? "from" : "to"} favorites`}
+                    aria-pressed={!!isFav}
                     onClick={() => onToggleFavorite(item.href)}
                     className={cn(
                       "shrink-0 p-1 rounded transition-opacity",
-                      isFav ? "opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
+                      isFav ? "opacity-100" : "opacity-0 group-hover:opacity-50 focus-visible:opacity-100 hover:!opacity-100"
                     )}
                   >
                     <Star className={cn("h-3 w-3", isFav ? "fill-amber-500 text-amber-500" : "text-muted-foreground")} />
@@ -314,10 +317,10 @@ function SidebarContent() {
   })
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="workspace-nav flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-14 items-center px-4">
-        <StokoraLogo theme="light" />
+      <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-5">
+        <StokoraLogo theme="dark" size="sm" />
       </div>
 
       {/* Navigation */}
@@ -402,7 +405,7 @@ function SidebarContent() {
 
 export function Sidebar() {
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background">
+    <aside className="hidden md:flex h-dvh w-64 shrink-0 flex-col">
       <SidebarContent />
     </aside>
   )
@@ -416,7 +419,7 @@ interface MobileSidebarProps {
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="workspace-theme w-64 p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SidebarContent />
       </SheetContent>

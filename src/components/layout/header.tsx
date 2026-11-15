@@ -144,7 +144,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     .slice(0, 2) || "WM"
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+    <header className="sticky top-0 z-40 flex h-20 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-8 lg:px-10">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
@@ -157,17 +157,17 @@ export function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Page title */}
-      <h1 className="text-base font-semibold truncate min-w-0 flex-1">{title}</h1>
+      <h1 className="text-lg font-semibold tracking-tight truncate min-w-0 flex-1">{title}</h1>
 
       {/* Search button */}
       <Button
         variant="outline"
         size="sm"
-        className="hidden sm:flex items-center gap-2 text-muted-foreground h-8 w-56 justify-start"
+        className="hidden sm:flex items-center gap-2 text-muted-foreground h-10 w-64 justify-start"
         onClick={() => setSearchOpen(true)}
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="text-xs">Search...</span>
+        <span className="text-xs">Find a page...</span>
         <kbd className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">
           <Command className="inline h-2.5 w-2.5" />K
         </kbd>
@@ -179,6 +179,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         onClick={() => setSearchOpen(true)}
       >
         <Search className="h-4 w-4" />
+        <span className="sr-only">Find a page</span>
       </Button>
 
       {/* Right side actions */}
@@ -201,7 +202,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* User menu — NOW FUNCTIONAL */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center justify-center rounded-full p-1 hover:bg-accent transition-colors">
+          <DropdownMenuTrigger aria-label="Account menu" className="flex items-center justify-center rounded-full p-1 hover:bg-accent transition-colors">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>

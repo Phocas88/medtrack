@@ -22,6 +22,6 @@ export function shopDomain(value: string): string {
 }
 
 export function isPublicPage(path: string): boolean {
-  return ['/', '/demo', '/support', '/guide', '/manifest.json', '/robots.txt', '/sitemap.xml'].includes(path)
+  return ['/', '/demo', '/demo/workspace', '/support', '/guide', '/manifest.json', '/robots.txt', '/sitemap.xml'].includes(path)
     || path.startsWith('/legal/');
 }

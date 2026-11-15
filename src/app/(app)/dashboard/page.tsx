@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Card, CardContent } from '@/components/ui/card';
+import { WorkspaceOverview } from '@/components/workspace/overview';
 import { LiteDashboard } from './lite-dashboard';
 import { ThreePLDashboard } from './threepl-dashboard';
 import {
@@ -129,9 +130,7 @@ interface KPIData {
 export default function DashboardPage() {
   const { preset } = useAuth();
 
-  if (preset === 'lite') return <LiteDashboard />;
-  if (preset === '3pl') return <ThreePLDashboard />;
-  return <FullDashboard />;
+  return <div className="space-y-8"><WorkspaceOverview />{preset === 'lite' ? <LiteDashboard /> : preset === '3pl' ? <ThreePLDashboard /> : <FullDashboard />}</div>;
 }
 
 function FullDashboard() {
