@@ -21,6 +21,7 @@ export async function POST(request: Request) {
 
     // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: 'Notification worker is not configured' }, { status: 503 });
     if (apiKey) {
       const providedKey = request.headers.get('x-api-key');
       if (providedKey !== apiKey) {

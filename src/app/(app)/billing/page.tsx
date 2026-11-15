@@ -35,13 +35,6 @@ import {
   Warehouse,
 } from "lucide-react"
 
-// ── Stripe Price IDs (replace with real Stripe price IDs) ──────────────
-const PRICE_IDS = {
-  starter: "price_starter_monthly_placeholder",
-  professional: "price_professional_monthly_placeholder",
-  enterprise: "price_enterprise_monthly_placeholder",
-} as const
-
 // ── Plan definitions ───────────────────────────────────────────────────
 const PLANS = [
   {
@@ -131,9 +124,11 @@ function getStatusVariant(status: string | null): "default" | "secondary" | "des
     case "past_due":
       return "destructive"
     case "cancelled":
+    case "canceled":
     case "cancelling":
       return "secondary"
     case "trial":
+    case "trialing":
       return "outline"
     default:
       return "secondary"
@@ -156,13 +151,12 @@ export default function BillingPage() {
 
       // Fetch tenant settings for billing info
       const { data: tenant } = await supabase
-        .from("tenants")
-        .select("settings")
-        .eq("id", tenantId)
+        .from("tenant_billing")
+        .select("*")
+        .eq("tenant_id", tenantId)
         .single()
 
-      const settings = (tenant?.settings as Record<string, unknown>) || {}
-      const billing = settings.billing as Record<string, unknown> | undefined
+      const billing = tenant as Record<string, unknown> | null;
       setBilling({
         plan: (billing?.plan as string) || null,
         status: (billing?.status as string) || null,
@@ -192,7 +186,7 @@ export default function BillingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          priceId: PRICE_IDS[planKey as keyof typeof PRICE_IDS],
+          plan: planKey,
           tenantId,
         }),
       })
@@ -243,7 +237,7 @@ export default function BillingPage() {
   }
 
   const currentPlan = PLANS.find((p) => p.key === billing?.plan)
-  const isSubscribed = billing?.plan && billing?.status !== "cancelled"
+  const isSubscribed = billing?.plan && !["cancelled", "canceled", "incomplete_expired"].includes(billing?.status || "")
 
   if (loading) {
     return (

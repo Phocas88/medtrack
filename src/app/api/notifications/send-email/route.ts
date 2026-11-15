@@ -25,6 +25,7 @@ export async function POST(request: Request) {
 
     // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: 'Notification worker is not configured' }, { status: 503 });
     if (apiKey) {
       const providedKey = request.headers.get('x-api-key');
       if (providedKey !== apiKey) {
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!resend) return NextResponse.json({ error: 'Email delivery is not configured' }, { status: 503 });
     const supabase = createServiceClient();
 
     // Get unsent notifications
@@ -128,10 +130,11 @@ export async function POST(request: Request) {
       // ── Send emails to recipients ──
       const fromAddress = 'notifications@' + (process.env.NEXT_PUBLIC_APP_DOMAIN || 'stokora.com');
 
+      let delivered = true;
       for (const recipientEmail of recipients) {
         if (resend) {
           try {
-            await resend.emails.send({
+            const result = await resend.emails.send({
               from: fromAddress,
               to: recipientEmail,
               subject: notification.title,
@@ -141,7 +144,9 @@ export async function POST(request: Request) {
       <p style="color: #666; font-size: 12px;">This is an automated notification from your inventory management system.</p>
     </div>`
             });
+            if (result.error) delivered = false;
           } catch (emailErr) {
+            delivered = false;
             console.error(`Failed to send email to ${recipientEmail}:`, emailErr);
           }
         } else {
@@ -155,6 +160,7 @@ export async function POST(request: Request) {
         }
       }
 
+      if (!delivered) continue;
       // Mark notification as email sent
       await supabase
         .from('notifications')

@@ -1,29 +1,17 @@
+import { requireUser, routeError } from '@/lib/server-auth';
+import { createServiceClient } from '@/lib/supabase/service';
 import { NextResponse } from 'next/server';
 import { buyLabel, isShippingConfigured } from '@/lib/shipping';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-  return data;
-}
 
 export async function POST(request: Request) {
   try {
+    const authorizedUser = await requireUser(['admin', 'manager', 'staff'], true);
     if (!isShippingConfigured()) {
       return NextResponse.json({ error: 'Shipping not configured' }, { status: 400 });
     }
 
-    const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authUser = authorizedUser;
 
     const { shipment_id, rate_id, order_id } = await request.json();
 
@@ -31,7 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'shipment_id and rate_id required' }, { status: 400 });
     }
 
-    const result = await buyLabel(shipment_id, rate_id);
+    const db = createServiceClient();
+    const { data: quote, error: quoteError } = await db.from('shipping_quotes').select('*').eq('shipment_id', shipment_id).eq('tenant_id', authorizedUser.tenant_id).single();
+    if (quoteError || !quote || !quote.rates.some((rate: { id: string }) => rate.id === rate_id)) return NextResponse.json({ error: 'Shipping quote not found' }, { status: 404 });
+    if (!order_id) return NextResponse.json({ error: 'An order is required' }, { status: 400 });
+    const { data: order, error: orderError } = await db.from('sales_orders').select('id,status').eq('id', order_id).eq('tenant_id', authorizedUser.tenant_id).single();
+    if (orderError || !order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    if (!['draft', 'confirmed', 'picking'].includes(order.status)) return NextResponse.json({ error: 'Order is not available for shipping' }, { status: 409 });
+    const result = quote.purchased || await buyLabel(shipment_id, rate_id);
+    const { error: saveError } = await db.from('shipping_quotes').update({ purchased: result }).eq('shipment_id', shipment_id).eq('tenant_id', authorizedUser.tenant_id);
+    if (saveError) throw saveError;
 
     // Update the sales order with tracking info
     if (order_id) {
@@ -42,7 +39,7 @@ export async function POST(request: Request) {
         shipping_label_url: result.label_url,
         shipping_rate: parseFloat(result.rate.rate),
         status: 'picking', // ready to pick and ship
-      }).eq('id', order_id);
+      }).eq('id', order_id).eq('tenant_id', authorizedUser.tenant_id);
 
       // Audit log
       await svc.from('stock_movements').insert({
@@ -72,6 +69,6 @@ export async function POST(request: Request) {
       rate: result.rate.rate,
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to buy label' }, { status: 500 });
+    return routeError(err);
   }
 }

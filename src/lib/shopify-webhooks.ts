@@ -1,3 +1,4 @@
+import { shopDomain as normalizeShop } from '@/lib/security';
 import crypto from 'crypto';
 
 /**
@@ -27,29 +28,31 @@ export function verifyShopifyHmac(
   }
 }
 
-/**
- * Find tenant by Shopify shop domain.
- * Looks through all tenants' settings.shopify.shop_domain or store_url.
- */
 export async function findTenantByShopDomain(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  shopDomain: string,
+  supabase: import('@supabase/supabase-js').SupabaseClient,
+  domain: string,
 ): Promise<{ id: string; settings: Record<string, unknown> } | null> {
-  const { data: tenants } = await supabase.from('tenants').select('id, settings');
+  let normalized: string;
+  try { normalized = normalizeShop(domain); } catch { return null; }
+  const { data: connection, error } = await supabase.from('integration_credentials').select('tenant_id').eq('provider', 'shopify').eq('shop_domain', normalized).maybeSingle();
+  if (error) throw error;
+  if (!connection) return null;
+  const { data: tenant, error: tenantError } = await supabase.from('tenants').select('id,settings').eq('id', connection.tenant_id).single();
+  if (tenantError) throw tenantError;
+  return tenant;
+}
 
-  const domain = shopDomain.toLowerCase().replace('https://', '').replace('http://', '').replace(/\/$/, '');
-
-  for (const t of tenants || []) {
-    const s = (t.settings as Record<string, unknown>) || {};
-    const shopify = (s.shopify as Record<string, unknown>) || {};
-    const storeUrl = ((shopify.store_url as string) || '').toLowerCase();
-    const storedDomain = ((shopify.shop_domain as string) || '').toLowerCase();
-
-    if (storedDomain === domain || storeUrl.includes(domain) || domain.includes(storeUrl.replace('.myshopify.com', ''))) {
-      return { id: t.id, settings: s };
-    }
-  }
-
-  return null;
+export function verifyOAuth(params: URLSearchParams, state?: string, expectedShop?: string): boolean {
+  const secret = process.env.SHOPIFY_API_SECRET;
+  const hmac = params.get('hmac');
+  if (!secret || !hmac || !state || !expectedShop || params.get('state') !== state || !params.get('code')) return false;
+  try {
+    if (normalizeShop(params.get('shop') || '') !== expectedShop) return false;
+    const timestamp = Number(params.get('timestamp'));
+    if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 600) return false;
+    const entries = Array.from(params.entries()).filter(([key]) => key !== 'hmac' && key !== 'signature').sort(([a], [b]) => a.localeCompare(b));
+    const message = entries.map(([key, value]) => `${key}=${value}`).join('&');
+    const digest = crypto.createHmac('sha256', secret).update(message).digest('hex');
+    return crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(hmac));
+  } catch { return false; }
 }

@@ -1,8 +1,11 @@
+import { requireUser, routeError } from '@/lib/server-auth';
+import { createServiceClient } from '@/lib/supabase/service';
 import { NextResponse } from 'next/server';
 import { getRates, isShippingConfigured, type ShippingAddress, type Parcel } from '@/lib/shipping';
 
 export async function POST(request: Request) {
   try {
+    const authorizedUser = await requireUser(['admin', 'manager', 'staff'], true);
     if (!isShippingConfigured()) {
       return NextResponse.json({ error: 'Shipping not configured. Add EASYPOST_API_KEY to environment variables.' }, { status: 400 });
     }
@@ -19,8 +22,10 @@ export async function POST(request: Request) {
 
     const result = await getRates(from, to, parcel);
 
+    const { error } = await createServiceClient().from('shipping_quotes').insert({ shipment_id: result.shipment_id, tenant_id: authorizedUser.tenant_id, rates: result.rates });
+    if (error) throw error;
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to get rates' }, { status: 500 });
+    return routeError(err);
   }
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { safeRedirect } from '@/lib/security';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/dashboard');
+    const next = new URLSearchParams(window.location.search).get('redirect');
+    router.push(safeRedirect(next));
     router.refresh();
   }
 

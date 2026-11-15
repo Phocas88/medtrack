@@ -57,6 +57,8 @@ export default function ShipPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [lines, setLines] = useState<OrderLine[]>([]);
+  const [existingOrders, setExistingOrders] = useState<{ id: string; order_number: string; customer_id: string; lines: { product_id: string; quantity_ordered: number; quantity_shipped: number; unit_price: number }[] }[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [shipDate, setShipDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
@@ -65,6 +67,7 @@ export default function ShipPage() {
   const [pickSuggestions, setPickSuggestions] = useState<PickSuggestion[]>([]);
   const [showPicking, setShowPicking] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [recentOrders, setRecentOrders] = useState<(SalesOrder & { customer?: Customer })[]>([]);
 
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function ShipPage() {
     supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_archived', false).order('name')
       .then(({ data }) => setProducts(data || []));
 
+    supabase.from('sales_orders').select('id,order_number,customer_id,lines:sales_order_lines(product_id,quantity_ordered,quantity_shipped,unit_price)').eq('tenant_id', tenantId).in('status', ['confirmed', 'picking']).order('created_at').then(({ data }) => setExistingOrders(data || []));
     loadRecentOrders();
   }, [tenantId]);
 
@@ -153,93 +157,20 @@ export default function ShipPage() {
     setProcessing(true);
     const supabase = createClient();
 
-    // Generate order number
-    const orderNum = `SO-${Date.now().toString(36).toUpperCase()}`;
-
-    // Create sales order
-    const { data: order, error: orderErr } = await supabase
-      .from('sales_orders')
-      .insert({
-        tenant_id: tenantId,
-        order_number: orderNum,
-        customer_id: customerId,
-        status: 'shipped',
-        ship_date: shipDate,
-        notes,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (orderErr) { toast.error(orderErr.message); setProcessing(false); return; }
-
-    // Create order lines
-    await supabase.from('sales_order_lines').insert(
-      lines.map((l) => ({
-        tenant_id: tenantId,
-        order_id: order.id,
-        product_id: l.product_id,
-        quantity_ordered: l.quantity,
-        quantity_shipped: l.quantity,
-        unit_price: l.unit_price,
-      }))
-    );
-
-    // Create shipment
-    const { data: shipment } = await supabase
-      .from('shipments')
-      .insert({
-        tenant_id: tenantId,
-        order_id: order.id,
-        customer_id: customerId,
-        shipped_by: user.id,
-        tracking_number: trackingNumber || null,
-        notes,
-      })
-      .select()
-      .single();
-
-    if (!shipment) { toast.error('Failed to create shipment'); setProcessing(false); return; }
-
-    // Process each pick: create shipment lines, decrement lots, record movements
-    for (const suggestion of pickSuggestions) {
-      for (const pick of suggestion.picks) {
-        // Shipment line
-        await supabase.from('shipment_lines').insert({
-          tenant_id: tenantId,
-          shipment_id: shipment.id,
-          product_id: suggestion.product.id,
-          lot_id: pick.lot.id,
-          quantity: pick.pickQuantity,
-        });
-
-        // Decrement lot
-        await supabase
-          .from('lots')
-          .update({
-            quantity_on_hand: pick.lot.quantity_on_hand - pick.pickQuantity,
-            status: pick.lot.quantity_on_hand - pick.pickQuantity <= 0 ? 'depleted' : 'active',
-          })
-          .eq('id', pick.lot.id);
-
-        // Stock movement
-        await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: suggestion.product.id,
-          lot_id: pick.lot.id,
-          user_id: user.id,
-          quantity: -pick.pickQuantity,
-          movement_type: 'ship',
-          reason: `Shipped to customer - Order ${orderNum}`,
-          reference_number: orderNum,
-        });
-      }
-    }
+    const { data: posted, error } = await supabase.rpc('ship_inventory', {
+      p_request_id: requestId,
+      p_shipment: { order_id: selectedOrderId || null, customer_id: customerId, ship_date: shipDate, notes, tracking_number: trackingNumber, lines },
+    });
+    if (error) { toast.error(error.message); setProcessing(false); return; }
+    const orderNum = posted.order_number;
+    setRequestId(crypto.randomUUID());
 
     toast.success(`Shipment ${orderNum} created successfully`);
     setShowPicking(false);
     setLines([]);
     setCustomerId('');
+    setSelectedOrderId('');
+    setExistingOrders(previous => previous.filter(order => order.id !== selectedOrderId));
     setNotes('');
     setTrackingNumber('');
     setPickSuggestions([]);
@@ -254,6 +185,17 @@ export default function ShipPage() {
         description="Create shipments with FEFO picking logic"
       />
 
+      <div className="space-y-2">
+        <Label htmlFor="existing-order">Fulfill an existing order</Label>
+        <select id="existing-order" className="w-full rounded border p-2" value={selectedOrderId} onChange={event => {
+          const id = event.target.value; setSelectedOrderId(id);
+          const order = existingOrders.find(candidate => candidate.id === id);
+          setCustomerId(order?.customer_id || '');
+          setLines(order ? order.lines.filter(line => line.quantity_ordered > line.quantity_shipped).map(line => ({ product_id: line.product_id, quantity: line.quantity_ordered - line.quantity_shipped, unit_price: line.unit_price })) : []);
+          setShowPicking(false);
+        }}><option value="">Create a new manual shipment</option>{existingOrders.map(order => <option key={order.id} value={order.id}>{order.order_number}</option>)}</select>
+        {selectedOrderId && <p className="text-sm text-muted-foreground">Existing order quantities and prices are verified by the server when shipping.</p>}
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

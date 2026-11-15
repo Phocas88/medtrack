@@ -41,6 +41,7 @@ import {
 import { CalendarDays, Truck, PackageOpen, Plus, Percent } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 
 interface DockAppointment {
   id: string;
@@ -55,7 +56,6 @@ interface DockAppointment {
   created_at: string;
 }
 
-const DOCK_STORAGE_KEY = 'trackflow_dock_appointments';
 const DOCK_DOORS = ['Door 1', 'Door 2', 'Door 3', 'Door 4', 'Door 5', 'Door 6'];
 const TIME_SLOTS: string[] = [];
 for (let h = 6; h <= 19; h++) {
@@ -63,18 +63,6 @@ for (let h = 6; h <= 19; h++) {
   TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
 }
 TIME_SLOTS.push('20:00');
-
-function getStoredAppointments(): DockAppointment[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(DOCK_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function storeAppointments(appts: DockAppointment[]) {
-  localStorage.setItem(DOCK_STORAGE_KEY, JSON.stringify(appts));
-}
 
 function getToday(): string {
   return new Date().toISOString().split('T')[0];
@@ -107,7 +95,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function DockSchedulingPage() {
-  useAuth();
+  const { tenantId } = useAuth();
   const [appointments, setAppointments] = useState<DockAppointment[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterDate, setFilterDate] = useState('');
@@ -123,8 +111,12 @@ export default function DockSchedulingPage() {
   const [formNotes, setFormNotes] = useState('');
 
   useEffect(() => {
-    setAppointments(getStoredAppointments());
-  }, []);
+    if (!tenantId) return;
+    createClient().from('dock_appointments').select('*').eq('tenant_id', tenantId).order('date').then(({ data, error }) => {
+      if (error) toast.error('Could not load the shared dock schedule');
+      else setAppointments(data || []);
+    });
+  }, [tenantId]);
 
   const resetForm = () => {
     setFormDate(getToday());
@@ -136,7 +128,8 @@ export default function DockSchedulingPage() {
     setFormNotes('');
   };
 
-  const createAppointment = () => {
+  const createAppointment = async () => {
+    if (!tenantId) return;
     if (!formCarrier.trim()) {
       toast.error('Carrier name is required');
       return;
@@ -165,19 +158,22 @@ export default function DockSchedulingPage() {
       return;
     }
 
+    const { error } = await createClient().from('dock_appointments').insert({ ...appt, tenant_id: tenantId });
+    if (error) { toast.error(error.code === '23505' ? 'That dock slot has just been booked' : 'Could not save appointment'); return; }
     const updated = [...appointments, appt];
-    storeAppointments(updated);
     setAppointments(updated);
     setDialogOpen(false);
     resetForm();
     toast.success('Appointment scheduled');
   };
 
-  const updateStatus = (id: string, newStatus: DockAppointment['status']) => {
+  const updateStatus = async (id: string, newStatus: DockAppointment['status']) => {
+    if (!tenantId) return;
+    const { error } = await createClient().from('dock_appointments').update({ status: newStatus }).eq('id', id).eq('tenant_id', tenantId);
+    if (error) { toast.error('Could not update appointment'); return; }
     const updated = appointments.map(a =>
       a.id === id ? { ...a, status: newStatus } : a
     );
-    storeAppointments(updated);
     setAppointments(updated);
     toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
   };

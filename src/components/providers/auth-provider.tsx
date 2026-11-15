@@ -59,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', authUser.id)
           .single();
 
+        if (data && !data.is_active) {
+          await supabase.auth.signOut();
+          setUser(null);
+          router.replace('/auth/login?error=account_disabled');
+          return;
+        }
         setUser(data ?? null);
 
         // Fetch tenant name + settings + preset for white-label branding and module config
@@ -104,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const signOut = useCallback(async () => {
     const supabase = createClient();

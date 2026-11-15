@@ -58,12 +58,12 @@ export default function ShopifyIntegrationPage() {
     const settings = (tenant?.settings as Record<string, unknown>) || {};
     const shopify = (settings.shopify as Record<string, unknown>) || {};
 
-    if (shopify.store_url && shopify.access_token) {
+    if (shopify.store_url && shopify.connected) {
       setState((prev) => ({
         ...prev,
         connected: true,
         store_url: shopify.store_url as string,
-        access_token: shopify.access_token as string,
+        access_token: '',
         shop_name: (shopify.shop_name as string) || null,
         shop_domain: (shopify.shop_domain as string) || null,
         last_sync: (shopify.last_sync as string) || null,
@@ -102,6 +102,7 @@ export default function ShopifyIntegrationPage() {
       setState((prev) => ({
         ...prev,
         connected: true,
+        access_token: '',
         shop_name: data.shop_name,
         shop_domain: data.shop_domain,
         product_count: data.product_count,
@@ -118,12 +119,8 @@ export default function ShopifyIntegrationPage() {
   // Disconnect
   const handleDisconnect = async () => {
     if (!tenantId) return;
-    const supabase = createClient();
-    const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
-    const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-    delete currentSettings.shopify;
-    await supabase.from('tenants').update({ settings: currentSettings }).eq('id', tenantId);
-
+    const response = await fetch('/api/shopify/disconnect', { method: 'POST' });
+    if (!response.ok) { toast.error('Disconnect failed'); return; }
     setState({
       connected: false, store_url: '', access_token: '',
       shop_name: null, shop_domain: null, product_count: null, order_count: null,
@@ -168,15 +165,8 @@ export default function ShopifyIntegrationPage() {
   };
 
   // Update sync settings
-  const updateSyncSetting = async (key: string, value: boolean) => {
-    if (!tenantId) return;
-    setState((prev) => ({ ...prev, [key]: value }));
-    const supabase = createClient();
-    const { data: tenant } = await supabase.from('tenants').select('settings').eq('id', tenantId).single();
-    const settings = (tenant?.settings as Record<string, unknown>) || {};
-    const shopify = (settings.shopify as Record<string, unknown>) || {};
-    shopify[key] = value;
-    await supabase.from('tenants').update({ settings: { ...settings, shopify } }).eq('id', tenantId);
+  const updateSyncSetting = async () => {
+    toast.info('Automatic inventory synchronization is not yet available. Order events are managed by the server.');
   };
 
   if (loading) {
@@ -314,7 +304,7 @@ export default function ShopifyIntegrationPage() {
                   <p className="text-sm font-medium">Auto-import new orders</p>
                   <p className="text-xs text-muted-foreground">Shopify orders automatically create sales orders in Stokora</p>
                 </div>
-                <Switch checked={state.auto_sync_orders} onCheckedChange={(v) => updateSyncSetting('auto_sync_orders', v)} />
+                <Switch checked={state.auto_sync_orders} onCheckedChange={() => updateSyncSetting()} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -322,7 +312,7 @@ export default function ShopifyIntegrationPage() {
                   <p className="text-sm font-medium">Two-way inventory sync</p>
                   <p className="text-xs text-muted-foreground">Stock changes in Stokora update Shopify availability</p>
                 </div>
-                <Switch checked={state.auto_sync_inventory} onCheckedChange={(v) => updateSyncSetting('auto_sync_inventory', v)} />
+                <Switch checked={state.auto_sync_inventory} onCheckedChange={() => updateSyncSetting()} />
               </div>
               <Separator />
               {isAdmin && (

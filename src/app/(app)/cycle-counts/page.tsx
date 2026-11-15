@@ -482,12 +482,10 @@ export default function CycleCountsPage() {
       // Update each line
       for (const line of entryLines) {
         const counted = parseInt(line.counted_quantity, 10);
-        const variance = counted - line.system_quantity;
         const { error } = await supabase
           .from('cycle_count_lines')
           .update({
             counted_quantity: counted,
-            variance,
             reason_code: line.reason_code || null,
             notes: line.notes || null,
             counted_by: user.id,
@@ -526,74 +524,9 @@ export default function CycleCountsPage() {
     if (!user || !tenantId) return;
     setPostingVariance(true);
     try {
-      const varianceLines = (count.lines || []).filter(
-        (l) => l.variance !== null && l.variance !== 0
-      );
-
-      for (const line of varianceLines) {
-        // Create stock_movement for adjustment
-        const { error: mvErr } = await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: line.lot_id || null,
-          user_id: user.id,
-          quantity: line.variance!,
-          movement_type: 'adjust',
-          reason: `Cycle count ${count.count_number}: ${line.reason_code || 'variance'}`,
-          reference_number: count.count_number,
-          metadata: { cycle_count_id: count.id, line_id: line.id },
-        });
-        if (mvErr) throw mvErr;
-
-        // Update lot quantity if lot_id is set
-        if (line.lot_id) {
-          const { data: lotData } = await supabase
-            .from('lots')
-            .select('quantity_on_hand')
-            .eq('id', line.lot_id)
-            .single();
-          if (lotData) {
-            const newQty = lotData.quantity_on_hand + line.variance!;
-            const { error: lotErr } = await supabase
-              .from('lots')
-              .update({ quantity_on_hand: Math.max(0, newQty) })
-              .eq('id', line.lot_id);
-            if (lotErr) throw lotErr;
-          }
-        }
-
-        // Update bin_inventory if applicable
-        const { data: biRows } = await supabase
-          .from('bin_inventory')
-          .select('id, quantity')
-          .eq('tenant_id', tenantId)
-          .eq('product_id', line.product_id);
-        if (biRows && biRows.length > 0) {
-          // Adjust the first matching row (simplification)
-          const bi = biRows[0];
-          const { error: biErr } = await supabase
-            .from('bin_inventory')
-            .update({ quantity: Math.max(0, bi.quantity + line.variance!) })
-            .eq('id', bi.id);
-          if (biErr) throw biErr;
-        }
-      }
-
-      // Approve the count
-      const { error: approveErr } = await supabase
-        .from('cycle_counts')
-        .update({
-          status: 'approved' as CountStatus,
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', count.id)
-        .eq('tenant_id', tenantId);
-      if (approveErr) throw approveErr;
-
-      toast.success(`Variance posted for ${count.count_number}. ${varianceLines.length} adjustment(s) created.`);
-      setVarianceDetailOpen(false);
-      setSelectedCount(null);
+      const { error } = await supabase.rpc('post_cycle_count', { p_count_id: count.id });
+      if (error) throw error;
+      toast.success('Count approved and stock adjusted');
       await loadCounts();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to post variance';

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,7 +97,7 @@ const FEATURE_SECTIONS = [
   {
     title: 'Platform & Integrations',
     icon: Zap,
-    features: ['Shopify integration — products, orders, inventory sync', 'EasyPost shipping — UPS/FedEx/USPS rates, labels, pickup', 'Stripe billing & payment processing', 'QuickBooks accounting sync', 'Zapier (5,000+ app connections)', 'Email notifications via Resend', 'White-label multi-tenancy', 'Role-based access control (RBAC)', 'Module-based feature toggles', 'IT user provisioning (email optional)', 'Password reset flow', 'Sentry error monitoring', 'Rate limiting & CSP security headers'],
+    features: ['Shopify product and order import', 'EasyPost shipping — UPS/FedEx/USPS rates, labels, pickup', 'Stripe subscription billing', 'QuickBooks integration planned', 'Zapier (5,000+ app connections)', 'Email notifications via Resend', 'White-label multi-tenancy', 'Role-based access control (RBAC)', 'Module-based feature toggles', 'IT user provisioning (email optional)', 'Password reset flow', 'Sentry error monitoring', 'Rate limiting & CSP security headers'],
   },
 ];
 
@@ -135,7 +136,7 @@ export default function DemoPage() {
         <p className="text-slate-500 mt-2 text-lg">Enterprise warehouse management at a fraction of the cost</p>
         <div className="flex flex-wrap justify-center gap-4 mt-6 text-sm text-slate-500">
           <span className="flex items-center gap-1"><Package className="h-4 w-4 text-blue-400" /> 97 routes</span>
-          <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-green-400" /> 100% WMS compliant</span>
+          <span className="flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-green-400" /> Warehouse workflows</span>
           <span className="flex items-center gap-1"><Layers className="h-4 w-4 text-purple-400" /> 4 separate UIs</span>
           <span className="flex items-center gap-1"><Target className="h-4 w-4 text-amber-400" /> $49-199/mo</span>
         </div>
@@ -388,7 +389,7 @@ export default function DemoPage() {
 
         {/* Footer */}
         <div className="text-center">
-          <a href="/" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">← Back to Stokora WMS</a>
+          <Link href="/" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">← Back to Stokora WMS</Link>
           <p className="text-xs text-slate-500 mt-2">Demo data is shared and resets periodically.</p>
         </div>
       </div>

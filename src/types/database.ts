@@ -32,6 +32,7 @@ export interface User {
   email: string;
   full_name: string;
   role: UserRole;
+  access_level?: 'full' | 'scanner_only';
   is_active: boolean;
   created_at: string;
   updated_at: string;

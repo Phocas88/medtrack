@@ -1,7 +1,7 @@
+import { requireUser, routeError } from '@/lib/server-auth';
+import { appOrigin } from '@/lib/security';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,35 +10,9 @@ function createServiceClient() {
   return createClient(url, serviceKey);
 }
 
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll() {},
-      },
-    }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: dbUser } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  return dbUser;
-}
-
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
+    const authUser = await requireUser(['admin'], true);
     if (!authUser || authUser.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
@@ -50,11 +24,9 @@ export async function POST(request: Request) {
 
     const serviceClient = createServiceClient();
 
-    // Use Supabase to generate a password reset link
-    const { error } = await serviceClient.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-    });
+    const { data: target } = await serviceClient.from('users').select('id').eq('email', email).eq('tenant_id', authUser.tenant_id).single();
+    if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const { error } = await serviceClient.auth.resetPasswordForEmail(email, { redirectTo: `${appOrigin()}/auth/reset?type=recovery` });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -76,8 +48,5 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('Password reset error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  } catch (error) { return routeError(error); }
 }

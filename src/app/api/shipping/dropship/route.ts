@@ -1,24 +1,12 @@
+import { requireUser, routeError } from '@/lib/server-auth';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-  return data;
-}
 
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authorizedUser = await requireUser(['admin', 'manager'], true);
+    const authUser = authorizedUser;
 
     const { order_id } = await request.json();
     if (!order_id) return NextResponse.json({ error: 'order_id required' }, { status: 400 });
@@ -139,6 +127,6 @@ export async function POST(request: Request) {
       ship_to: `${shipToName}, ${shipTo}`,
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Dropship failed' }, { status: 500 });
+    return routeError(err);
   }
 }

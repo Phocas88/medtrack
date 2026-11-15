@@ -55,7 +55,7 @@ export default function FindItemPage() {
 
     // Search by SKU, name, or UPC
     const { data: products } = await supabase
-      .from('products')
+      .from('staff_products')
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('is_archived', false)
@@ -91,7 +91,7 @@ export default function FindItemPage() {
 
     // Get lot info
     const { data: lots } = await supabase
-      .from('lots')
+      .from('staff_lots')
       .select('quantity_on_hand, expiration_date')
       .eq('tenant_id', tenantId)
       .eq('product_id', product.id)

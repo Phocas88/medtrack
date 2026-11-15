@@ -45,8 +45,10 @@ export default function SignupPage() {
       email: data.email,
       password: data.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
         data: {
           full_name: data.fullName,
+          company_name: data.companyName,
         },
       },
     });
@@ -58,24 +60,6 @@ export default function SignupPage() {
 
     if (!authData.user) {
       setServerError('Failed to create account. Please try again.');
-      return;
-    }
-
-    // 2. Create tenant + user record via API
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: authData.user.id,
-        email: data.email,
-        fullName: data.fullName,
-        companyName: data.companyName,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setServerError(body.error || 'Failed to set up your organization. Please contact support.');
       return;
     }
 

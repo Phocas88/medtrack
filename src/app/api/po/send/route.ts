@@ -1,29 +1,15 @@
+import { requireUser, routeError } from '@/lib/server-auth';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 
 function svc() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-  return data;
-}
-
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authorizedUser = await requireUser(['admin', 'manager'], true);
+    const authUser = authorizedUser;
 
     const { po_id } = await request.json();
     if (!po_id) return NextResponse.json({ error: 'po_id required' }, { status: 400 });
@@ -123,6 +109,7 @@ export async function POST(request: Request) {
 
     // Send via Resend if configured, otherwise log
     const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return NextResponse.json({ error: 'Email delivery is not configured; PO was not sent' }, { status: 503 });
     if (resendKey) {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -165,7 +152,6 @@ export async function POST(request: Request) {
       email_sent: !!resendKey,
     });
   } catch (err) {
-    console.error('PO send error:', err);
-    return NextResponse.json({ error: 'Failed to send PO' }, { status: 500 });
+    return routeError(err);
   }
 }

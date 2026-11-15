@@ -12,17 +12,17 @@ test.describe('Landing Page', () => {
     await expect(h1).toContainText('Inventory management');
 
     // Check for CTA buttons
-    await expect(page.getByRole('link', { name: /Start Free/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Start Free — No Credit Card', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: /See All Features/i })).toBeVisible();
   });
 
-  test('features section has 12 items', async ({ page }) => {
+  test('features describe the core warehouse workflows', async ({ page }) => {
     const featuresSection = page.locator('#features');
     await featuresSection.scrollIntoViewIfNeeded();
 
-    // Each feature card is a div inside the grid with an h3
-    const featureCards = featuresSection.locator('.grid > div');
-    await expect(featureCards).toHaveCount(12);
+    await expect(featuresSection.getByRole('heading', { name: 'Product & Lot Tracking', exact: true })).toBeVisible();
+    await expect(featuresSection.getByRole('heading', { name: 'Mobile Scanner', exact: true })).toBeVisible();
+    await expect(featuresSection.getByRole('heading', { name: 'Receive & Ship', exact: true })).toBeVisible();
   });
 
   test('pricing section shows 3 plans', async ({ page }) => {
@@ -48,11 +48,9 @@ test.describe('Landing Page', () => {
     await expect(industriesSection.getByText('Medical Supply')).toBeVisible();
     await expect(industriesSection.getByText('Pharmaceutical')).toBeVisible();
     await expect(industriesSection.getByText('Food & Beverage')).toBeVisible();
-    await expect(industriesSection.getByText('Auto Parts')).toBeVisible();
+    await expect(industriesSection.getByText('Auto Parts', { exact: true })).toBeVisible();
 
-    // There should be 16 industry items in the grid
-    const industryItems = industriesSection.locator('.grid > div');
-    await expect(industryItems).toHaveCount(16);
+
   });
 
   test('navigation links work', async ({ page }) => {

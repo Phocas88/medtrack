@@ -189,10 +189,7 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
     if (!transfer) return;
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase
-      .from('transfers')
-      .update({ status: 'in_transit', shipped_at: new Date().toISOString() })
-      .eq('id', transfer.id);
+    const { error } = await supabase.rpc('dispatch_transfer', { p_transfer_id: transfer.id });
 
     if (error) { toast.error(error.message); setSaving(false); return; }
     toast.success('Transfer shipped');
@@ -210,80 +207,8 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
     setSaving(true);
     const supabase = createClient();
 
-    // Update each transfer line with received qty
-    for (const line of lines) {
-      if (line.id) {
-        await supabase
-          .from('transfer_lines')
-          .update({ quantity_received: line.quantity_received })
-          .eq('id', line.id);
-      }
-    }
-
-    // Update transfer status
-    const { error: tErr } = await supabase
-      .from('transfers')
-      .update({
-        status: 'received',
-        received_by: user?.id || null,
-        received_at: new Date().toISOString(),
-      })
-      .eq('id', transfer.id);
-
-    if (tErr) { toast.error(tErr.message); setSaving(false); return; }
-
-    // Create stock movements for each line
-    const movements = [];
-    for (const line of lines) {
-      if (line.quantity_received > 0) {
-        // Negative at source
-        movements.push({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: line.lot_id || null,
-          user_id: user?.id || '',
-          quantity: -line.quantity_received,
-          movement_type: 'ship' as const,
-          reason: `Transfer ${transfer.transfer_number} - shipped`,
-          reference_number: transfer.transfer_number,
-          metadata: { transfer_id: transfer.id },
-        });
-        // Positive at destination
-        movements.push({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: line.lot_id || null,
-          user_id: user?.id || '',
-          quantity: line.quantity_received,
-          movement_type: 'receive' as const,
-          reason: `Transfer ${transfer.transfer_number} - received`,
-          reference_number: transfer.transfer_number,
-          metadata: { transfer_id: transfer.id },
-        });
-      }
-    }
-
-    if (movements.length > 0) {
-      const { error: mErr } = await supabase.from('stock_movements').insert(movements);
-      if (mErr) {
-        toast.error('Transfer received but stock movements failed: ' + mErr.message);
-        setSaving(false);
-        onOpenChange(false);
-        onSaved();
-        return;
-      }
-    }
-
-    // Update lot locations for received items
-    for (const line of lines) {
-      if (line.lot_id && line.quantity_received > 0) {
-        await supabase
-          .from('lots')
-          .update({ location_id: transfer.to_location_id })
-          .eq('id', line.lot_id);
-      }
-    }
-
+    const { error } = await supabase.rpc('receive_transfer', { p_transfer_id: transfer.id, p_lines: lines.map(line => ({ id: line.id, quantity_received: line.quantity_received })) });
+    if (error) { toast.error(error.message); setSaving(false); return; }
     toast.success('Transfer received and stock updated');
     setSaving(false);
     onOpenChange(false);

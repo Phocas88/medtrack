@@ -1,3 +1,5 @@
+import { shopDomain } from '@/lib/security';
+
 // Shopify Admin API helper for single-merchant integration
 
 export interface ShopifyConfig {
@@ -63,8 +65,8 @@ class ShopifyClient {
   private headers: Record<string, string>;
 
   constructor(config: ShopifyConfig) {
-    const store = config.store_url.replace('https://', '').replace('http://', '').replace(/\/$/, '');
-    this.baseUrl = `https://${store}/admin/api/2025-01`; // Latest stable API version
+    const store = shopDomain(config.store_url);
+    this.baseUrl = `https://${store}/admin/api/2026-10`; // Latest stable API version
     this.headers = {
       'X-Shopify-Access-Token': config.access_token,
       'Content-Type': 'application/json',
@@ -92,6 +94,31 @@ class ShopifyClient {
     return res.json();
   }
 
+  private async collection<T>(key: string, initialPath: string): Promise<T[]> {
+    const rows: T[] = [];
+    let url: string | null = `${this.baseUrl}${initialPath}`;
+    const seen = new Set<string>();
+    while (url) {
+      if (seen.has(url)) throw new Error('Shopify returned a pagination cycle');
+      seen.add(url);
+      const parsed = new URL(url);
+      const base = new URL(this.baseUrl);
+      if (parsed.origin !== base.origin || !parsed.pathname.startsWith(base.pathname + '/')) throw new Error('Invalid Shopify pagination URL');
+      const response: Response = await fetch(url, { headers: this.headers, signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error(`Shopify collection request failed (${response.status})`);
+      const data = await response.json();
+      if (!Array.isArray(data[key])) throw new Error('Invalid Shopify collection');
+      rows.push(...data[key]);
+      url = response.headers.get('link')?.match(/<([^>]+)>; rel="next"/)?.[1] || null;
+    }
+    return rows;
+  }
+
+  async getOrder(id: string): Promise<{ order: ShopifyOrder }> {
+    if (!/^\d+$/.test(id)) throw new Error('Invalid Shopify order ID');
+    return this.request(`/orders/${id}.json`);
+  }
+
   // ── Shop Info ──
   async getShop(): Promise<{ shop: { name: string; email: string; domain: string; plan_name: string } }> {
     return this.request('/shop.json');
@@ -99,7 +126,7 @@ class ShopifyClient {
 
   // ── Products ──
   async getProducts(limit = 50): Promise<{ products: ShopifyProduct[] }> {
-    return this.request(`/products.json?limit=${limit}`);
+    return { products: await this.collection<ShopifyProduct>('products', `/products.json?limit=${limit}`) };
   }
 
   async getProductCount(): Promise<{ count: number }> {
@@ -108,7 +135,7 @@ class ShopifyClient {
 
   // ── Orders ──
   async getOrders(status = 'any', limit = 50): Promise<{ orders: ShopifyOrder[] }> {
-    return this.request(`/orders.json?status=${status}&limit=${limit}`);
+    return { orders: await this.collection<ShopifyOrder>('orders', `/orders.json?status=${status}&limit=${limit}`) };
   }
 
   async getOrderCount(): Promise<{ count: number }> {

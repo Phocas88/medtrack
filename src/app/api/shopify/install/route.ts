@@ -1,37 +1,20 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
+import { randomBytes } from 'node:crypto';
+import { appOrigin, shopDomain } from '@/lib/security';
+import { routeError, HttpError } from '@/lib/server-auth';
 
-/**
- * Shopify OAuth install flow — Step 1.
- * Merchant clicks "Install" from App Store → redirected here.
- * We redirect them to Shopify's OAuth authorization URL.
- */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const shop = searchParams.get('shop');
-
-  if (!shop) {
-    return NextResponse.json({ error: 'Missing shop parameter' }, { status: 400 });
-  }
-
-  const apiKey = process.env.SHOPIFY_API_KEY;
-  const scopes = 'read_products,write_products,read_orders,write_orders,read_inventory,write_inventory,read_locations,read_fulfillments,write_fulfillments';
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'https://stokora.vercel.app'}/api/shopify/callback`;
-
-  // Generate a random state for CSRF protection
-  const state = crypto.randomBytes(16).toString('hex');
-
-  // Store state in a cookie for verification on callback
-  const authUrl = `https://${shop}/admin/oauth/authorize?client_id=${apiKey}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
-
-  const response = NextResponse.redirect(authUrl);
-  response.cookies.set('shopify_oauth_state', state, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: 600, // 10 minutes
-    path: '/',
-  });
-
-  return response;
+  try {
+    const shop = shopDomain(new URL(request.url).searchParams.get('shop') || '');
+    const key = process.env.SHOPIFY_API_KEY;
+    if (!key || !process.env.SHOPIFY_API_SECRET || !process.env.SHOPIFY_TOKEN_ENCRYPTION_KEY) throw new HttpError(503, 'Shopify installation is not configured');
+    const state = randomBytes(32).toString('hex');
+    const url = new URL(`https://${shop}/admin/oauth/authorize`);
+    url.search = new URLSearchParams({ client_id: key, scope: 'read_products,read_orders,read_inventory,write_inventory,read_locations,read_fulfillments,write_fulfillments', redirect_uri: `${appOrigin()}/api/shopify/callback`, state }).toString();
+    const response = NextResponse.redirect(url);
+    const options = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, maxAge: 600, path: '/' };
+    response.cookies.set('shopify_oauth_state', state, options);
+    response.cookies.set('shopify_oauth_shop', shop, options);
+    return response;
+  } catch (error) { return routeError(error); }
 }

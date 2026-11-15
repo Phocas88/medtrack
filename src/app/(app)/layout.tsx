@@ -40,6 +40,8 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
       })
   }, [tenantId, loading, pathname, router])
 
+  if (!loading && !tenantId) return <div className="p-8 space-y-4"><h1>Account setup needs attention</h1><p>Your warehouse profile is unavailable. Sign out and contact support if this continues.</p><a href="/support">Contact support</a></div>
+
   if (!checked && !pathname.startsWith("/onboarding")) {
     return null
   }

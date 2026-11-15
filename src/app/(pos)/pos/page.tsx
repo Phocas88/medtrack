@@ -68,7 +68,8 @@ export default function POSRegisterPage() {
   const [scanInput, setScanInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceipt, setLastReceipt] = useState<{ items: CartItem[]; total: number; tax: number; ref: string; payment: PaymentMethod; change: number } | null>(null);
   const [heldTransactions, setHeldTransactions] = useState<{ id: string; items: CartItem[]; time: string }[]>([]);
@@ -85,7 +86,11 @@ export default function POSRegisterPage() {
   const [woLoading, setWoLoading] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
-  const TAX_RATE = 0.0825; // 8.25%
+  const [TAX_RATE, setTaxRate] = useState(0);
+  useEffect(() => {
+    if (!tenantId) return;
+    createClient().from('tenants').select('settings').eq('id', tenantId).single().then(({ data }) => setTaxRate(Number(data?.settings?.sales_tax_rate || 0)));
+  }, [tenantId]);
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
@@ -226,7 +231,6 @@ export default function POSRegisterPage() {
   const taxableAmount = subtotal - discountAmount;
   const tax = taxableAmount * TAX_RATE;
   const total = taxableAmount + tax;
-  const change = paymentMethod === 'cash' && cashTendered ? parseFloat(cashTendered) - total : 0;
 
   // Hold transaction
   const holdTransaction = () => {
@@ -260,62 +264,20 @@ export default function POSRegisterPage() {
     }
     setProcessing(true);
     const supabase = createClient();
-    const ref = `POS-${Date.now().toString(36).toUpperCase()}`;
 
-    // Process card payment via Stripe if applicable
-    if (paymentMethod === 'card') {
-      try {
-        const chargeRes = await fetch('/api/pos/charge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: total,
-            description: `POS Sale ${ref}`,
-            metadata: { reference: ref, customer: customerName || 'Walk-in', items: cart.length },
-          }),
-        });
-        const chargeData = await chargeRes.json();
-        if (!chargeRes.ok) {
-          toast.error(chargeData.error || 'Card payment failed');
-          setProcessing(false);
-          return;
-        }
-        if (chargeData.demo) {
-          toast.info('Demo mode — card not actually charged');
-        }
-      } catch {
-        toast.error('Payment processing failed');
-        setProcessing(false);
-        return;
-      }
+    if (paymentMethod !== 'cash') {
+      toast.error('Only cash checkout is currently available. No payment has been recorded.'); setProcessing(false); return;
     }
-
-    // Record stock movements for product lines
-    for (const item of cart) {
-      if (item.lineType === 'product' && item.productId) {
-        await supabase.from('stock_movements').insert({
-          tenant_id: tenantId, product_id: item.productId, user_id: user.id,
-          quantity: -item.quantity, movement_type: 'ship', reason: 'POS in-store sale',
-          reference_number: ref,
-          metadata: {
-            channel: 'in_store', payment_method: paymentMethod,
-            unit_price: item.unitPrice, item_discount: item.discount,
-            line_total: (item.unitPrice - item.discount) * item.quantity,
-            customer_name: customerName || null,
-            order_discount_pct: orderDiscount,
-            tax_rate: TAX_RATE,
-          },
-        });
-      }
-    }
-
+    const { data: posted, error } = await supabase.rpc('post_cash_sale', { p_request_id: requestId, p_items: cart, p_customer_name: customerName, p_order_discount: orderDiscount, p_tendered: Number(cashTendered) });
+    if (error) { toast.error(error.message); setProcessing(false); return; }
+    setRequestId(crypto.randomUUID());
     setProcessing(false);
-    setLastReceipt({ items: [...cart], total, tax, ref, payment: paymentMethod, change: Math.max(change, 0) });
+    setLastReceipt({ items: posted.items, total: posted.total, tax: posted.tax, ref: posted.ref, payment: paymentMethod, change: posted.change });
     setCart([]);
     setCustomerName('');
     setOrderDiscount(0);
     setCashTendered('');
-    toast.success(`Sale: ${ref}`);
+    toast.success(`Sale: ${posted.ref}`);
     scanRef.current?.focus();
   };
 

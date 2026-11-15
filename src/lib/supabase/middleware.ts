@@ -1,7 +1,9 @@
+import { isPublicPage } from '@/lib/security';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+  if (isPublicPage(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith('/api/')) return NextResponse.next({ request });
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -30,6 +32,17 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  if (user && !pathname.startsWith('/auth/') && !pathname.startsWith('/portal')) {
+    const { data: profile } = await supabase.from('users').select('role,is_active,access_level').eq('id', user.id).single();
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL('/auth/login?error=account_disabled', request.url));
+    }
+    if ((profile?.role === 'staff' || profile?.access_level === 'scanner_only') && !pathname.startsWith('/scan')) {
+      return NextResponse.redirect(new URL('/scan', request.url));
+    }
+  }
+
   const isAuthPage = pathname.startsWith('/auth');
   const isPortalRoute = pathname.startsWith('/portal');
   const isPortalLogin = pathname === '/portal/login';
@@ -80,7 +93,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  if (user && (pathname === '/auth/login' || pathname === '/auth/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

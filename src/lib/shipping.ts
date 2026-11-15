@@ -11,7 +11,7 @@ function authHeaders(): Record<string, string> {
   const key = getApiKey();
   if (!key) throw new Error('EASYPOST_API_KEY not configured');
   return {
-    'Authorization': `Bearer ${key}`,
+    'Authorization': `Basic ${Buffer.from(`${key}:`).toString('base64')}`,
     'Content-Type': 'application/json',
   };
 }
@@ -21,6 +21,7 @@ async function post(path: string, body: unknown) {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) {
     const err = await res.json();
@@ -30,7 +31,7 @@ async function post(path: string, body: unknown) {
 }
 
 async function get(path: string) {
-  const res = await fetch(`${EASYPOST_BASE}${path}`, { headers: authHeaders() });
+  const res = await fetch(`${EASYPOST_BASE}${path}`, { headers: authHeaders(), signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`EasyPost error: ${res.status}`);
   return res.json();
 }

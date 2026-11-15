@@ -16,7 +16,7 @@ function getEncryptionKey(): Buffer | null {
  */
 export function encryptToken(token: string): string {
   const key = getEncryptionKey();
-  if (!key) return token; // No encryption key — store plaintext (dev mode)
+  if (!key) throw new Error('Shopify token encryption is not configured');
 
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -34,10 +34,10 @@ export function encryptToken(token: string): string {
  */
 export function decryptToken(stored: string): string {
   const key = getEncryptionKey();
-  if (!key) return stored; // No encryption key — assume plaintext
+  if (!key) throw new Error('Shopify token encryption is not configured');
 
   const parts = stored.split(':');
-  if (parts.length !== 3) return stored; // Not encrypted — plaintext fallback
+  if (parts.length !== 3) throw new Error('Reconnect Shopify to encrypt its credentials');
 
   const [ivB64, encryptedB64, tagB64] = parts;
 
@@ -55,6 +55,6 @@ export function decryptToken(stored: string): string {
     return decrypted.toString('utf8');
   } catch {
     // Decryption failed — token might be plaintext from before encryption was enabled
-    return stored;
+    throw new Error('Shopify credentials could not be decrypted');
   }
 }

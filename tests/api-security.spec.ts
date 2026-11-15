@@ -1,50 +1,11 @@
 import { test, expect } from '@playwright/test';
-
-test.describe('API Security', () => {
-  test('signup API rejects empty body', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
-      data: {},
-    });
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBeTruthy();
+for (const endpoint of ['/api/auth/signup','/api/admin/users','/api/admin/users/reset-password','/api/portal/invite','/api/stripe/checkout','/api/stripe/portal','/api/pos/charge','/api/shipping/rates','/api/shipping/buy','/api/shipping/pickup','/api/po/send','/api/shopify/save-connection','/api/shopify/sync-orders']) {
+  test(`${endpoint} rejects unauthenticated requests`, async ({request}) => {
+    const response=await request.post(endpoint,{data:{}});
+    expect([401,403]).toContain(response.status());
   });
-
-  test('signup API rejects partial body', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
-      data: { userId: '123' },
-    });
-    expect(response.status()).toBe(400);
-  });
-
-  test('signup API rejects missing companyName', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
-      data: { userId: '123', email: 'test@test.com', fullName: 'Test' },
-    });
-    expect(response.status()).toBe(400);
-  });
-
-  test('notification check API exists', async ({ request }) => {
-    const response = await request.post('/api/notifications/check');
-    expect(response.status()).not.toBe(404);
-  });
-
-  test('admin user creation requires authentication', async ({ request }) => {
-    const response = await request.post('/api/admin/users', {
-      data: {
-        tenant_id: 'test',
-        email: 'new@test.com',
-        full_name: 'New User',
-        role: 'staff',
-      },
-    });
-    expect([403, 500]).toContain(response.status());
-  });
-
-  test('admin password reset requires authentication', async ({ request }) => {
-    const response = await request.post('/api/admin/users/reset-password', {
-      data: { email: 'user@test.com' },
-    });
-    expect([403, 500]).toContain(response.status());
-  });
+}
+test('Shopify rejects unsigned orders',async({request})=>{
+  const response=await request.post('/api/shopify/webhook',{headers:{'x-shopify-topic':'orders/create','x-shopify-shop-domain':'fixture.myshopify.com'},data:{id:1}});
+  expect(response.status()).toBe(401);
 });

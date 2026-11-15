@@ -44,6 +44,7 @@ export default function ReceivePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [saving, setSaving] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [lastReceived, setLastReceived] = useState<{ productName: string; lotNumber: string; sku: string; expDate: string | null; location: string | null } | null>(null);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -101,60 +102,13 @@ export default function ReceivePage() {
     const supabase = createClient();
     const product = products.find((p) => p.id === data.product_id);
 
-    // Create lot
-    const { data: lot, error: lotError } = await supabase
-      .from('lots')
-      .insert({
-        tenant_id: tenantId,
-        product_id: data.product_id,
-        lot_number: data.lot_number,
-        expiration_date: data.expiration_date || null,
-        quantity_on_hand: data.quantity,
-        received_date: new Date().toISOString().split('T')[0],
-        supplier_id: data.supplier_id && data.supplier_id !== 'none' ? data.supplier_id : null,
-        cost_at_receipt: data.cost_at_receipt,
-        location: data.location || null,
-        notes: data.notes || null,
-      })
-      .select()
-      .single();
-
-    if (lotError) {
-      toast.error(lotError.message);
-      setSaving(false);
-      return;
-    }
-
-    // Record movement
-    await supabase.from('stock_movements').insert({
-      tenant_id: tenantId,
-      product_id: data.product_id,
-      lot_id: lot.id,
-      user_id: user.id,
-      quantity: data.quantity,
-      movement_type: 'receive',
-      reason: 'Inventory received',
-      reference_number: data.lot_number,
+    const { error } = await supabase.rpc('receive_inventory', {
+      p_request_id: requestId,
+      p_receipt: { ...data, supplier_id: data.supplier_id === 'none' ? null : data.supplier_id,
+        serial_numbers: (data.serial_numbers || '').split('\n').map(value => value.trim()).filter(Boolean) },
     });
-
-    // Create serial numbers if provided
-    if (data.serial_numbers && product?.is_serial_tracked) {
-      const serials = data.serial_numbers
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      if (serials.length > 0) {
-        await supabase.from('serial_numbers').insert(
-          serials.map((sn) => ({
-            tenant_id: tenantId,
-            lot_id: lot.id,
-            product_id: data.product_id,
-            serial_number: sn,
-          }))
-        );
-      }
-    }
+    if (error) { toast.error(error.message); setSaving(false); return; }
+    setRequestId(crypto.randomUUID());
 
     setLastReceived({
       productName: product?.name || '',

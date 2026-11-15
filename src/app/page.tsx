@@ -29,7 +29,7 @@ export default function LandingPage() {
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <img src="/stokora-logo.png" alt="Stokora WMS" className="h-10" />
+            <img src="/stokora-logo.png" alt="Stokora WMS" className="h-8 w-auto max-w-[120px] sm:h-10 sm:max-w-none" />
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition">Features</a>
@@ -84,7 +84,7 @@ export default function LandingPage() {
                 See All Features
               </a>
             </div>
-            <div className="flex items-center gap-6 mt-8 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 mt-8 text-sm text-gray-500">
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> Free 14-day trial</span>
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> No setup fees</span>
               <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> Cancel anytime</span>
@@ -158,12 +158,12 @@ export default function LandingPage() {
               {
                 icon: ScanLine,
                 title: "Audit Trail",
-                desc: "Every movement is logged immutably. Time-travel to see inventory state at any point in history.",
+                desc: "Stock movements retain an immutable history with dates, quantities, references, and operators.",
               },
               {
                 icon: Shield,
-                title: "Compliance Ready",
-                desc: "DSCSA tracking, controlled substance logs, DEA schedule management, and pre-built compliance reports.",
+                title: "Compliance Records",
+                desc: "Manual compliance records and document tracking. Regulatory certification and automated reporting require separate validation.",
               },
               {
                 icon: Boxes,
@@ -183,22 +183,22 @@ export default function LandingPage() {
               {
                 icon: Clock,
                 title: "Expiration Management",
-                desc: "Auto-quarantine expiring lots, track destructions with witness logs, manage donations of near-expiry stock.",
+                desc: "Review expiring lots and record manual quarantine, destruction, and donation decisions.",
               },
               {
                 icon: Wrench,
                 title: "Work Orders",
-                desc: "Service tickets with parts + labor. Assign technicians, track jobs, auto-decrement inventory on completion. Invoice PDF generation.",
+                desc: "Service tickets with parts and labor, technician assignments, job status, and printable invoices.",
               },
               {
                 icon: CreditCard,
                 title: "Point of Sale",
-                desc: "Cashier register with barcode scanning, tax, discounts, hold/recall, cash/card/check payments. Separate UI for checkout staff.",
+                desc: "Manager cash checkout with barcode scanning, configured tax, discounts, stock posting, and receipts. Card and check checkout are not yet available.",
               },
               {
                 icon: ShoppingBag,
                 title: "Shopify Integration",
-                desc: "Sync products, orders, and inventory with your Shopify store. Real-time webhooks. Two-way stock levels.",
+                desc: "Import Shopify products and orders with signed order webhooks. Automatic inventory pushback is not yet available.",
               },
               {
                 icon: Send,
@@ -208,12 +208,12 @@ export default function LandingPage() {
               {
                 icon: Tag,
                 title: "Promotions & Sales",
-                desc: "Schedule sales with start/end dates, track markdown loss, auto-apply discounts at POS and customer portal.",
+                desc: "Schedule product promotions with start/end dates and apply active promotions to cash checkout.",
               },
               {
                 icon: Star,
                 title: "White-Label Ready",
-                desc: "Your company name and logo throughout. Custom fields, pricing tiers, feature toggles, and module-based access per tenant.",
+                desc: "Company branding, customer pricing tiers, module navigation, and custom field definitions.",
               },
               {
                 icon: Zap,
@@ -222,8 +222,8 @@ export default function LandingPage() {
               },
               {
                 icon: Users,
-                title: "4 Separate UIs",
-                desc: "Management desktop, handheld scanner, cashier POS, and B2B customer portal — each role sees only what they need.",
+                title: "Role-Based Workspaces",
+                desc: "Manager desktop, assigned-task scanner for staff, and customer ordering portal. Staff do not receive purchasing costs.",
               },
             ].map((feature) => (
               <div key={feature.title} className="group rounded-xl border p-6 hover:border-gray-300 hover:shadow-sm transition">
@@ -457,7 +457,7 @@ export default function LandingPage() {
               </div>
               <span className="font-semibold">Stokora WMS</span>
             </div>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
+            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-sm text-gray-500">
               <a href="#features" className="hover:text-gray-900 transition">Features</a>
               <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
               <Link href="/demo" className="hover:text-gray-900 transition">Demo</Link>

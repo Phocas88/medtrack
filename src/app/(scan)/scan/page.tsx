@@ -179,7 +179,7 @@ export default function ScannerAppPage() {
   const loadBinContents = async (binId: string): Promise<BinItem[]> => {
     const supabase = createClient();
     const { data } = await supabase
-      .from('bin_inventory').select('*, product:products(name, sku), lot:lots(lot_number)')
+      .from('bin_inventory').select('*, product:staff_products(name, sku), lot:staff_lots(lot_number)')
       .eq('bin_id', binId).eq('tenant_id', tenantId!);
     return (data || []).map((item: Record<string, unknown>) => ({
       product_id: item.product_id as string,
@@ -200,7 +200,7 @@ export default function ScannerAppPage() {
 
   const resolveProduct = async (sku: string): Promise<Product | null> => {
     const supabase = createClient();
-    const { data } = await supabase.from('products').select('*')
+    const { data } = await supabase.from('staff_products').select('*')
       .eq('tenant_id', tenantId!).eq('sku', sku.toUpperCase()).eq('is_archived', false).maybeSingle();
     return data;
   };
@@ -208,7 +208,8 @@ export default function ScannerAppPage() {
   // ── Start Task ──
   const handleStartTask = async (task: TaskWithDetails) => {
     const supabase = createClient();
-    await supabase.from('scan_tasks').update({ status: 'in_progress', started_at: new Date().toISOString() }).eq('id', task.id);
+    const { error } = await supabase.rpc('start_scan_task', { p_task_id: task.id });
+    if (error) { toast.error(error.message); return; }
     setActiveTask({ ...task, status: 'in_progress' });
     setMode('active');
     setCurrentStep(0); setScanLog([]); setScannedBinCode(''); setScannedProductSku('');
@@ -315,7 +316,6 @@ export default function ScannerAppPage() {
     if (!activeTask || !user) return;
     setCompleting(true);
     const supabase = createClient();
-    const now = new Date().toISOString();
     let scannedQty: number | null = null;
     let variance: number | null = null;
     if (activeTask.task_type === 'verify_stock' || activeTask.task_type === 'cycle_count') {
@@ -324,10 +324,12 @@ export default function ScannerAppPage() {
     } else if (['bin_to_bin', 'replenish', 'pick'].includes(activeTask.task_type)) {
       scannedQty = parseInt(enteredQty, 10) || 0;
     }
-    await supabase.from('scan_tasks').update({ status: 'completed', completed_by: user.id, completed_at: now, scanned_quantity: scannedQty, variance }).eq('id', activeTask.id);
-    for (const entry of scanLog.filter((e) => e.success)) {
-      await supabase.from('scan_logs').insert({ tenant_id: tenantId!, task_id: activeTask.id, scanned_by: user.id, scan_type: activeTask.task_type, scanned_value: entry.value, scanned_at: now });
-    }
+    const { error } = await supabase.rpc('complete_scan_task', {
+      p_task_id: activeTask.id, p_quantity: scannedQty, p_variance: variance,
+      p_source: scannedBinCode, p_target: targetBinCode,
+      p_scans: scanLog.filter(entry => entry.success).map(entry => ({ value: entry.value })),
+    });
+    if (error) { toast.error(error.message); setCompleting(false); return; }
     setCompleting(false);
     toast.success('Task completed!');
     setActiveTask(null);

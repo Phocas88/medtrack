@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  poweredBy: false,
+  poweredByHeader: false,
+  experimental: { cpus: 2 },
   headers: async () => [
     {
       source: '/(.*)',

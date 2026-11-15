@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import localFont from "next/font/local"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Analytics } from "@vercel/analytics/react"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const inter = localFont({ src: "./fonts/GeistVF.woff", variable: "--font-sans", weight: "100 900", display: "swap" })
 
 export const metadata: Metadata = {
   title: "Stokora WMS | Warehouse Management System",
