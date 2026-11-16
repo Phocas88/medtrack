@@ -4,7 +4,7 @@
 export type UserRole = 'admin' | 'manager' | 'staff';
 export type StorageRequirement = 'room_temp' | 'refrigerated' | 'frozen';
 export type MovementType = 'receive' | 'ship' | 'adjust' | 'return' | 'expire' | 'recall';
-export type OrderStatus = 'draft' | 'confirmed' | 'picking' | 'shipped' | 'cancelled';
+export type OrderStatus = 'draft' | 'confirmed' | 'picking' | 'shipped' | 'cancelled' | 'externally_fulfilled';
 export type LotStatus = 'active' | 'expired' | 'recalled' | 'depleted';
 export type POStatus = 'draft' | 'pending_approval' | 'approved' | 'sent' | 'partial' | 'received' | 'cancelled';
 export type ReturnType = 'customer_return' | 'supplier_rma';

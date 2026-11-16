@@ -322,3 +322,134 @@ describe('fulfill existing orders', () => {
     expect((await db.query('select quantity_shipped,unit_price from sales_order_lines where order_id=$1',[order])).rows[0]).toEqual({quantity_shipped:2,unit_price:'7.0000'});
   });
 });
+
+describe('commercial reliability upgrades',()=>{
+  it('shares atomic rate limits and rejects direct user access',async()=>{
+    await login(admin);await expect(db.query("select consume_api_limit('fixture',2,60)")).rejects.toThrow();
+    await db.exec('reset role;set role service_role');
+    expect((await db.query<{allowed:boolean}>("select consume_api_limit('fixture',2,60) as allowed")).rows[0].allowed).toBe(true);
+    expect((await db.query<{allowed:boolean}>("select consume_api_limit('fixture',2,60) as allowed")).rows[0].allowed).toBe(true);
+    expect((await db.query<{allowed:boolean}>("select consume_api_limit('fixture',2,60) as allowed")).rows[0].allowed).toBe(false);
+  });
+  it('scopes the order desk by tenant and excludes product costs',async()=>{
+    await login(admin);const data=(await db.query<{result:{orders:unknown[];total:number}}>("select list_order_desk('', 'all', 0) as result")).rows[0].result;
+    expect(data.total).toBeGreaterThan(0);expect(JSON.stringify(data)).not.toContain('cost');
+    await login(other);expect((await db.query<{result:{total:number}}>("select list_order_desk('', 'all', 0) as result")).rows[0].result.total).toBe(0);
+    await login(staff);await expect(db.query('select list_order_desk()')).rejects.toThrow('Manager required');
+  });
+  it('binds a label purchase to one order and recovers without buying again',async()=>{
+    await owner();const order=(await db.query<{id:string}>("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'LABEL-LOCK','confirmed') returning id",[tenant,customer])).rows[0].id;
+    await db.query("insert into shipping_quotes(shipment_id,tenant_id,rates) values('shp_lock',$1,'[{\"id\":\"rate_one\"}]'),('shp_other',$1,'[{\"id\":\"rate_one\"}]')",[tenant]);
+    await db.exec('set role service_role');
+    const claim=(await db.query<{claim:{mode:string;token:string}}>("select claim_label_purchase($1,$2,'shp_lock','rate_one') as claim",[tenant,order])).rows[0].claim;expect(claim.mode).toBe('buy');
+    expect((await db.query<{claim:{mode:string}}>("select claim_label_purchase($1,$2,'shp_lock','rate_one') as claim",[tenant,order])).rows[0].claim.mode).toBe('busy');
+    await expect(db.query("select claim_label_purchase($1,$2,'shp_other','rate_one')",[tenant,order])).rejects.toThrow('already has a label');
+    await db.query("update shipping_quotes set lease_until=now()-interval '1 second' where shipment_id='shp_lock'");
+    const recovered=(await db.query<{claim:{mode:string;token:string}}>("select claim_label_purchase($1,$2,'shp_lock','rate_one') as claim",[tenant,order])).rows[0].claim;expect(recovered.mode).toBe('recover');
+    const result=JSON.stringify({id:'shp_lock',tracking_code:'TEST-TRACK',label_url:'https://example.test/label',rate:{id:'rate_one',carrier:'Fixture',rate:'5.00'}});
+    await expect(db.query("select complete_label_purchase($1,'shp_lock',$2,$3)",[tenant,claim.token,result])).rejects.toThrow('lease expired');
+    await db.query("select complete_label_purchase($1,'shp_lock',$2,$3)",[tenant,recovered.token,result]);
+    expect((await db.query<{claim:{mode:string}}>("select claim_label_purchase($1,$2,'shp_lock','rate_one') as claim",[tenant,order])).rows[0].claim.mode).toBe('cached');
+    await owner();expect((await db.query<{tracking_number:string}>('select tracking_number from sales_orders where id=$1',[order])).rows[0].tracking_number).toBe('TEST-TRACK');
+  });
+  it('requires physical serial scans and allocates the scanned lot',async()=>{
+    await owner();const serialProduct=(await db.query<{id:string}>("insert into products(tenant_id,name,sku,is_serial_tracked) values($1,'Serialized','SERIAL-PHYSICAL',true) returning id",[tenant])).rows[0].id;
+    await login(admin);
+    for(const [index,serial] of ['PHYSICAL-A','PHYSICAL-B'].entries()) await db.query('select receive_inventory($1,$2)',[`90000000-0000-4000-8000-00000000000${index+1}`,JSON.stringify({product_id:serialProduct,quantity:1,lot_number:serial,expiration_date:`2099-01-0${index+1}`,serial_numbers:[serial]})]);
+    const shipment={customer_id:customer,lines:[{product_id:serialProduct,quantity:1,unit_price:5}]};
+    await expect(db.query('select ship_inventory($1,$2)',['90000000-0000-4000-8000-000000000003',JSON.stringify(shipment)])).rejects.toThrow('Scan one serial');
+    await db.query('select ship_inventory($1,$2)',['90000000-0000-4000-8000-000000000003',JSON.stringify({...shipment,serial_numbers:{[serialProduct]:['PHYSICAL-B']}})]);
+    expect((await db.query<{serial_number:string;is_shipped:boolean}>('select serial_number,is_shipped from serial_numbers where product_id=$1 order by serial_number',[serialProduct])).rows).toEqual([{serial_number:'PHYSICAL-A',is_shipped:false},{serial_number:'PHYSICAL-B',is_shipped:true}]);
+    await expect(db.query('select ship_inventory($1,$2)',['90000000-0000-4000-8000-000000000004',JSON.stringify({...shipment,serial_numbers:{[serialProduct]:['PHYSICAL-B']}})])).rejects.toThrow('Scanned serial is unavailable');
+  });
+});
+
+describe('accounting and integration jobs',()=>{
+ it('denies browser access to private accounting snapshots and job payloads',async()=>{
+  await login(admin);for(const table of ['accounting_exports','accounting_mappings','integration_jobs'])await expect(db.query(`select * from ${table}`)).rejects.toThrow();
+ });
+ it('freezes an idempotent invoice snapshot and requires all mappings',async()=>{
+  await owner();const order=(await db.query<{id:string}>("select id from sales_orders where tenant_id=$1 and status='shipped' limit 1",[tenant])).rows[0].id;
+  await db.exec('set role service_role');await expect(db.query("select prepare_accounting_invoice($1,$2,'request')",[tenant,order])).rejects.toThrow('Map the customer');
+  await db.query("insert into accounting_mappings values($1,'customer',$2,'10',null),($1,'product',$3,'20','NON')",[tenant,customer,product]);
+  const first=(await db.query<{r:{snapshot:unknown}}>("select prepare_accounting_invoice($1,$2,'request') as r",[tenant,order])).rows[0].r;
+  await db.query("update accounting_mappings set remote_id='21' where tenant_id=$1 and entity_type='product'",[tenant]);
+  const second=(await db.query<{r:{snapshot:unknown}}>("select prepare_accounting_invoice($1,$2,'changed') as r",[tenant,order])).rows[0].r;
+  expect(second).toEqual(first);await expect(db.query("select prepare_accounting_invoice($1,$2,'other')",[tenantB,order])).rejects.toThrow('Only shipped orders');
+ });
+ it('claims durable jobs once and recovers expired leases',async()=>{
+  await owner();await db.query("insert into integration_jobs(tenant_id,provider,event_id,payload) values($1,'shopify','job-fixture','{\"order_id\":\"123\"}')",[tenant]);await db.exec('set role service_role');
+  const first=(await db.query<{job:{id:string;attempts:number;lease_token:string}}>('select claim_integration_job() as job')).rows[0].job;expect(first.attempts).toBe(1);
+  expect((await db.query<{job:unknown}>('select claim_integration_job() as job')).rows[0].job).toBeNull();
+  await db.query("update integration_jobs set lease_until=now()-interval '1 second' where id=$1",[first.id]);
+  const second=(await db.query<{job:{attempts:number;lease_token:string}}>('select claim_integration_job() as job')).rows[0].job;expect(second.attempts).toBe(2);expect(second.lease_token).not.toBe(first.lease_token);
+ });
+});
+
+describe('embedded and tracking boundaries',()=>{
+ it('links only a live member of the exact connected tenant, consumes the challenge, and revokes on disconnect',async()=>{
+  await owner();await db.query("update integration_credentials set connected=true where tenant_id=$1 and provider='shopify'",[tenant]);
+  await db.query("insert into shopify_link_challenges(challenge_hash,shop_domain,shopify_user_id) values('link-fixture','fixture.myshopify.com','123')");
+  await login(other);await expect(db.query("select link_shopify_identity('link-fixture')")).rejects.toThrow('another warehouse');
+  await login(staff);await expect(db.query("select link_shopify_identity('link-fixture')")).rejects.toThrow('Manager account required');
+  await login(admin);expect((await db.query<{shop:string}>("select link_shopify_identity('link-fixture') as shop")).rows[0].shop).toBe('fixture.myshopify.com');
+  await expect(db.query("select link_shopify_identity('link-fixture')")).rejects.toThrow('Link expired');
+  await owner();await db.query("update integration_credentials set connected=false where tenant_id=$1 and provider='shopify'",[tenant]);expect((await db.query('select * from shopify_identity_links')).rows).toHaveLength(0);
+ });
+ it('keeps delivery status separate from physical shipping and ignores older tracking states',async()=>{
+  await owner();await db.query("update shipping_quotes set purchased=purchased||'{\"tracker_id\":\"trk_fixture\"}' where shipment_id='shp_lock'");await db.exec('set role service_role');
+  await db.query("select apply_shipping_tracking('evt_new','trk_fixture','delivered','2026-11-16T12:00:00Z')");
+  await db.query("select apply_shipping_tracking('evt_old','trk_fixture','in_transit','2026-11-15T12:00:00Z')");
+  await db.query("select apply_shipping_tracking('evt_new','trk_fixture','delivered','2026-11-16T12:00:00Z')");
+  await owner();expect((await db.query<{status:string;delivery_status:string}>("select status,delivery_status from sales_orders where order_number='LABEL-LOCK'")).rows[0]).toEqual({status:'confirmed',delivery_status:'delivered'});
+ });
+});
+
+describe('stock publishing outbox',()=>{
+ it('deducts unshipped commitments, excludes expired stock, and does not lose concurrent revisions',async()=>{
+  await owner();const prod=(await db.query<{id:string}>("insert into products(tenant_id,name,sku) values($1,'Publishable','OUTBOX-TEST') returning id",[tenant])).rows[0].id;
+  await db.query("update integration_credentials set connected=true where tenant_id=$1 and provider='shopify'",[tenant]);
+  await db.query("insert into shopify_inventory_mappings values($1,$2,'gid://shopify/ProductVariant/77','gid://shopify/InventoryItem/88','gid://shopify/Location/99',true)",[tenant,prod]);
+  await login(admin);await db.query('select receive_inventory($1,$2)',['91000000-0000-4000-8000-000000000001',JSON.stringify({product_id:prod,quantity:10,lot_number:'OUTBOX-LOT'})]);
+  await owner();const oid=(await db.query<{id:string}>("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'OUTBOX-ORDER','confirmed') returning id",[tenant,customer])).rows[0].id;
+  await db.query('insert into sales_order_lines(tenant_id,order_id,product_id,quantity_ordered,unit_price) values($1,$2,$3,3,5)',[tenant,oid,prod]);
+  await db.exec('set role service_role');expect((await db.query<{qty:number}>('select stock_publish_quantity($1,$2) as qty',[tenant,prod])).rows[0].qty).toBe(7);
+  await db.query("update integration_jobs set status='complete' where payload->>'kind' is distinct from 'inventory'");
+  const job=(await db.query<{j:{id:string;lease_token:string;revision:number}}>('select claim_integration_job() as j')).rows[0].j;
+  await owner();await db.query("update lots set expiration_date=current_date-1 where lot_number='OUTBOX-LOT'");
+  await db.exec('set role service_role');expect((await db.query<{qty:number}>('select stock_publish_quantity($1,$2) as qty',[tenant,prod])).rows[0].qty).toBe(0);
+  await db.query('select finish_integration_job($1,$2,$3,true)',[job.id,job.lease_token,job.revision]);
+  expect((await db.query<{status:string}>('select status from integration_jobs where id=$1',[job.id])).rows[0].status).toBe('pending');
+ });
+});
+
+describe('atomic lot dispositions',()=>{
+ it('removes stock once, preserves audit quantities, and blocks unsafe donations',async()=>{
+  await login(admin);const received=(await db.query<{r:{lot_id:string}}>('select receive_inventory($1,$2) as r',['92000000-0000-4000-8000-000000000001',JSON.stringify({product_id:product,quantity:5,lot_number:'DISPOSITION-TEST'})])).rows[0].r.lot_id;
+  const args=['92000000-0000-4000-8000-000000000002',received,2,'consume','Consignment consumption'];
+  await db.query('select post_lot_disposition($1,$2,$3,$4,$5)',args);await db.query('select post_lot_disposition($1,$2,$3,$4,$5)',args);
+  expect((await db.query<{quantity_on_hand:number}>('select quantity_on_hand from lots where id=$1',[received])).rows[0].quantity_on_hand).toBe(3);
+  await db.query("select post_lot_disposition($1,$2,0,'recall','Lot recalled')",['92000000-0000-4000-8000-000000000003',received]);
+  await expect(db.query("select post_lot_disposition($1,$2,1,'donate','Donation','{\"recipient\":\"Fixture\"}')",['92000000-0000-4000-8000-000000000004',received])).rejects.toThrow('cannot be consumed or donated');
+  expect((await db.query<{quantity:number}>("select quantity from stock_movements where lot_id=$1 and movement_type='recall'",[received])).rows[0].quantity).toBe(0);
+ });
+});
+
+describe('shipping account connection isolation',()=>{
+ it('allows only one in-flight setup and denies direct user claims',async()=>{
+  await login(admin);await expect(db.query('select claim_shipping_connection($1)',[tenant])).rejects.toThrow();
+  await db.exec('reset role;set role service_role');const first=(await db.query<{lease:string}>('select claim_shipping_connection($1) as lease',[tenant])).rows[0].lease;expect(first).toBeTruthy();
+  expect((await db.query<{lease:string|null}>('select claim_shipping_connection($1) as lease',[tenant])).rows[0].lease).toBeNull();
+ });
+});
+
+describe('accounting source boundaries',()=>{
+ it('blocks Shopify and paid POS exports until their full financial reconciliation is supported',async()=>{
+  await owner();
+  for(const [number,notes] of [['SHOPIFY-999999','Imported from Shopify'],['PAID-POS-FIXTURE','Cash POS sale: fixture']]){
+   const order=(await db.query<{id:string}>("insert into sales_orders(tenant_id,customer_id,order_number,status,notes) values($1,$2,$3,'shipped',$4) returning id",[tenant,customer,number,notes])).rows[0].id;
+   await db.exec('set role service_role');await expect(db.query("select prepare_accounting_invoice($1,$2,'source-boundary')",[tenant,order])).rejects.toThrow('require payment, tax, discount and freight reconciliation');
+   expect((await db.query('select * from accounting_exports where order_id=$1',[order])).rows).toHaveLength(0);await owner();
+  }
+ });
+});

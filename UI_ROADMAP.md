@@ -7,7 +7,7 @@
 - Accessible names for search, account and favorite controls, visible keyboard focus and reduced-motion support.
 - `/demo/workspace` provides an interactive order-desk preview: status filters, search, selectable order rows and a detail panel. All records are explicitly labeled samples. Its simplified navigation illustrates the design direction; the authenticated application retains its full role/preset/module navigation.
 
-This is a foundation, not a completed redesign of every application screen. The preview does not connect to tenant data or bypass authentication on its app links.
+The authenticated dashboard now uses a real tenant-scoped order desk, and shared tables include density, column visibility and keyboard sorting controls. This remains a foundation, not a completed redesign of every application screen. The preview does not connect to tenant data or bypass authentication on its app links.
 
 ## Next UI work
 

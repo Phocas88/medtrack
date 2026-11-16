@@ -1,25 +1,20 @@
 // EasyPost shipping integration
 // Docs: https://docs.easypost.com/docs
 
-const EASYPOST_BASE = 'https://api.easypost.com/v2';
+const EASYPOST_BASE = "https://api.easypost.com/v2";
 
-function getApiKey(): string | null {
-  return process.env.EASYPOST_API_KEY || null;
-}
-
-function authHeaders(): Record<string, string> {
-  const key = getApiKey();
-  if (!key) throw new Error('EASYPOST_API_KEY not configured');
+function authHeaders(key: string): Record<string, string> {
+  if (!key) throw new Error("Shipping account key required");
   return {
-    'Authorization': `Basic ${Buffer.from(`${key}:`).toString('base64')}`,
-    'Content-Type': 'application/json',
+    Authorization: `Basic ${Buffer.from(`${key}:`).toString("base64")}`,
+    "Content-Type": "application/json",
   };
 }
 
-async function post(path: string, body: unknown) {
+async function post(path: string, body: unknown, key: string) {
   const res = await fetch(`${EASYPOST_BASE}${path}`, {
-    method: 'POST',
-    headers: authHeaders(),
+    method: "POST",
+    headers: authHeaders(key),
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(20000),
   });
@@ -30,8 +25,11 @@ async function post(path: string, body: unknown) {
   return res.json();
 }
 
-async function get(path: string) {
-  const res = await fetch(`${EASYPOST_BASE}${path}`, { headers: authHeaders(), signal: AbortSignal.timeout(20000) });
+async function get(path: string, key: string) {
+  const res = await fetch(`${EASYPOST_BASE}${path}`, {
+    headers: authHeaders(key),
+    signal: AbortSignal.timeout(20000),
+  });
   if (!res.ok) throw new Error(`EasyPost error: ${res.status}`);
   return res.json();
 }
@@ -63,6 +61,7 @@ export interface ShippingRate {
   carrier: string;
   service: string;
   rate: string;
+  currency?: string;
   delivery_days: number | null;
   est_delivery_date: string | null;
 }
@@ -80,15 +79,20 @@ export interface ShipmentResult {
 export async function getRates(
   from: ShippingAddress,
   to: ShippingAddress,
-  parcel: Parcel
+  parcel: Parcel,
+  key: string,
 ): Promise<{ shipment_id: string; rates: ShippingRate[] }> {
-  const data = await post('/shipments', {
-    shipment: {
-      from_address: { ...from, country: from.country || 'US' },
-      to_address: { ...to, country: to.country || 'US' },
-      parcel,
+  const data = await post(
+    "/shipments",
+    {
+      shipment: {
+        from_address: { ...from, country: from.country || "US" },
+        to_address: { ...to, country: to.country || "US" },
+        parcel,
+      },
     },
-  });
+    key,
+  );
 
   const rates: ShippingRate[] = (data.rates || [])
     .map((r: Record<string, unknown>) => ({
@@ -96,68 +100,107 @@ export async function getRates(
       carrier: r.carrier as string,
       service: r.service as string,
       rate: r.rate as string,
+      currency: r.currency as string,
       delivery_days: r.delivery_days as number | null,
       est_delivery_date: r.est_delivery_date as string | null,
     }))
-    .sort((a: ShippingRate, b: ShippingRate) => parseFloat(a.rate) - parseFloat(b.rate));
+    .sort(
+      (a: ShippingRate, b: ShippingRate) =>
+        parseFloat(a.rate) - parseFloat(b.rate),
+    );
 
   return { shipment_id: data.id, rates };
 }
 
 // ── Buy Label ──
-export async function buyLabel(shipmentId: string, rateId: string): Promise<ShipmentResult> {
-  const data = await post(`/shipments/${shipmentId}/buy`, {
-    rate: { id: rateId },
-  });
+export async function buyLabel(
+  shipmentId: string,
+  rateId: string,
+  key: string,
+): Promise<ShipmentResult> {
+  const data = await post(
+    `/shipments/${shipmentId}/buy`,
+    {
+      rate: { id: rateId },
+    },
+    key,
+  );
 
+  return labelResult(data, rateId);
+}
+
+function labelResult(
+  data: {
+    id: string;
+    tracking_code: string;
+    postage_label?: { label_url?: string };
+    selected_rate?: Partial<ShippingRate>;
+    tracker?: { id?: string };
+  },
+  rateId: string,
+): ShipmentResult {
+  if (
+    !data.postage_label?.label_url ||
+    !data.tracking_code ||
+    data.selected_rate?.id !== rateId ||
+    !data.selected_rate.carrier ||
+    !data.selected_rate.service ||
+    typeof data.selected_rate.rate !== "string" ||
+    !Number.isFinite(Number(data.selected_rate.rate)) ||
+    Number(data.selected_rate.rate) < 0
+  )
+    throw new Error(
+      "Incomplete provider label response; recover the original shipment",
+    );
   return {
     id: data.id,
     tracking_code: data.tracking_code,
-    label_url: data.postage_label?.label_url || '',
+    label_url: data.postage_label?.label_url || "",
     rate: {
-      id: rateId,
-      carrier: data.selected_rate?.carrier || '',
-      service: data.selected_rate?.service || '',
-      rate: data.selected_rate?.rate || '0',
+      id: data.selected_rate?.id || rateId,
+      carrier: data.selected_rate?.carrier || "",
+      service: data.selected_rate?.service || "",
+      rate: data.selected_rate?.rate || "0",
+      currency: data.selected_rate?.currency,
       delivery_days: data.selected_rate?.delivery_days || null,
       est_delivery_date: data.selected_rate?.est_delivery_date || null,
     },
-    tracker_id: data.tracker?.id || '',
+    tracker_id: data.tracker?.id || "",
   };
 }
 
-// ── Track Package ──
-export async function getTracking(trackerId: string) {
-  return get(`/trackers/${trackerId}`);
-}
-
-// ── Schedule Pickup ──
-export async function schedulePickup(
+/** Recovery only reads the existing provider shipment; it never issues another charge. */
+export async function recoverLabel(
   shipmentId: string,
-  address: ShippingAddress,
-  minDate: string, // "2026-05-10"
-  maxDate: string,
-) {
-  return post('/pickups', {
-    pickup: {
-      address: { ...address, country: address.country || 'US' },
-      shipment: { id: shipmentId },
-      min_datetime: `${minDate}T08:00:00Z`,
-      max_datetime: `${maxDate}T18:00:00Z`,
-      instructions: 'Package at front door',
-    },
-  });
+  rateId: string,
+  key: string,
+): Promise<ShipmentResult | null> {
+  const data = await get(`/shipments/${shipmentId}`, key);
+  if (!data.postage_label?.label_url || !data.tracking_code) return null;
+  if (data.selected_rate?.id !== rateId)
+    throw new Error("Recovered label does not match the selected rate");
+  return labelResult(data, rateId);
 }
 
-// ── Buy Pickup ──
-export async function buyPickup(pickupId: string, carrier: string, service: string) {
-  return post(`/pickups/${pickupId}/buy`, {
-    carrier,
-    service,
-  });
+// ── Track Package ──
+export async function getTracking(trackerId: string, key: string) {
+  return get(`/trackers/${trackerId}`, key);
 }
 
-// ── Check if EasyPost is configured ──
-export function isShippingConfigured(): boolean {
-  return !!process.env.EASYPOST_API_KEY;
+export async function registerShippingWebhook(
+  url: string,
+  secret: string,
+  key: string,
+): Promise<string> {
+  const result = await post(
+    "/webhooks",
+    { webhook: { url, webhook_secret: secret } },
+    key,
+  );
+  if (typeof result.id !== "string")
+    throw new Error("Webhook registration failed");
+  return result.id;
+}
+export async function validateShippingAccount(key: string): Promise<void> {
+  await get("/carrier_accounts", key);
 }

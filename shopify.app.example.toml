@@ -1,9 +1,9 @@
 # Copy to shopify.app.toml and set client_id/application_url for your Partner app.
 name = "Stokora"
-application_url = "https://stokora.vercel.app"
-embedded = false
+application_url = "https://stokora.vercel.app/shopify"
+embedded = true
 [access_scopes]
-scopes = "read_products,read_orders,read_inventory,write_inventory,read_locations,read_fulfillments,write_fulfillments"
+scopes = "read_products,read_orders,read_inventory,write_inventory,read_locations,read_fulfillments,write_fulfillments,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders"
 [auth]
 redirect_urls = ["https://stokora.vercel.app/api/shopify/callback"]
 [webhooks]

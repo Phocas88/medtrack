@@ -12,7 +12,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit --incremental false",
-    "readiness": "node scripts/release-check.mjs"
+    "readiness": "node scripts/release-check.mjs",
+    "test:staging": "node scripts/staging-acceptance.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

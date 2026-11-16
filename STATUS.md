@@ -1,6 +1,6 @@
 # Stokora implementation status
 
-> This is the baseline audit of commit `14a352c`. Implementation has since started on `work/stokora-commercial-hardening`; see [COMMERCIAL_READINESS.md](COMMERCIAL_READINESS.md) for changes, remaining gaps and rollout gates. The baseline ratings below are historical, not the current branch status.
+> This is the baseline audit of commit `14a352c`. Implementation has since started on `codex/stokora-commercial-hardening-20261115`; see [COMMERCIAL_READINESS.md](COMMERCIAL_READINESS.md) for changes, remaining gaps and rollout gates. The baseline ratings below are historical, not the current branch status.
 
 Audited 2026-11-15. Repository: `Phocas88/medtrack`, branch `master`, commit `14a352c32fa4c8e03f5948e5b6146f7e8e9fa3c6`. The repository has not been renamed; its package is `stokora-wms`.
 
