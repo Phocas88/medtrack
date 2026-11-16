@@ -74,58 +74,42 @@
   }
 }
 
-/* Workspace colors are scoped so acquisition and scanner flows keep their own layout. */
+/* Neutral workbench palette, scoped to authenticated and preview workspaces. */
 .workspace-theme {
-  --background: 160 20% 97%;
-  --foreground: 164 30% 13%;
+  --background: 40 14% 96%;
+  --foreground: 220 15% 16%;
   --card: 0 0% 100%;
-  --card-foreground: 164 30% 13%;
-  --primary: 160 84% 25%;
+  --card-foreground: 220 15% 16%;
+  --primary: 222 70% 43%;
   --primary-foreground: 0 0% 100%;
-  --muted: 156 14% 94%;
-  --muted-foreground: 163 9% 42%;
-  --accent: 156 28% 93%;
-  --accent-foreground: 164 30% 13%;
-  --border: 156 14% 88%;
-  --input: 156 14% 85%;
-  --ring: 160 84% 25%;
+  --muted: 40 8% 92%;
+  --muted-foreground: 220 7% 43%;
+  --accent: 220 14% 94%;
+  --accent-foreground: 220 15% 16%;
+  --border: 40 6% 84%;
+  --input: 40 6% 78%;
+  --ring: 222 70% 43%;
+  --radius: 0.25rem;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
 }
-
 .dark .workspace-theme {
-  --background: 164 24% 8%;
-  --foreground: 150 15% 94%;
-  --card: 164 20% 11%;
-  --card-foreground: 150 15% 94%;
-  --primary: 158 64% 52%;
-  --primary-foreground: 164 30% 8%;
-  --muted: 164 16% 16%;
-  --muted-foreground: 158 10% 65%;
-  --accent: 164 16% 16%;
-  --accent-foreground: 150 15% 94%;
-  --border: 164 14% 21%;
-  --input: 164 14% 26%;
-  --ring: 158 64% 52%;
+  --background: 220 12% 10%;
+  --foreground: 40 10% 92%;
+  --card: 220 10% 13%;
+  --card-foreground: 40 10% 92%;
+  --primary: 220 90% 72%;
+  --primary-foreground: 220 20% 10%;
+  --muted: 220 10% 18%;
+  --muted-foreground: 220 8% 65%;
+  --accent: 220 10% 20%;
+  --accent-foreground: 40 10% 92%;
+  --border: 220 8% 26%;
+  --input: 220 8% 30%;
+  --ring: 220 90% 72%;
 }
-
-.workspace-nav {
-  --background: 164 30% 10%;
-  --foreground: 150 15% 94%;
-  --muted-foreground: 158 12% 68%;
-  --primary: 158 64% 62%;
-  --accent: 164 22% 18%;
-  --accent-foreground: 150 15% 98%;
-  --border: 164 18% 22%;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-.workspace-theme :focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 3px;
-}
-
+.workspace-nav { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.workspace-theme :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   .workspace-theme *, .workspace-theme *::before, .workspace-theme *::after {
     animation-duration: 0.01ms !important;

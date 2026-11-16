@@ -68,7 +68,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { StokoraLogo } from "@/components/ui/stokora-logo"
 import { isSectionVisible } from "@/lib/presets"
 import {
   Collapsible,
@@ -320,7 +319,7 @@ function SidebarContent() {
     <div className="workspace-nav flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-5">
-        <StokoraLogo theme="dark" size="sm" />
+        <Link href="/dashboard" className="text-xl font-bold tracking-tight">stokora<span className="text-primary">.</span></Link>
       </div>
 
       {/* Navigation */}
@@ -403,11 +402,28 @@ function SidebarContent() {
   )
 }
 
-export function Sidebar() {
+export function WorkspaceNavigation() {
+  const pathname = usePathname()
+  const { role, preset, enabledModules } = useAuth()
+  const hasModuleConfig = Object.keys(enabledModules || {}).length > 0
+  const sections = navSections.filter(section =>
+    (section.title !== "Admin" || role === "admin") && isSectionVisible(section.title, preset)
+  )
   return (
-    <aside className="hidden md:flex h-dvh w-64 shrink-0 flex-col">
-      <SidebarContent />
-    </aside>
+    <div className="hidden shrink-0 items-center gap-5 border-b bg-card px-5 md:flex">
+      <Link href="/dashboard" className="py-4 text-lg font-bold tracking-tight">stokora<span className="text-primary">.</span></Link>
+      <nav aria-label="Main navigation" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+        {sections.map(section => {
+          const items = section.items.filter(item => !item.module || !hasModuleConfig || enabledModules?.[item.module])
+          if (!items.length) return null
+          const active = items.some(item => pathname === item.href || pathname.startsWith(item.href + "/"))
+          return <DropdownMenu key={section.title}>
+            <DropdownMenuTrigger className={cn("flex min-h-14 shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-3 text-xs font-medium", active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>{section.title}<ChevronDown className="h-3 w-3" /></DropdownMenuTrigger>
+            <DropdownMenuContent align="start">{items.map(item => <DropdownMenuItem key={item.href} asChild><Link href={item.href} aria-current={pathname === item.href ? "page" : undefined}><item.icon className="mr-2 h-4 w-4" />{item.label}</Link></DropdownMenuItem>)}</DropdownMenuContent>
+          </DropdownMenu>
+        })}
+      </nav>
+    </div>
   )
 }
 

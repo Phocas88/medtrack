@@ -144,7 +144,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     .slice(0, 2) || "WM"
 
   return (
-    <header className="sticky top-0 z-40 flex h-20 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-8 lg:px-10">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
@@ -157,7 +157,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Page title */}
-      <h1 className="text-lg font-semibold tracking-tight truncate min-w-0 flex-1">{title}</h1>
+      <h1 className="text-sm font-semibold tracking-tight truncate min-w-0 flex-1">{title}</h1>
 
       {/* Search button */}
       <Button

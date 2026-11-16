@@ -1,11 +1,11 @@
 # Stokora workspace UI
 
-## Implemented first pass
+## Current direction: operations workbench
 
-- Scoped emerald workspace palette with light and dark themes, a dark navigation rail, roomier header, bounded content width and lighter card shadows.
-- Shared dashboard introduction and direct receiving, shipping, counting and scanner links across dashboard presets.
+- Neutral workspace palette with restrained blue actions, light/dark themes, horizontal desktop navigation and compact page headers. Mobile navigation retains its accessible sheet.
+- Compact operations toolbar with direct receiving, shipping and scanner links across dashboard presets. Hero messaging and shortcut cards have been removed.
 - Accessible names for search, account and favorite controls, visible keyboard focus and reduced-motion support.
-- `/demo/workspace` provides a public, read-only visual preview with explicitly labeled sample data. Its simplified navigation illustrates the design direction; the authenticated application retains its full role/preset/module navigation.
+- `/demo/workspace` provides an interactive order-desk preview: status filters, search, selectable order rows and a detail panel. All records are explicitly labeled samples. Its simplified navigation illustrates the design direction; the authenticated application retains its full role/preset/module navigation.
 
 This is a foundation, not a completed redesign of every application screen. The preview does not connect to tenant data or bypass authentication on its app links.
 
