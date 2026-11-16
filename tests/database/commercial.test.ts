@@ -453,3 +453,14 @@ describe('accounting source boundaries',()=>{
   }
  });
 });
+
+describe('staff floor-only data access',()=>{
+ it('hides all sales-order records and peer profiles while retaining safe product lookup',async()=>{
+  await owner();expect((await db.query('select * from sales_orders where tenant_id=$1',[tenant])).rows.length).toBeGreaterThan(0);
+  await db.query("insert into scan_logs(tenant_id,task_id,scanned_by,scan_type,scanned_value) select tenant_id,id,$1,'verify_stock','peer-fixture' from scan_tasks where tenant_id=$2 limit 1",[admin,tenant]);
+  await login(staff);expect((await db.query('select * from sales_orders')).rows).toHaveLength(0);
+  expect((await db.query('select * from scan_logs where scanned_by=$1',[admin])).rows).toHaveLength(0);expect((await db.query('select * from sales_order_lines')).rows).toHaveLength(0);
+  expect((await db.query('select id from users where id=$1',[admin])).rows).toHaveLength(0);expect((await db.query('select id from users where id=$1',[staff])).rows).toHaveLength(1);
+  expect((await db.query('select id from staff_products where id=$1',[product])).rows).toHaveLength(1);
+ });
+});

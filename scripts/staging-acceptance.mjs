@@ -16,6 +16,7 @@ if (missing.length) {
 }
 const url = new URL(process.env.STAGING_SUPABASE_URL);
 if (
+  url.hostname === "pzpseofzcwmdmpbwpxqj.supabase.co" ||
   url.protocol !== "https:" ||
   !url.hostname.endsWith(".supabase.co") ||
   process.env.STAGING_PROJECT_CONFIRMATION !== url.hostname.split(".")[0]
