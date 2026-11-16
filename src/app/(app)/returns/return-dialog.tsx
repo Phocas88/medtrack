@@ -44,11 +44,6 @@ function emptyLine(): ReturnLineInput {
   return { product_id: '', lot_id: '', quantity: 1, disposition: '', reason: '' };
 }
 
-function generateReturnNumber(type: ReturnType): string {
-  const prefix = type === 'customer_return' ? 'RET-' : 'RMA-';
-  return prefix + Date.now().toString(36).toUpperCase();
-}
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,6 +53,7 @@ interface Props {
 export function ReturnDialog({ open, onOpenChange, onSaved }: Props) {
   const { user, tenantId } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   const [returnType, setReturnType] = useState<ReturnType>('customer_return');
   const [customerId, setCustomerId] = useState('');
@@ -160,101 +156,13 @@ export function ReturnDialog({ open, onOpenChange, onSaved }: Props) {
 
     setSaving(true);
     const supabase = createClient();
-    const returnNumber = generateReturnNumber(returnType);
-    const creditAmount = calculateCreditAmount();
-
-    // Create return header
-    const { data: ret, error: retError } = await supabase
-      .from('returns')
-      .insert({
-        tenant_id: tenantId,
-        return_number: returnNumber,
-        return_type: returnType,
-        status: 'completed' as const,
-        customer_id: returnType === 'customer_return' ? customerId : null,
-        supplier_id: returnType === 'supplier_rma' ? supplierId : null,
-        reason: reason || null,
-        credit_amount: creditAmount,
-        inspected_by: user.id,
-        inspected_at: new Date().toISOString(),
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (retError) {
-      toast.error(retError.message);
-      setSaving(false);
-      return;
-    }
-
-    // Process each line
-    for (const line of validLines) {
-      const disposition = line.disposition as ReturnDisposition;
-
-      // Insert return line
-      await supabase.from('return_lines').insert({
-        tenant_id: tenantId,
-        return_id: ret.id,
-        product_id: line.product_id,
-        lot_id: line.lot_id || null,
-        quantity: line.quantity,
-        disposition,
-        reason: line.reason || null,
-      });
-
-      if (disposition === 'restock' && line.lot_id) {
-        // Add quantity back to lot
-        const { data: lot } = await supabase
-          .from('lots')
-          .select('quantity_on_hand')
-          .eq('id', line.lot_id)
-          .single();
-
-        if (lot) {
-          await supabase
-            .from('lots')
-            .update({ quantity_on_hand: lot.quantity_on_hand + line.quantity })
-            .eq('id', line.lot_id);
-        }
-
-        // Create stock movement
-        await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: line.lot_id,
-          user_id: user.id,
-          quantity: line.quantity,
-          movement_type: 'return',
-          reason: `Return ${returnNumber} - restocked`,
-          reference_number: returnNumber,
-        });
-      } else if (disposition === 'quarantine') {
-        // Create quarantine hold
-        await supabase.from('quarantine_holds').insert({
-          tenant_id: tenantId,
-          lot_id: line.lot_id || null,
-          product_id: line.product_id,
-          status: 'held',
-          reason: line.reason || reason || 'Return - pending inspection',
-          quantity: line.quantity,
-          held_by: user.id,
-          held_at: new Date().toISOString(),
-        });
-      } else if (disposition === 'destroy') {
-        // Record negative adjustment for destroyed items
-        await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: line.lot_id || null,
-          user_id: user.id,
-          quantity: -line.quantity,
-          movement_type: 'adjust',
-          reason: `Return ${returnNumber} - destroyed`,
-          reference_number: returnNumber,
-        });
-      }
-    }
+    const { data: posted, error } = await supabase.rpc('process_return', {
+      p_request_id: requestId,
+      p_return: { return_type: returnType, customer_id: customerId || null, supplier_id: supplierId || null, reason, lines: validLines },
+    });
+    if (error) { toast.error(error.message); setSaving(false); return; }
+    setRequestId(crypto.randomUUID());
+    const returnNumber = posted.return_number;
 
     toast.success(`Return ${returnNumber} processed successfully`);
     resetForm();

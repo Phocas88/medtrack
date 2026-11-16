@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/providers/auth-provider';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -23,20 +23,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { Truck, Plus, Trash2, AlertTriangle, Check } from 'lucide-react';
-import { pickLotsForQuantity } from '@/lib/fefo';
-import { formatDate } from '@/lib/format';
-import { ExpiryBadge } from '@/components/ui/expiry-badge';
-import { InvoiceButton } from './invoice-button';
-import type { Customer, Product, Lot, SalesOrder } from '@/types/database';
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { Truck, Plus, Trash2, AlertTriangle, Check } from "lucide-react";
+import { pickLotsForQuantity } from "@/lib/fefo";
+import { formatDate } from "@/lib/format";
+import { ExpiryBadge } from "@/components/ui/expiry-badge";
+import { InvoiceButton } from "./invoice-button";
+import type { Customer, Product, Lot, SalesOrder } from "@/types/database";
 
 interface OrderLine {
   product_id: string;
@@ -57,50 +57,111 @@ export default function ShipPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [lines, setLines] = useState<OrderLine[]>([]);
-  const [customerId, setCustomerId] = useState('');
-  const [shipDate, setShipDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
-  const [trackingNumber, setTrackingNumber] = useState('');
+  const [existingOrders, setExistingOrders] = useState<
+    {
+      id: string;
+      order_number: string;
+      customer_id: string;
+      lines: {
+        product_id: string;
+        quantity_ordered: number;
+        quantity_shipped: number;
+        unit_price: number;
+      }[];
+    }[]
+  >([]);
+  const [selectedOrderId, setSelectedOrderId] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [shipDate, setShipDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [notes, setNotes] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [serials, setSerials] = useState<Record<string, string>>({});
 
   const [pickSuggestions, setPickSuggestions] = useState<PickSuggestion[]>([]);
   const [showPicking, setShowPicking] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [recentOrders, setRecentOrders] = useState<(SalesOrder & { customer?: Customer })[]>([]);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [recentOrders, setRecentOrders] = useState<
+    (SalesOrder & { customer?: Customer })[]
+  >([]);
 
   useEffect(() => {
     if (!tenantId) return;
     const supabase = createClient();
 
-    supabase.from('customers').select('*').eq('tenant_id', tenantId).eq('is_archived', false).order('name')
+    supabase
+      .from("customers")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("is_archived", false)
+      .order("name")
       .then(({ data }) => setCustomers(data || []));
 
-    supabase.from('products').select('*').eq('tenant_id', tenantId).eq('is_archived', false).order('name')
+    supabase
+      .from("products")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("is_archived", false)
+      .order("name")
       .then(({ data }) => setProducts(data || []));
 
+    supabase
+      .from("sales_orders")
+      .select(
+        "id,order_number,customer_id,lines:sales_order_lines(product_id,quantity_ordered,quantity_shipped,unit_price)",
+      )
+      .eq("tenant_id", tenantId)
+      .in("status", ["confirmed", "picking"])
+      .order("created_at")
+      .then(({ data }) => setExistingOrders(data || []));
     loadRecentOrders();
   }, [tenantId]);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("order");
+    if (!id) return;
+    const order = existingOrders.find((candidate) => candidate.id === id);
+    if (!order) return;
+    setSelectedOrderId(id);
+    setCustomerId(order.customer_id);
+    setLines(
+      order.lines
+        .filter((line) => line.quantity_ordered > line.quantity_shipped)
+        .map((line) => ({
+          product_id: line.product_id,
+          quantity: line.quantity_ordered - line.quantity_shipped,
+          unit_price: line.unit_price,
+        })),
+    );
+  }, [existingOrders]);
 
   async function loadRecentOrders() {
     if (!tenantId) return;
     const supabase = createClient();
     const { data } = await supabase
-      .from('sales_orders')
-      .select('*, customer:customers(id, name)')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'shipped')
-      .order('created_at', { ascending: false })
+      .from("sales_orders")
+      .select("*, customer:customers(id, name)")
+      .eq("tenant_id", tenantId)
+      .eq("status", "shipped")
+      .order("created_at", { ascending: false })
       .limit(20);
     setRecentOrders((data as (SalesOrder & { customer?: Customer })[]) || []);
   }
 
   function addLine() {
-    setLines([...lines, { product_id: '', quantity: 1, unit_price: 0 }]);
+    setLines([...lines, { product_id: "", quantity: 1, unit_price: 0 }]);
   }
 
-  function updateLine(index: number, field: keyof OrderLine, value: string | number) {
+  function updateLine(
+    index: number,
+    field: keyof OrderLine,
+    value: string | number,
+  ) {
     const updated = [...lines];
     (updated[index] as unknown as Record<string, unknown>)[field] = value;
-    if (field === 'product_id') {
+    if (field === "product_id") {
       const prod = products.find((p) => p.id === value);
       if (prod) updated[index].unit_price = prod.price;
     }
@@ -112,29 +173,74 @@ export default function ShipPage() {
   }
 
   async function handlePrepareShipment() {
-    if (!customerId) { toast.error('Select a customer'); return; }
-    if (lines.length === 0) { toast.error('Add at least one line item'); return; }
+    if (!customerId) {
+      toast.error("Select a customer");
+      return;
+    }
+    if (lines.length === 0) {
+      toast.error("Add at least one line item");
+      return;
+    }
     if (lines.some((l) => !l.product_id || l.quantity <= 0)) {
-      toast.error('All lines must have a product and positive quantity');
+      toast.error("All lines must have a product and positive quantity");
       return;
     }
 
     const supabase = createClient();
     const suggestions: PickSuggestion[] = [];
+    if (new Set(lines.map((line) => line.product_id)).size !== lines.length) {
+      toast.error(
+        "Combine duplicate product lines before preparing a shipment",
+      );
+      return;
+    }
 
     for (const line of lines) {
       const product = products.find((p) => p.id === line.product_id)!;
 
       const { data: lots } = await supabase
-        .from('lots')
-        .select('*')
-        .eq('tenant_id', tenantId!)
-        .eq('product_id', line.product_id)
-        .eq('status', 'active')
-        .gt('quantity_on_hand', 0)
-        .order('expiration_date', { ascending: true, nullsFirst: false });
+        .from("lots")
+        .select("*")
+        .eq("tenant_id", tenantId!)
+        .eq("product_id", line.product_id)
+        .eq("status", "active")
+        .gt("quantity_on_hand", 0)
+        .order("expiration_date", { ascending: true, nullsFirst: false });
 
-      const result = pickLotsForQuantity(lots || [], line.quantity);
+      let eligibleLots = lots || [];
+      if (product.is_serial_tracked) {
+        const scanned = (serials[product.id] || "")
+          .split(/\r?\n/)
+          .map((value) => value.trim())
+          .filter(Boolean);
+        if (
+          scanned.length !== line.quantity ||
+          new Set(scanned).size !== scanned.length
+        ) {
+          toast.error("Scan one unique serial per shipped unit");
+          return;
+        }
+        const { data: available, error: serialError } = await supabase
+          .from("serial_numbers")
+          .select("lot_id,serial_number")
+          .eq("tenant_id", tenantId!)
+          .eq("product_id", product.id)
+          .eq("is_shipped", false)
+          .in("serial_number", scanned);
+        if (serialError || available?.length !== scanned.length) {
+          toast.error("A scanned serial is unavailable");
+          return;
+        }
+        eligibleLots = eligibleLots
+          .map((lot) => ({
+            ...lot,
+            quantity_on_hand: available.filter(
+              (serial) => serial.lot_id === lot.id,
+            ).length,
+          }))
+          .filter((lot) => lot.quantity_on_hand > 0);
+      }
+      const result = pickLotsForQuantity(eligibleLots, line.quantity);
       suggestions.push({
         product,
         picks: result.picks,
@@ -153,95 +259,45 @@ export default function ShipPage() {
     setProcessing(true);
     const supabase = createClient();
 
-    // Generate order number
-    const orderNum = `SO-${Date.now().toString(36).toUpperCase()}`;
-
-    // Create sales order
-    const { data: order, error: orderErr } = await supabase
-      .from('sales_orders')
-      .insert({
-        tenant_id: tenantId,
-        order_number: orderNum,
+    const { data: posted, error } = await supabase.rpc("ship_inventory", {
+      p_request_id: requestId,
+      p_shipment: {
+        order_id: selectedOrderId || null,
         customer_id: customerId,
-        status: 'shipped',
         ship_date: shipDate,
         notes,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (orderErr) { toast.error(orderErr.message); setProcessing(false); return; }
-
-    // Create order lines
-    await supabase.from('sales_order_lines').insert(
-      lines.map((l) => ({
-        tenant_id: tenantId,
-        order_id: order.id,
-        product_id: l.product_id,
-        quantity_ordered: l.quantity,
-        quantity_shipped: l.quantity,
-        unit_price: l.unit_price,
-      }))
-    );
-
-    // Create shipment
-    const { data: shipment } = await supabase
-      .from('shipments')
-      .insert({
-        tenant_id: tenantId,
-        order_id: order.id,
-        customer_id: customerId,
-        shipped_by: user.id,
-        tracking_number: trackingNumber || null,
-        notes,
-      })
-      .select()
-      .single();
-
-    if (!shipment) { toast.error('Failed to create shipment'); setProcessing(false); return; }
-
-    // Process each pick: create shipment lines, decrement lots, record movements
-    for (const suggestion of pickSuggestions) {
-      for (const pick of suggestion.picks) {
-        // Shipment line
-        await supabase.from('shipment_lines').insert({
-          tenant_id: tenantId,
-          shipment_id: shipment.id,
-          product_id: suggestion.product.id,
-          lot_id: pick.lot.id,
-          quantity: pick.pickQuantity,
-        });
-
-        // Decrement lot
-        await supabase
-          .from('lots')
-          .update({
-            quantity_on_hand: pick.lot.quantity_on_hand - pick.pickQuantity,
-            status: pick.lot.quantity_on_hand - pick.pickQuantity <= 0 ? 'depleted' : 'active',
-          })
-          .eq('id', pick.lot.id);
-
-        // Stock movement
-        await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: suggestion.product.id,
-          lot_id: pick.lot.id,
-          user_id: user.id,
-          quantity: -pick.pickQuantity,
-          movement_type: 'ship',
-          reason: `Shipped to customer - Order ${orderNum}`,
-          reference_number: orderNum,
-        });
-      }
+        tracking_number: trackingNumber,
+        lines,
+        serial_numbers: Object.fromEntries(
+          Object.entries(serials).map(([id, value]) => [
+            id,
+            value
+              .split(/\r?\n/)
+              .map((serial) => serial.trim())
+              .filter(Boolean),
+          ]),
+        ),
+      },
+    });
+    if (error) {
+      toast.error(error.message);
+      setProcessing(false);
+      return;
     }
+    const orderNum = posted.order_number;
+    setRequestId(crypto.randomUUID());
 
     toast.success(`Shipment ${orderNum} created successfully`);
     setShowPicking(false);
     setLines([]);
-    setCustomerId('');
-    setNotes('');
-    setTrackingNumber('');
+    setCustomerId("");
+    setSelectedOrderId("");
+    setExistingOrders((previous) =>
+      previous.filter((order) => order.id !== selectedOrderId),
+    );
+    setNotes("");
+    setTrackingNumber("");
+    setSerials({});
     setPickSuggestions([]);
     setProcessing(false);
     loadRecentOrders();
@@ -254,6 +310,50 @@ export default function ShipPage() {
         description="Create shipments with FEFO picking logic"
       />
 
+      <div className="space-y-2">
+        <Label htmlFor="existing-order">Fulfill an existing order</Label>
+        <select
+          id="existing-order"
+          className="w-full rounded border p-2"
+          value={selectedOrderId}
+          onChange={(event) => {
+            const id = event.target.value;
+            setSelectedOrderId(id);
+            const order = existingOrders.find(
+              (candidate) => candidate.id === id,
+            );
+            setCustomerId(order?.customer_id || "");
+            setLines(
+              order
+                ? order.lines
+                    .filter(
+                      (line) => line.quantity_ordered > line.quantity_shipped,
+                    )
+                    .map((line) => ({
+                      product_id: line.product_id,
+                      quantity: line.quantity_ordered - line.quantity_shipped,
+                      unit_price: line.unit_price,
+                    }))
+                : [],
+            );
+            setShowPicking(false);
+          }}
+        >
+          <option value="">Create a new manual shipment</option>
+          {existingOrders.map((order) => (
+            <option key={order.id} value={order.id}>
+              {order.order_number}
+            </option>
+          ))}
+        </select>
+        {selectedOrderId && (
+          <p className="text-sm text-muted-foreground">
+            This workflow ships all remaining quantities on the selected order.
+            Partial order fulfillment is not available in this release.
+            Quantities and prices are verified by the server.
+          </p>
+        )}
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -264,24 +364,37 @@ export default function ShipPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Customer *</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
+              <Select
+                value={customerId}
+                disabled={!!selectedOrderId}
+                onValueChange={setCustomerId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Ship Date</Label>
-              <Input type="date" value={shipDate} onChange={(e) => setShipDate(e.target.value)} />
+              <Input
+                type="date"
+                value={shipDate}
+                onChange={(e) => setShipDate(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Tracking Number</Label>
-              <Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} />
+              <Input
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>Notes</Label>
@@ -292,7 +405,12 @@ export default function ShipPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Line Items</Label>
-              <Button variant="outline" size="sm" onClick={addLine}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addLine}
+                disabled={!!selectedOrderId}
+              >
                 <Plus className="h-4 w-4 mr-1" /> Add Item
               </Button>
             </div>
@@ -311,13 +429,19 @@ export default function ShipPage() {
                   {lines.map((line, i) => (
                     <TableRow key={i}>
                       <TableCell>
-                        <Select value={line.product_id} onValueChange={(v) => updateLine(i, 'product_id', v)}>
+                        <Select
+                          value={line.product_id}
+                          disabled={!!selectedOrderId}
+                          onValueChange={(v) => updateLine(i, "product_id", v)}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
                             {products.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>{p.name} ({p.sku})</SelectItem>
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name} ({p.sku})
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -327,7 +451,14 @@ export default function ShipPage() {
                           type="number"
                           min={1}
                           value={line.quantity}
-                          onChange={(e) => updateLine(i, 'quantity', parseInt(e.target.value) || 1)}
+                          disabled={!!selectedOrderId}
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              "quantity",
+                              parseInt(e.target.value) || 1,
+                            )
+                          }
                         />
                       </TableCell>
                       <TableCell>
@@ -335,11 +466,23 @@ export default function ShipPage() {
                           type="number"
                           step="0.01"
                           value={line.unit_price}
-                          onChange={(e) => updateLine(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                          disabled={!!selectedOrderId}
+                          onChange={(e) =>
+                            updateLine(
+                              i,
+                              "unit_price",
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
                         />
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => removeLine(i)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={!!selectedOrderId}
+                          onClick={() => removeLine(i)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -350,8 +493,48 @@ export default function ShipPage() {
             )}
           </div>
 
+          {lines
+            .filter(
+              (line, index, all) =>
+                all.findIndex(
+                  (candidate) => candidate.product_id === line.product_id,
+                ) === index &&
+                products.find((product) => product.id === line.product_id)
+                  ?.is_serial_tracked,
+            )
+            .map((line) => (
+              <div key={line.product_id} className="space-y-2">
+                <Label htmlFor={`serials-${line.product_id}`}>
+                  Scan serials:{" "}
+                  {
+                    products.find((product) => product.id === line.product_id)
+                      ?.name
+                  }
+                </Label>
+                <textarea
+                  id={`serials-${line.product_id}`}
+                  className="min-h-24 w-full rounded border p-3 font-mono text-sm"
+                  value={serials[line.product_id] || ""}
+                  onChange={(event) =>
+                    setSerials((previous) => ({
+                      ...previous,
+                      [line.product_id]: event.target.value,
+                    }))
+                  }
+                  placeholder="Scan one serial number per line"
+                />
+                <p className="text-xs text-muted-foreground">
+                  One unique physical serial per unit. Only scanned serials will
+                  ship; unavailable or duplicate serials are rejected.
+                </p>
+              </div>
+            ))}
+
           <div className="flex gap-2 pt-2">
-            <Button onClick={handlePrepareShipment} disabled={lines.length === 0}>
+            <Button
+              onClick={handlePrepareShipment}
+              disabled={lines.length === 0}
+            >
               Prepare Shipment (FEFO Pick)
             </Button>
           </div>
@@ -378,14 +561,19 @@ export default function ShipPage() {
               <TableBody>
                 {recentOrders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-mono">{order.order_number}</TableCell>
-                    <TableCell>{order.customer?.name || '—'}</TableCell>
+                    <TableCell className="font-mono">
+                      {order.order_number}
+                    </TableCell>
+                    <TableCell>{order.customer?.name || "—"}</TableCell>
                     <TableCell>{formatDate(order.ship_date)}</TableCell>
                     <TableCell>
                       <Badge variant="default">Shipped</Badge>
                     </TableCell>
                     <TableCell>
-                      <InvoiceButton orderId={order.id} tenantId={order.tenant_id} />
+                      <InvoiceButton
+                        orderId={order.id}
+                        tenantId={order.tenant_id}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -415,7 +603,9 @@ export default function ShipPage() {
                         Need: {suggestion.requestedQty}
                       </span>
                       {suggestion.fulfilled ? (
-                        <Badge variant="default"><Check className="h-3 w-3 mr-1" /> Fulfilled</Badge>
+                        <Badge variant="default">
+                          <Check className="h-3 w-3 mr-1" /> Fulfilled
+                        </Badge>
                       ) : (
                         <Badge variant="destructive">Insufficient Stock</Badge>
                       )}
@@ -442,8 +632,10 @@ export default function ShipPage() {
                     <TableBody>
                       {suggestion.picks.map((pick, j) => (
                         <TableRow key={j}>
-                          <TableCell className="font-mono">{pick.lot.lot_number}</TableCell>
-                          <TableCell>{pick.lot.location || '—'}</TableCell>
+                          <TableCell className="font-mono">
+                            {pick.lot.lot_number}
+                          </TableCell>
+                          <TableCell>{pick.lot.location || "—"}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {formatDate(pick.lot.expiration_date)}
@@ -451,7 +643,9 @@ export default function ShipPage() {
                             </div>
                           </TableCell>
                           <TableCell>{pick.lot.quantity_on_hand}</TableCell>
-                          <TableCell className="font-bold">{pick.pickQuantity}</TableCell>
+                          <TableCell className="font-bold">
+                            {pick.pickQuantity}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -462,12 +656,14 @@ export default function ShipPage() {
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowPicking(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowPicking(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={handleConfirmShipment}
               disabled={processing || pickSuggestions.some((s) => !s.fulfilled)}
             >
-              {processing ? 'Processing...' : 'Confirm & Ship'}
+              {processing ? "Processing..." : "Confirm & Ship"}
             </Button>
           </div>
         </DialogContent>

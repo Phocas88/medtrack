@@ -1,94 +1,94 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { escapeHtml } from "@/lib/html";
+import { requireUser, routeError } from "@/lib/server-auth";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 function svc() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
-
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-  return data;
 }
 
 export async function POST(request: Request) {
   try {
-    const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authorizedUser = await requireUser(["admin", "manager"], true);
+    const authUser = authorizedUser;
 
     const { po_id } = await request.json();
-    if (!po_id) return NextResponse.json({ error: 'po_id required' }, { status: 400 });
+    if (!po_id)
+      return NextResponse.json({ error: "po_id required" }, { status: 400 });
 
     const supabase = svc();
 
     // Get PO with supplier and lines
     const { data: po, error: poErr } = await supabase
-      .from('purchase_orders')
-      .select('*, supplier:suppliers(*)')
-      .eq('id', po_id)
-      .eq('tenant_id', authUser.tenant_id)
+      .from("purchase_orders")
+      .select("*, supplier:suppliers(*)")
+      .eq("id", po_id)
+      .eq("tenant_id", authUser.tenant_id)
       .single();
 
-    if (poErr || !po) return NextResponse.json({ error: 'PO not found' }, { status: 404 });
+    if (poErr || !po)
+      return NextResponse.json({ error: "PO not found" }, { status: 404 });
 
     const supplier = po.supplier as Record<string, string> | null;
     if (!supplier?.email) {
-      return NextResponse.json({ error: 'Supplier has no email address on file' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Supplier has no email address on file" },
+        { status: 400 },
+      );
     }
 
     // Get PO lines with product details
     const { data: lines } = await supabase
-      .from('po_lines')
-      .select('*, product:products(name, sku, unit_of_measure)')
-      .eq('po_id', po_id);
+      .from("po_lines")
+      .select("*, product:products(name, sku, unit_of_measure)")
+      .eq("po_id", po_id);
 
     // Get tenant info for ship-to
     const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name, settings')
-      .eq('id', authUser.tenant_id)
+      .from("tenants")
+      .select("name, settings")
+      .eq("id", authUser.tenant_id)
       .single();
 
-    const tenantName = tenant?.name || 'Our Company';
+    const tenantName = tenant?.name || "Our Company";
     const settings = (tenant?.settings as Record<string, unknown>) || {};
-    const shipTo = (settings.address as string) || '';
+    const shipTo = (settings.address as string) || "";
 
     // Build email body
-    const lineRows = (lines || []).map((l: Record<string, unknown>) => {
-      const prod = l.product as Record<string, string> | null;
-      return `<tr>
-        <td style="padding:8px;border-bottom:1px solid #eee">${prod?.sku || '—'}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee">${prod?.name || l.description || '—'}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${l.quantity_ordered}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${prod?.unit_of_measure || 'ea'}</td>
+    const lineRows = (lines || [])
+      .map((l: Record<string, unknown>) => {
+        const prod = l.product as Record<string, string> | null;
+        return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(prod?.sku || "—")}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(prod?.name || l.description || "—")}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${escapeHtml(l.quantity_ordered)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${escapeHtml(prod?.unit_of_measure || "ea")}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${(Number(l.unit_cost) || 0).toFixed(2)}</td>
         <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${((Number(l.quantity_ordered) || 0) * (Number(l.unit_cost) || 0)).toFixed(2)}</td>
       </tr>`;
-    }).join('');
+      })
+      .join("");
 
-    const totalAmount = (lines || []).reduce((s: number, l: Record<string, unknown>) =>
-      s + (Number(l.quantity_ordered) || 0) * (Number(l.unit_cost) || 0), 0);
+    const totalAmount = (lines || []).reduce(
+      (s: number, l: Record<string, unknown>) =>
+        s + (Number(l.quantity_ordered) || 0) * (Number(l.unit_cost) || 0),
+      0,
+    );
 
     const htmlBody = `
       <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto">
-        <h2 style="color:#1a2744">Purchase Order: ${po.po_number}</h2>
-        <p>Dear ${supplier.contact_name || supplier.name},</p>
+        <h2 style="color:#1a2744">Purchase Order: ${escapeHtml(po.po_number)}</h2>
+        <p>Dear ${escapeHtml(supplier.contact_name || supplier.name)},</p>
         <p>Please find our purchase order below. We kindly request confirmation of receipt and expected delivery date.</p>
 
         <table style="width:100%;margin:20px 0;font-size:14px">
-          <tr><td><strong>PO Number:</strong></td><td>${po.po_number}</td></tr>
+          <tr><td><strong>PO Number:</strong></td><td>${escapeHtml(po.po_number)}</td></tr>
           <tr><td><strong>Date:</strong></td><td>${new Date().toLocaleDateString()}</td></tr>
-          ${po.expected_date ? `<tr><td><strong>Requested Delivery:</strong></td><td>${new Date(po.expected_date).toLocaleDateString()}</td></tr>` : ''}
-          <tr><td><strong>Ship To:</strong></td><td>${tenantName}${shipTo ? '<br>' + shipTo : ''}</td></tr>
+          ${po.expected_date ? `<tr><td><strong>Requested Delivery:</strong></td><td>${new Date(po.expected_date).toLocaleDateString()}</td></tr>` : ""}
+          <tr><td><strong>Ship To:</strong></td><td>${escapeHtml(tenantName)}${shipTo ? "<br>" + escapeHtml(shipTo) : ""}</td></tr>
         </table>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
@@ -111,10 +111,10 @@ export async function POST(request: Request) {
           </tfoot>
         </table>
 
-        ${po.notes ? `<p><strong>Notes:</strong> ${po.notes}</p>` : ''}
+        ${po.notes ? `<p><strong>Notes:</strong> ${escapeHtml(po.notes)}</p>` : ""}
 
         <p>Please confirm this order by replying to this email.</p>
-        <p>Thank you,<br>${authUser.full_name}<br>${tenantName}</p>
+        <p>Thank you,<br>${escapeHtml(authUser.full_name)}<br>${escapeHtml(tenantName)}</p>
 
         <hr style="margin:30px 0;border:none;border-top:1px solid #eee">
         <p style="font-size:12px;color:#999">Sent via Stokora WMS</p>
@@ -123,37 +123,55 @@ export async function POST(request: Request) {
 
     // Send via Resend if configured, otherwise log
     const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey)
+      return NextResponse.json(
+        { error: "Email delivery is not configured; PO was not sent" },
+        { status: 503 },
+      );
     if (resendKey) {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          from: `${tenantName} <orders@${process.env.NEXT_PUBLIC_APP_DOMAIN || 'stokora.com'}>`,
+          from: `${escapeHtml(tenantName)} <orders@${process.env.NEXT_PUBLIC_APP_DOMAIN || "stokora.com"}>`,
           to: supplier.email,
-          subject: `Purchase Order ${po.po_number} from ${tenantName}`,
+          subject: `Purchase Order ${escapeHtml(po.po_number)} from ${escapeHtml(tenantName)}`,
           html: htmlBody,
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        return NextResponse.json({ error: errData.message || 'Email send failed' }, { status: 500 });
+        return NextResponse.json(
+          { error: errData.message || "Email send failed" },
+          { status: 500 },
+        );
       }
     }
 
     // Update PO status to 'sent'
-    await supabase.from('purchase_orders').update({ status: 'sent' }).eq('id', po_id);
+    await supabase
+      .from("purchase_orders")
+      .update({ status: "sent" })
+      .eq("id", po_id);
 
     // Log to audit
-    await supabase.from('stock_movements').insert({
+    await supabase.from("stock_movements").insert({
       tenant_id: authUser.tenant_id,
       product_id: null,
       user_id: authUser.id,
       quantity: 0,
-      movement_type: 'adjust',
-      reason: `PO ${po.po_number} sent to ${supplier.name} (${supplier.email})`,
+      movement_type: "adjust",
+      reason: `PO ${escapeHtml(po.po_number)} sent to ${supplier.name} (${supplier.email})`,
       reference_number: po.po_number,
-      metadata: { action: 'po_sent', supplier_email: supplier.email, line_count: (lines || []).length },
+      metadata: {
+        action: "po_sent",
+        supplier_email: supplier.email,
+        line_count: (lines || []).length,
+      },
     });
 
     return NextResponse.json({
@@ -165,7 +183,6 @@ export async function POST(request: Request) {
       email_sent: !!resendKey,
     });
   } catch (err) {
-    console.error('PO send error:', err);
-    return NextResponse.json({ error: 'Failed to send PO' }, { status: 500 });
+    return routeError(err);
   }
 }

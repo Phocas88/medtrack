@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
         if (result.login_note) {
           toast.success(result.login_note, { duration: 10000 });
         } else {
-          toast.success(`User ${newUser.full_name} created. Temp password: check email.`);
+          toast.success(`User ${newUser.full_name} invitation requested by email.`);
         }
         if (result.temp_password) {
           toast.info(`Temp password: ${result.temp_password}`, { duration: 15000 });
@@ -476,7 +476,7 @@ export default function AdminUsersPage() {
                 <SelectContent>
                   <SelectItem value="admin">Admin — Full system access</SelectItem>
                   <SelectItem value="manager">Manager — Operations + reports</SelectItem>
-                  <SelectItem value="staff">Staff — Day-to-day operations</SelectItem>
+                  <SelectItem value="staff">Staff — Assigned floor tasks, no costs</SelectItem>
                 </SelectContent>
               </Select>
             </div>

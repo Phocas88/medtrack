@@ -1,23 +1,26 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/components/providers/auth-provider';
-import { PageHeader } from '@/components/ui/page-header';
-import { DataTable, type Column } from '@/components/ui/data-table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ExpiryBadge } from '@/components/ui/expiry-badge';
-import { Plus, Archive, ArchiveRestore, Upload } from 'lucide-react';
-import { ImportDialog } from './import-dialog';
-import { formatCurrency, storageLabel } from '@/lib/format';
-import { ProductDialog } from './product-dialog';
-import type { Product } from '@/types/database';
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/providers/auth-provider";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable, type Column } from "@/components/ui/data-table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ExpiryBadge } from "@/components/ui/expiry-badge";
+import { Plus, Archive, ArchiveRestore, Upload } from "lucide-react";
+import { ImportDialog } from "./import-dialog";
+import { formatCurrency, storageLabel } from "@/lib/format";
+import { ProductDialog } from "./product-dialog";
+import type { Product } from "@/types/database";
 
 export default function ProductsPage() {
   const { tenantId } = useAuth();
-  const [products, setProducts] = useState<(Product & { total_on_hand?: number; nearest_expiration?: string | null })[]>([]);
+  const [products, setProducts] = useState<
+    (Product & { total_on_hand?: number; nearest_expiration?: string | null })[]
+  >([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -25,26 +28,40 @@ export default function ProductsPage() {
 
   async function loadProducts() {
     if (!tenantId) return;
+    setLoading(true);
+    setLoadError("");
     const supabase = createClient();
 
     // Get products with stock summary
-    const { data: prods } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_archived', showArchived)
-      .order('name');
+    const { data: prods, error: productError } = await supabase
+      .from("products")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("is_archived", showArchived)
+      .order("name");
 
-    if (!prods) { setProducts([]); setLoading(false); return; }
+    if (productError || !prods) {
+      setProducts([]);
+      setLoadError("Could not load products. Please retry.");
+      setLoading(false);
+      return;
+    }
 
     // Get stock summaries
-    const { data: stockData } = await supabase
-      .from('lots')
-      .select('product_id, quantity_on_hand, expiration_date, status')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active');
+    const { data: stockData, error: stockError } = await supabase
+      .from("lots")
+      .select("product_id, quantity_on_hand, expiration_date, status")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active");
 
-    const stockMap: Record<string, { total: number; nearest: string | null }> = {};
+    if (stockError) {
+      setProducts([]);
+      setLoadError("Could not load stock balances. Please retry.");
+      setLoading(false);
+      return;
+    }
+    const stockMap: Record<string, { total: number; nearest: string | null }> =
+      {};
     (stockData || []).forEach((lot) => {
       if (!stockMap[lot.product_id]) {
         stockMap[lot.product_id] = { total: 0, nearest: null };
@@ -68,67 +85,82 @@ export default function ProductsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { loadProducts(); }, [tenantId, showArchived]);
+  useEffect(() => {
+    loadProducts();
+  }, [tenantId, showArchived]);
 
   async function handleArchive(product: Product) {
     const supabase = createClient();
     await supabase
-      .from('products')
+      .from("products")
       .update({ is_archived: !product.is_archived })
-      .eq('id', product.id);
+      .eq("id", product.id);
     loadProducts();
   }
 
-  const columns: Column<typeof products[0]>[] = [
-    { key: 'sku', label: 'SKU', sortable: true },
-    { key: 'name', label: 'Product Name', sortable: true },
-    { key: 'category', label: 'Category', sortable: true },
-    { key: 'manufacturer', label: 'Manufacturer', sortable: true },
+  const columns: Column<(typeof products)[0]>[] = [
+    { key: "sku", label: "SKU", sortable: true },
+    { key: "name", label: "Product Name", sortable: true },
+    { key: "category", label: "Category", sortable: true },
+    { key: "manufacturer", label: "Manufacturer", sortable: true },
     {
-      key: 'total_on_hand',
-      label: 'Stock',
+      key: "total_on_hand",
+      label: "Stock",
       sortable: true,
       render: (row) => {
-        const isLow = row.total_on_hand !== undefined && row.total_on_hand <= row.low_stock_threshold;
+        const isLow =
+          row.total_on_hand !== undefined &&
+          row.total_on_hand <= row.low_stock_threshold;
         return (
-          <span className={isLow ? 'text-destructive font-medium' : ''}>
+          <span className={isLow ? "text-destructive font-medium" : ""}>
             {row.total_on_hand ?? 0} {row.unit_of_measure}
-            {isLow && <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>}
+            {isLow && (
+              <Badge variant="destructive" className="ml-2 text-xs">
+                Low
+              </Badge>
+            )}
           </span>
         );
       },
     },
     {
-      key: 'nearest_expiration',
-      label: 'Nearest Expiry',
+      key: "nearest_expiration",
+      label: "Nearest Expiry",
       render: (row) => <ExpiryBadge date={row.nearest_expiration ?? null} />,
     },
     {
-      key: 'storage_requirement',
-      label: 'Storage',
+      key: "storage_requirement",
+      label: "Storage",
       render: (row) => storageLabel(row.storage_requirement),
     },
     {
-      key: 'cost',
-      label: 'Cost',
+      key: "cost",
+      label: "Cost",
       render: (row) => formatCurrency(row.cost),
     },
     {
-      key: 'price',
-      label: 'Price',
+      key: "price",
+      label: "Price",
       render: (row) => formatCurrency(row.price),
     },
     {
-      key: 'actions',
-      label: '',
+      key: "actions",
+      label: "",
       render: (row) => (
         <Button
           variant="ghost"
           size="sm"
-          onClick={(e) => { e.stopPropagation(); handleArchive(row); }}
-          title={row.is_archived ? 'Restore' : 'Archive'}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleArchive(row);
+          }}
+          title={row.is_archived ? "Restore" : "Archive"}
         >
-          {row.is_archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+          {row.is_archived ? (
+            <ArchiveRestore className="h-4 w-4" />
+          ) : (
+            <Archive className="h-4 w-4" />
+          )}
         </Button>
       ),
     },
@@ -146,12 +178,17 @@ export default function ProductsPage() {
               size="sm"
               onClick={() => setShowArchived(!showArchived)}
             >
-              {showArchived ? 'Show Active' : 'Show Archived'}
+              {showArchived ? "Show Active" : "Show Archived"}
             </Button>
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="h-4 w-4 mr-2" /> Import CSV
             </Button>
-            <Button onClick={() => { setEditProduct(null); setDialogOpen(true); }}>
+            <Button
+              onClick={() => {
+                setEditProduct(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" /> Add Product
             </Button>
           </div>
@@ -161,10 +198,16 @@ export default function ProductsPage() {
       <DataTable
         data={products}
         columns={columns}
-        searchKey="name"
+        searchKeys={["name", "sku", "category"]}
+        loading={loading}
+        error={loadError}
+        onRetry={loadProducts}
         searchPlaceholder="Search products..."
-        onRowClick={(row) => { setEditProduct(row); setDialogOpen(true); }}
-        emptyMessage={loading ? 'Loading...' : 'No products found.'}
+        onRowClick={(row) => {
+          setEditProduct(row);
+          setDialogOpen(true);
+        }}
+        emptyMessage={loading ? "Loading..." : "No products found."}
       />
 
       <ProductDialog

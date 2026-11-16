@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -51,37 +51,39 @@ import {
   ChevronDown,
   Tag,
   Star,
-} from "lucide-react"
-import { useAuth } from "@/components/providers/auth-provider"
-import { cn } from "@/lib/utils"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet"
+} from "lucide-react";
+import { useAuth } from "@/components/providers/auth-provider";
+import { isReleasedRoute } from "@/lib/release-scope";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { StokoraLogo } from "@/components/ui/stokora-logo"
-import { isSectionVisible } from "@/lib/presets"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { StokoraNavigationLogo } from "@/components/ui/stokora-logo";
+import { isSectionVisible } from "@/lib/presets";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 
-type NavItem = { label: string; href: string; icon: typeof LayoutDashboard; module?: string }
+type NavItem = {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  module?: string;
+};
 
 interface NavSection {
-  title: string
-  items: NavItem[]
-  defaultOpen?: boolean
+  title: string;
+  items: NavItem[];
+  defaultOpen?: boolean;
 }
 
 const navSections: NavSection[] = [
@@ -112,7 +114,11 @@ const navSections: NavSection[] = [
     items: [
       { label: "Work Orders", href: "/work-orders", icon: ClipboardList },
       { label: "Services", href: "/services", icon: Boxes },
-      { label: "Purchase Orders", href: "/purchase-orders", icon: ClipboardList },
+      {
+        label: "Purchase Orders",
+        href: "/purchase-orders",
+        icon: ClipboardList,
+      },
       { label: "Receive", href: "/receive", icon: PackagePlus },
       { label: "Put-Away", href: "/put-away", icon: PackageOpen },
       { label: "Wave Picking", href: "/wave-picking", icon: Layers },
@@ -134,7 +140,12 @@ const navSections: NavSection[] = [
       { label: "Scanner", href: "/scanner", icon: Smartphone },
       { label: "Task Board", href: "/task-board", icon: ClipboardList },
       { label: "Kitting", href: "/kitting", icon: Boxes, module: "kitting" },
-      { label: "Consignment", href: "/consignment", icon: Handshake, module: "consignment" },
+      {
+        label: "Consignment",
+        href: "/consignment",
+        icon: Handshake,
+        module: "consignment",
+      },
     ],
   },
   {
@@ -158,8 +169,18 @@ const navSections: NavSection[] = [
     items: [
       { label: "Audit Trail", href: "/audit", icon: ScanLine },
       { label: "Compliance Reports", href: "/compliance", icon: ListChecks },
-      { label: "Controlled Substances", href: "/controlled-substances", icon: Shield, module: "controlled_substances" },
-      { label: "DSCSA", href: "/dscsa", icon: ScrollText, module: "dscsa_tracking" },
+      {
+        label: "Controlled Substances",
+        href: "/controlled-substances",
+        icon: Shield,
+        module: "controlled_substances",
+      },
+      {
+        label: "DSCSA",
+        href: "/dscsa",
+        icon: ScrollText,
+        module: "dscsa_tracking",
+      },
       { label: "Prop 65", href: "/prop65", icon: AlertTriangle },
       { label: "Recall Monitor", href: "/recall-monitor", icon: ShieldAlert },
       { label: "GS1 Compliance", href: "/gs1-compliance", icon: ScanBarcode },
@@ -181,6 +202,7 @@ const navSections: NavSection[] = [
     title: "Integrations",
     items: [
       { label: "Shopify", href: "/integrations/shopify", icon: Plug },
+      { label: "Shipping", href: "/integrations/shipping", icon: Truck },
       { label: "QuickBooks", href: "/integrations/quickbooks", icon: Plug },
       { label: "Zapier", href: "/integrations/zapier", icon: Zap },
       { label: "Billing", href: "/billing", icon: CreditCard },
@@ -193,7 +215,7 @@ const navSections: NavSection[] = [
       { label: "Settings", href: "/settings", icon: Settings },
     ],
   },
-]
+];
 
 function CollapsibleNavSection({
   section,
@@ -202,48 +224,54 @@ function CollapsibleNavSection({
   favorites,
   onToggleFavorite,
 }: {
-  section: NavSection
-  pathname: string
-  enabledModules?: Record<string, boolean>
-  favorites?: string[]
-  onToggleFavorite?: (href: string) => void
+  section: NavSection;
+  pathname: string;
+  enabledModules?: Record<string, boolean>;
+  favorites?: string[];
+  onToggleFavorite?: (href: string) => void;
 }) {
-  const hasModuleConfig = enabledModules && Object.keys(enabledModules).length > 0
+  const hasModuleConfig =
+    enabledModules && Object.keys(enabledModules).length > 0;
 
   const filteredItems = section.items.filter((item) => {
-    if (!item.module) return true
-    if (!hasModuleConfig) return true
-    return enabledModules![item.module] === true
-  })
+    if (!isReleasedRoute(item.href)) return false;
+    if (!item.module) return true;
+    if (!hasModuleConfig) return true;
+    return enabledModules![item.module] === true;
+  });
 
   const hasActiveChild = filteredItems.some(
-    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
-  )
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  );
 
-  const [open, setOpen] = useState(section.defaultOpen || hasActiveChild)
+  const [open, setOpen] = useState(section.defaultOpen || hasActiveChild);
 
-  if (filteredItems.length === 0) return null
+  if (filteredItems.length === 0) return null;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
         {section.title}
-        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn("h-3 w-3 transition-transform", open && "rotate-180")}
+        />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="flex flex-col gap-0.5 mt-0.5">
           {filteredItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-            const isFav = favorites?.includes(item.href)
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
+            const isFav = favorites?.includes(item.href);
             return (
               <div key={item.href} className="group flex items-center">
                 <Link
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex-1 flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    "flex-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <item.icon className="h-4 w-4 shrink-0" />
@@ -251,73 +279,98 @@ function CollapsibleNavSection({
                 </Link>
                 {onToggleFavorite && (
                   <button
+                    aria-label={`${isFav ? "Remove" : "Add"} ${item.label} ${isFav ? "from" : "to"} favorites`}
+                    aria-pressed={!!isFav}
                     onClick={() => onToggleFavorite(item.href)}
                     className={cn(
                       "shrink-0 p-1 rounded transition-opacity",
-                      isFav ? "opacity-100" : "opacity-0 group-hover:opacity-50 hover:!opacity-100"
+                      isFav
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-50 focus-visible:opacity-100 hover:!opacity-100",
                     )}
                   >
-                    <Star className={cn("h-3 w-3", isFav ? "fill-amber-500 text-amber-500" : "text-muted-foreground")} />
+                    <Star
+                      className={cn(
+                        "h-3 w-3",
+                        isFav
+                          ? "fill-amber-500 text-amber-500"
+                          : "text-muted-foreground",
+                      )}
+                    />
                   </button>
                 )}
               </div>
-            )
+            );
           })}
         </div>
       </CollapsibleContent>
     </Collapsible>
-  )
+  );
 }
 
 function useFavorites() {
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('wms_favorites')
-      if (stored) setFavorites(JSON.parse(stored))
+      const stored = localStorage.getItem("wms_favorites");
+      if (stored) setFavorites(JSON.parse(stored));
     } catch {}
-  }, [])
+  }, []);
 
   const toggle = (href: string) => {
     setFavorites((prev) => {
-      const next = prev.includes(href) ? prev.filter((f) => f !== href) : [...prev, href]
-      localStorage.setItem('wms_favorites', JSON.stringify(next))
-      return next
-    })
-  }
+      const next = prev.includes(href)
+        ? prev.filter((f) => f !== href)
+        : [...prev, href];
+      localStorage.setItem("wms_favorites", JSON.stringify(next));
+      return next;
+    });
+  };
 
-  return { favorites, toggle }
+  return { favorites, toggle };
 }
 
 function SidebarContent() {
-  const pathname = usePathname()
-  const { user, enabledModules, role, preset, signOut } = useAuth()
-  const { favorites, toggle: toggleFavorite } = useFavorites()
+  const pathname = usePathname();
+  const { user, enabledModules, role, preset, signOut } = useAuth();
+  const { favorites, toggle: toggleFavorite } = useFavorites();
 
-  const initials = user?.full_name
-    ?.split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'WM'
+  const initials =
+    user?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "WM";
 
   // Get favorite items from all sections
-  const allItems = navSections.flatMap((s) => s.items)
-  const favoriteItems = favorites.map((href) => allItems.find((i) => i.href === href)).filter(Boolean) as NavItem[]
+  const allItems = navSections
+    .filter(
+      (section) =>
+        (section.title !== "Admin" || role === "admin") &&
+        isSectionVisible(section.title, preset),
+    )
+    .flatMap((s) => s.items)
+    .filter((item) => isReleasedRoute(item.href));
+  const favoriteItems = favorites
+    .map((href) => allItems.find((i) => i.href === href))
+    .filter(Boolean) as NavItem[];
 
   // Filter sections by preset + role
   const sections = navSections.filter((s) => {
-    if (s.title === "Admin" && role !== "admin") return false
-    if (!isSectionVisible(s.title, preset)) return false
-    return true
-  })
+    if (s.title === "Admin" && role !== "admin") return false;
+    if (!isSectionVisible(s.title, preset)) return false;
+    return true;
+  });
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="workspace-nav flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-14 items-center px-4">
-        <StokoraLogo theme="light" />
+      <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-5">
+        <Link href="/dashboard" aria-label="Stokora dashboard">
+          <StokoraNavigationLogo />
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -331,20 +384,22 @@ function SidebarContent() {
               </p>
               <div className="flex flex-col gap-0.5">
                 {favoriteItems.map((item) => {
-                  const isActive = pathname === item.href
+                  const isActive = pathname === item.href;
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       {item.label}
                     </Link>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -371,8 +426,12 @@ function SidebarContent() {
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start text-left min-w-0 flex-1">
-              <span className="text-sm font-medium leading-none truncate w-full">{user?.full_name || 'User'}</span>
-              <span className="text-xs text-muted-foreground leading-none mt-0.5 truncate w-full">{user?.email || ''}</span>
+              <span className="text-sm font-medium leading-none truncate w-full">
+                {user?.full_name || "User"}
+              </span>
+              <span className="text-xs text-muted-foreground leading-none mt-0.5 truncate w-full">
+                {user?.email || ""}
+              </span>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -397,29 +456,90 @@ function SidebarContent() {
         </DropdownMenu>
       </div>
     </div>
-  )
+  );
 }
 
-export function Sidebar() {
+export function WorkspaceNavigation() {
+  const pathname = usePathname();
+  const { role, preset, enabledModules } = useAuth();
+  const hasModuleConfig = Object.keys(enabledModules || {}).length > 0;
+  const sections = navSections.filter(
+    (section) =>
+      (section.title !== "Admin" || role === "admin") &&
+      isSectionVisible(section.title, preset),
+  );
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background">
-      <SidebarContent />
-    </aside>
-  )
+    <div className="hidden shrink-0 items-center gap-5 border-b bg-card px-5 md:flex">
+      <Link
+        href="/dashboard"
+        aria-label="Stokora dashboard"
+        className="shrink-0"
+      >
+        <StokoraNavigationLogo />
+      </Link>
+      <nav
+        aria-label="Main navigation"
+        className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+      >
+        {sections.map((section) => {
+          const items = section.items.filter(
+            (item) =>
+              isReleasedRoute(item.href) &&
+              (!item.module ||
+                !hasModuleConfig ||
+                enabledModules?.[item.module]),
+          );
+          if (!items.length) return null;
+          const active = items.some(
+            (item) =>
+              pathname === item.href || pathname.startsWith(item.href + "/"),
+          );
+          return (
+            <DropdownMenu key={section.title}>
+              <DropdownMenuTrigger
+                className={cn(
+                  "flex min-h-14 shrink-0 items-center gap-1 whitespace-nowrap border-b-2 px-3 text-xs font-medium",
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {section.title}
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {items.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link
+                      href={item.href}
+                      aria-current={pathname === item.href ? "page" : undefined}
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        })}
+      </nav>
+    </div>
+  );
 }
 
 interface MobileSidebarProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent side="left" className="workspace-theme w-64 p-0">
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SidebarContent />
       </SheetContent>
     </Sheet>
-  )
+  );
 }

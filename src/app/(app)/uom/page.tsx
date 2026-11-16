@@ -169,7 +169,7 @@ export default function UomPage() {
     if (!tenantId) return
     const { data } = await supabase
       .from("products")
-      .select("id, name, sku, uom")
+      .select("id, name, sku, uom:unit_of_measure")
       .eq("tenant_id", tenantId)
       .order("name")
     if (data) setProducts(data)

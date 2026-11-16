@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/table';
 import { Plus, Play, Trash2, AlertTriangle } from 'lucide-react';
 import { formatDateTime, formatNumber } from '@/lib/format';
-import { pickLotsForQuantity } from '@/lib/fefo';
 import { toast } from 'sonner';
 import type { Kit, KitComponent, KitAssembly, Product } from '@/types/database';
 
@@ -76,6 +75,7 @@ export default function KittingPage() {
   const [checkingStock, setCheckingStock] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
 
   const loadData = useCallback(async () => {
     if (!tenantId) return;
@@ -290,98 +290,9 @@ export default function KittingPage() {
     const supabase = createClient();
 
     try {
-      // 1. Create assembly record
-      const lotNumber = `KIT-${Date.now()}`;
-      const { data: assembly, error: assemblyError } = await supabase
-        .from('kit_assemblies')
-        .insert({
-          tenant_id: tenantId,
-          kit_id: assemblyKitId,
-          quantity_assembled: qty,
-          assembled_by: user.id,
-          assembled_at: new Date().toISOString(),
-          lot_number: lotNumber,
-          notes: assemblyNotes || null,
-        })
-        .select()
-        .single();
-
-      if (assemblyError || !assembly) throw new Error('Failed to create assembly');
-
-      // 2. Pick and decrement component lots
-      for (const comp of kit.components) {
-        const requiredQty = comp.quantity * qty;
-
-        const { data: availableLots } = await supabase
-          .from('lots')
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .eq('product_id', comp.component_product_id)
-          .eq('status', 'active')
-          .gt('quantity_on_hand', 0)
-          .order('expiration_date', { ascending: true, nullsFirst: false })
-          .order('received_date', { ascending: true });
-
-        const { picks, fulfilled } = pickLotsForQuantity(availableLots || [], requiredQty);
-
-        if (!fulfilled) throw new Error(`Insufficient stock for ${comp.product?.name}`);
-
-        for (const pick of picks) {
-          // Decrement lot
-          const newQty = pick.lot.quantity_on_hand - pick.pickQuantity;
-          await supabase
-            .from('lots')
-            .update({
-              quantity_on_hand: newQty,
-              status: newQty <= 0 ? 'depleted' : 'active',
-            })
-            .eq('id', pick.lot.id);
-
-          // Record stock movement
-          await supabase.from('stock_movements').insert({
-            tenant_id: tenantId,
-            product_id: comp.component_product_id,
-            lot_id: pick.lot.id,
-            user_id: user.id,
-            quantity: -pick.pickQuantity,
-            movement_type: 'adjust',
-            reason: `Kit assembly: ${kit.name} (x${qty})`,
-            reference_number: lotNumber,
-          });
-
-          // Record assembly lot usage
-          await supabase.from('kit_assembly_lots').insert({
-            tenant_id: tenantId,
-            assembly_id: assembly.id,
-            component_product_id: comp.component_product_id,
-            lot_id: pick.lot.id,
-            quantity_used: pick.pickQuantity,
-          });
-        }
-      }
-
-      // 3. Create assembled lot for the kit product
-      await supabase.from('lots').insert({
-        tenant_id: tenantId,
-        product_id: kit.product_id,
-        lot_number: lotNumber,
-        quantity_on_hand: qty,
-        received_date: new Date().toISOString().split('T')[0],
-        cost_at_receipt: 0,
-        status: 'active',
-      });
-
-      // 4. Record inbound movement for kit product
-      await supabase.from('stock_movements').insert({
-        tenant_id: tenantId,
-        product_id: kit.product_id,
-        user_id: user.id,
-        quantity: qty,
-        movement_type: 'adjust',
-        reason: `Kit assembled: ${kit.name}`,
-        reference_number: lotNumber,
-      });
-
+      const { error } = await supabase.rpc('assemble_kit', { p_request_id: requestId, p_kit_id: assemblyKitId, p_quantity: qty, p_notes: assemblyNotes || null });
+      if (error) throw error;
+      setRequestId(crypto.randomUUID());
       toast.success(`Assembled ${qty}x ${kit.name}`);
       setAssemblyDialogOpen(false);
       loadData();

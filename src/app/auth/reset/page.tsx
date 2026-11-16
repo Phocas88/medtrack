@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -30,6 +30,28 @@ function ResetForm() {
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [changed, setChanged] = useState(false);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  useEffect(() => {
+    if (!isCallback) return;
+    let active = true;
+    const supabase = createClient();
+    async function establishRecoverySession() {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) { if (active) setError('This recovery link is invalid or expired. Request a new link.'); return; }
+        window.history.replaceState({}, '', '/auth/reset?type=recovery');
+      }
+      // Initializes Supabase's hash-token detection for invitations using its default email template.
+      const { data, error } = await supabase.auth.getSession();
+      if (!active) return;
+      if (error || !data.session) setError('This recovery link is invalid or expired. Request a new link.');
+      else setRecoveryReady(true);
+    }
+    void establishRecoverySession();
+    return () => { active = false; };
+  }, [isCallback]);
+
 
   // Step 1: Request reset link
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -148,7 +170,7 @@ function ResetForm() {
               )}
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || (isCallback && !recoveryReady)}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isCallback ? 'Set New Password' : 'Send Reset Link'}
               </Button>

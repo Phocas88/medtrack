@@ -198,12 +198,7 @@ export default function OnboardingPage() {
     try {
       const supabase = createClient();
       const { error } = await supabase
-        .from('tenants')
-        .update({
-          name: state.companyName,
-          settings: { industry: state.industry, address: state.companyAddress || '' },
-        })
-        .eq('id', tenantId);
+        .rpc('update_tenant_settings', { p_name: state.companyName, p_patch: { industry: state.industry, address: state.companyAddress || '' } });
       if (error) throw error;
       goToStep(2);
     } catch {

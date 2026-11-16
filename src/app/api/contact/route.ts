@@ -1,51 +1,77 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { enforceRateLimit } from "@/lib/distributed-rate-limit";
+import { routeError } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, company, message, interest } = await request.json();
+    const { name, email, company, message, interest } = z
+      .object({
+        name: z.string().trim().min(1).max(200),
+        email: z.string().email().max(320),
+        company: z.string().max(200).optional(),
+        message: z.string().trim().min(1).max(8000),
+        interest: z.string().max(200).optional(),
+      })
+      .parse(await request.json());
 
     if (!name || !email || !message) {
       return NextResponse.json(
-        { error: 'Name, email, and message are required' },
-        { status: 400 }
+        { error: "Name, email, and message are required" },
+        { status: 400 },
       );
     }
 
     const accessKey = process.env.WEB3FORMS_ACCESS_KEY;
     if (!accessKey) {
-      console.error('WEB3FORMS_ACCESS_KEY not configured');
-      return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
+      console.error("WEB3FORMS_ACCESS_KEY not configured");
+      return NextResponse.json(
+        { error: "Email service not configured" },
+        { status: 500 },
+      );
     }
 
-    const res = await fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
+    await enforceRateLimit(
+      "contact",
+      request.headers
+        .get("x-forwarded-for")
+        ?.split(",")[0]
+        ?.trim()
+        .slice(0, 80) || "unknown",
+      5,
+      300,
+    );
+    const res = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         access_key: accessKey,
-        subject: `New Stokora Inquiry from ${name}${company ? ` (${company})` : ''}`,
-        from_name: 'Stokora Demo Site',
+        subject: `New Stokora Inquiry from ${name}${company ? ` (${company})` : ""}`,
+        from_name: "Stokora Demo Site",
         replyto: email,
         name,
         email,
-        company: company || 'Not provided',
-        interest: interest || 'Not specified',
+        company: company || "Not provided",
+        interest: interest || "Not specified",
         message,
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.error('Web3Forms error:', errText);
-      return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
+      console.error("Contact delivery failed", { status: res.status });
+      return NextResponse.json({ error: "Failed to send" }, { status: 500 });
     }
 
-    console.log('Contact form submission:', { name, email, company, interest });
+    const result = await res.json();
+    if (!result.success)
+      return NextResponse.json({ error: "Failed to send" }, { status: 502 });
+
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Contact form error:', err);
-    return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
+    return routeError(err);
   }
 }

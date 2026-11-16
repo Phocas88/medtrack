@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { checkAndNotify } from '@/lib/notifications';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { checkAndNotify } from "@/lib/notifications";
+import { enforceRateLimit } from "@/lib/distributed-rate-limit";
+import { routeError } from "@/lib/server-auth";
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceKey) {
-    throw new Error('Missing Supabase service role environment variables');
+    throw new Error("Missing Supabase service role environment variables");
   }
 
   return createClient(url, serviceKey);
@@ -16,38 +17,39 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
-    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
-    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-
     // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
+    if (!apiKey)
+      return NextResponse.json(
+        { error: "Notification worker is not configured" },
+        { status: 503 },
+      );
     if (apiKey) {
-      const providedKey = request.headers.get('x-api-key');
+      const providedKey = request.headers.get("x-api-key");
       if (providedKey !== apiKey) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 
+    await enforceRateLimit("notifications-check", "worker", 30);
     const supabase = createServiceClient();
 
     // Get all active tenants
     const { data: tenants, error: tenantErr } = await supabase
-      .from('tenants')
-      .select('id, name');
+      .from("tenants")
+      .select("id, name");
 
     if (tenantErr) {
-      console.error('Failed to fetch tenants:', tenantErr);
+      console.error("Failed to fetch tenants:", tenantErr);
       return NextResponse.json(
-        { error: 'Failed to fetch tenants' },
-        { status: 500 }
+        { error: "Failed to fetch tenants" },
+        { status: 500 },
       );
     }
 
     let totalCreated = 0;
-    const results: { tenantId: string; tenantName: string; created: number }[] = [];
+    const results: { tenantId: string; tenantName: string; created: number }[] =
+      [];
 
     for (const tenant of tenants ?? []) {
       try {
@@ -75,10 +77,6 @@ export async function POST(request: Request) {
       checkedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error('Notification check error:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return routeError(err);
   }
 }

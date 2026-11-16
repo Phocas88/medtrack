@@ -56,7 +56,7 @@ export async function POST() {
     const T = uid();
     await supabase.from('tenants').insert({
       id: T, name: 'Apex Distribution Co.', slug: 'apex-demo-' + Date.now().toString(36),
-      settings: { onboarding_completed: true, enabled_modules: { kitting: true, consignment: true, controlled_substances: true, dscsa_tracking: true } },
+      settings: { is_demo: true, onboarding_completed: true, enabled_modules: { kitting: true, consignment: true, controlled_substances: true, dscsa_tracking: true } },
     });
 
     // ── Create auth users for each role ──

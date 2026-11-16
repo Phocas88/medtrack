@@ -129,7 +129,7 @@ export default function CompliancePage() {
         case 'state_board': {
           const { data: lots } = await supabase
             .from('lots')
-            .select('product_id, lot_number, expiration_date, status, quantity, product:products(name, sku)')
+            .select('product_id, lot_number, expiration_date, status, quantity:quantity_on_hand, product:products(name, sku)')
             .eq('tenant_id', tenantId)
             .order('expiration_date');
 

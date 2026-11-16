@@ -53,115 +53,18 @@ export function QuarantineDialog({ open, onOpenChange, hold, onUpdated }: Props)
 
   const isResolved = hold.status !== 'held';
 
-  async function handleRelease() {
+  async function resolve(action: 'released' | 'rejected' | 'destroyed') {
     if (!hold || !user || !tenantId) return;
-    if (!approvalNote.trim()) {
-      toast.error('Approval note is required to release');
-      return;
-    }
-
+    if (!approvalNote.trim()) { toast.error('An approval note is required'); return; }
     setProcessing(true);
-    const supabase = createClient();
-
-    // Update quarantine hold status
-    await supabase
-      .from('quarantine_holds')
-      .update({
-        status: 'released',
-        released_by: user.id,
-        released_at: new Date().toISOString(),
-        disposition: 'released',
-        notes: approvalNote,
-      })
-      .eq('id', hold.id);
-
-    // If there's a lot, set it back to active
-    if (hold.lot_id) {
-      await supabase
-        .from('lots')
-        .update({ status: 'active' })
-        .eq('id', hold.lot_id);
-
-      // Add quantity back via stock movement
-      await supabase.from('stock_movements').insert({
-        tenant_id: tenantId,
-        product_id: hold.product_id,
-        lot_id: hold.lot_id,
-        user_id: user.id,
-        quantity: hold.quantity,
-        movement_type: 'adjust',
-        reason: `Quarantine released - ${approvalNote}`,
-        reference_number: hold.id,
-      });
-    }
-
-    toast.success('Quarantine hold released');
-    setApprovalNote('');
-    onOpenChange(false);
-    onUpdated();
+    const { error } = await createClient().rpc('resolve_quarantine', { p_hold_id: hold.id, p_action: action, p_note: approvalNote });
     setProcessing(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Hold ${action}`); setApprovalNote(''); onOpenChange(false); onUpdated();
   }
-
-  async function handleReject() {
-    if (!hold || !user || !tenantId) return;
-
-    setProcessing(true);
-    const supabase = createClient();
-
-    await supabase
-      .from('quarantine_holds')
-      .update({
-        status: 'rejected',
-        released_by: user.id,
-        released_at: new Date().toISOString(),
-        disposition: 'rejected',
-        notes: approvalNote || 'Rejected',
-      })
-      .eq('id', hold.id);
-
-    toast.success('Quarantine hold rejected');
-    setApprovalNote('');
-    onOpenChange(false);
-    onUpdated();
-    setProcessing(false);
-  }
-
-  async function handleDestroy() {
-    if (!hold || !user || !tenantId) return;
-
-    setProcessing(true);
-    const supabase = createClient();
-
-    // Update quarantine status
-    await supabase
-      .from('quarantine_holds')
-      .update({
-        status: 'destroyed',
-        released_by: user.id,
-        released_at: new Date().toISOString(),
-        disposition: 'destroyed',
-        notes: approvalNote || 'Destroyed - quarantine',
-      })
-      .eq('id', hold.id);
-
-    // Create negative stock movement
-    await supabase.from('stock_movements').insert({
-      tenant_id: tenantId,
-      product_id: hold.product_id,
-      lot_id: hold.lot_id || null,
-      user_id: user.id,
-      quantity: -hold.quantity,
-      movement_type: 'adjust',
-      reason: 'Destroyed - quarantine',
-      reference_number: hold.id,
-    });
-
-    toast.success('Quarantine hold marked as destroyed');
-    setApprovalNote('');
-    onOpenChange(false);
-    onUpdated();
-    setProcessing(false);
-  }
+  const handleRelease = () => resolve('released');
+  const handleReject = () => resolve('rejected');
+  const handleDestroy = () => resolve('destroyed');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,69 +1,85 @@
-import { NextResponse } from 'next/server';
-import { buyLabel, isShippingConfigured } from '@/lib/shipping';
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-async function getAuthUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll() { return cookieStore.getAll(); }, setAll() {} } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
-  return data;
-}
+import { loadShippingAccount } from "@/lib/shipping-account";
+import { z } from "zod";
+import { NextResponse } from "next/server";
+import { requireUser, routeError, HttpError } from "@/lib/server-auth";
+import { createServiceClient } from "@/lib/supabase/service";
+import { buyLabel, recoverLabel, type ShipmentResult } from "@/lib/shipping";
+import { uuid } from "@/lib/security";
 
 export async function POST(request: Request) {
   try {
-    if (!isShippingConfigured()) {
-      return NextResponse.json({ error: 'Shipping not configured' }, { status: 400 });
+    const user = await requireUser(["admin", "manager"], true);
+    const account = await loadShippingAccount(user.tenant_id);
+
+    const input = z
+      .object({
+        shipment_id: z
+          .string()
+          .regex(/^shp_[a-zA-Z0-9]+$/)
+          .max(100),
+        rate_id: z
+          .string()
+          .regex(/^rate_[a-zA-Z0-9]+$/)
+          .max(100),
+        order_id: uuid,
+      })
+      .parse(await request.json());
+    const db = createServiceClient();
+    const { data: claim, error } = await db.rpc("claim_label_purchase", {
+      p_tenant: user.tenant_id,
+      p_order: input.order_id,
+      p_shipment: input.shipment_id,
+      p_rate: input.rate_id,
+    });
+    if (error)
+      throw new HttpError(
+        409,
+        "Label purchase unavailable. Check the order and recover any existing purchase before buying again.",
+      );
+    if (claim.mode === "busy")
+      throw new HttpError(
+        409,
+        "Label purchase is in progress. Retry shortly to retrieve the result.",
+      );
+    let result: ShipmentResult = claim.result;
+    if (claim.mode !== "cached") {
+      try {
+        const recovered = await recoverLabel(
+          input.shipment_id,
+          input.rate_id,
+          account.api_key,
+        );
+        if (recovered) result = recovered;
+        else if (claim.mode === "recover")
+          throw new HttpError(
+            409,
+            "The previous purchase is unresolved. No new charge was attempted. Retry recovery or contact support.",
+          );
+        else
+          result = await buyLabel(
+            input.shipment_id,
+            input.rate_id,
+            account.api_key,
+          );
+        const { error: saveError } = await db.rpc("complete_label_purchase", {
+          p_tenant: user.tenant_id,
+          p_shipment: input.shipment_id,
+          p_token: claim.token,
+          p_result: result,
+        });
+        if (saveError) throw saveError;
+      } catch (failure) {
+        // A timeout may follow a successful charge. Keep the order bound to this shipment.
+        await db
+          .from("shipping_quotes")
+          .update({ purchase_state: "uncertain", lease_until: null })
+          .eq("shipment_id", input.shipment_id)
+          .eq("tenant_id", user.tenant_id)
+          .eq("lease_token", claim.token)
+          .neq("purchase_state", "purchased");
+        throw failure;
+      }
     }
-
-    const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { shipment_id, rate_id, order_id } = await request.json();
-
-    if (!shipment_id || !rate_id) {
-      return NextResponse.json({ error: 'shipment_id and rate_id required' }, { status: 400 });
-    }
-
-    const result = await buyLabel(shipment_id, rate_id);
-
-    // Update the sales order with tracking info
-    if (order_id) {
-      const svc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-      await svc.from('sales_orders').update({
-        tracking_number: result.tracking_code,
-        carrier: result.rate.carrier,
-        shipping_label_url: result.label_url,
-        shipping_rate: parseFloat(result.rate.rate),
-        status: 'picking', // ready to pick and ship
-      }).eq('id', order_id);
-
-      // Audit log
-      await svc.from('stock_movements').insert({
-        tenant_id: authUser.tenant_id,
-        product_id: null,
-        user_id: authUser.id,
-        quantity: 0,
-        movement_type: 'adjust',
-        reason: `Shipping label purchased — ${result.rate.carrier} ${result.rate.service} — Tracking: ${result.tracking_code}`,
-        reference_number: result.tracking_code,
-        metadata: {
-          action: 'shipping_label',
-          carrier: result.rate.carrier,
-          service: result.rate.service,
-          rate: result.rate.rate,
-          label_url: result.label_url,
-          order_id,
-        },
-      });
-    }
-
     return NextResponse.json({
       tracking_code: result.tracking_code,
       label_url: result.label_url,
@@ -71,7 +87,7 @@ export async function POST(request: Request) {
       service: result.rate.service,
       rate: result.rate.rate,
     });
-  } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to buy label' }, { status: 500 });
+  } catch (error) {
+    return routeError(error);
   }
 }

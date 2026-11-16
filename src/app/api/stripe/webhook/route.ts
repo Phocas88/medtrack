@@ -1,182 +1,52 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
 import type Stripe from 'stripe';
-
-let stripe: Stripe | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const StripeLib = require('stripe');
-  if (process.env.STRIPE_SECRET_KEY) {
-    stripe = new StripeLib(process.env.STRIPE_SECRET_KEY) as Stripe;
-  }
-} catch {
-  /* stripe not installed */
-}
-
-function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error('Missing Supabase service role environment variables');
-  }
-  return createClient(url, serviceKey);
-}
-
-async function updateTenantBilling(tenantId: string, billingData: Record<string, unknown>) {
-  const supabase = createServiceClient();
-
-  // Fetch current settings
-  const { data: tenant, error: fetchError } = await supabase
-    .from('tenants')
-    .select('settings')
-    .eq('id', tenantId)
-    .single();
-
-  if (fetchError) {
-    console.error('Failed to fetch tenant:', fetchError);
-    throw fetchError;
-  }
-
-  const currentSettings = (tenant?.settings as Record<string, unknown>) || {};
-  const currentBilling = (currentSettings.billing as Record<string, unknown>) || {};
-  const updatedSettings = {
-    ...currentSettings,
-    billing: {
-      ...currentBilling,
-      ...billingData,
-      updated_at: new Date().toISOString(),
-    },
-  };
-
-  const { error: updateError } = await supabase
-    .from('tenants')
-    .update({ settings: updatedSettings })
-    .eq('id', tenantId);
-
-  if (updateError) {
-    console.error('Failed to update tenant billing:', updateError);
-    throw updateError;
-  }
-}
-
-// Map Stripe price IDs to plan names
-function getPlanFromPrice(priceId: string): string {
-  const priceMap: Record<string, string> = {
-    [process.env.STRIPE_PRICE_STARTER || 'price_starter']: 'starter',
-    [process.env.STRIPE_PRICE_PROFESSIONAL || 'price_professional']: 'professional',
-    [process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise']: 'enterprise',
-  };
-  return priceMap[priceId] || 'unknown';
-}
+import { stripeClient, planForPrice } from '@/lib/billing';
+import { createServiceClient } from '@/lib/supabase/service';
+import { routeError, HttpError } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
-  if (!stripe) {
-    return NextResponse.json(
-      { error: 'Stripe is not configured' },
-      { status: 503 }
-    );
-  }
-
-  const body = await request.text();
-  const signature = request.headers.get('stripe-signature');
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'Missing stripe-signature header' },
-      { status: 400 }
-    );
-  }
-
-  let event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err instanceof Error ? err.message : err);
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
-    );
-  }
-
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        const tenantId = session.metadata?.tenantId || session.client_reference_id;
-
-        if (tenantId && session.subscription) {
-          // Retrieve subscription to get price info
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-          const priceId = subscription.items.data[0]?.price?.id;
-
-          await updateTenantBilling(tenantId, {
-            plan: getPlanFromPrice(priceId),
-            stripe_customer_id: session.customer,
-            stripe_subscription_id: session.subscription,
-            stripe_price_id: priceId,
-            status: 'active',
-          });
-        }
-        break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const tenantId = subscription.metadata?.tenantId;
-
-        if (tenantId) {
-          const priceId = subscription.items.data[0]?.price?.id;
-          const status = subscription.cancel_at_period_end ? 'cancelling' : subscription.status;
-
-          await updateTenantBilling(tenantId, {
-            plan: getPlanFromPrice(priceId),
-            stripe_price_id: priceId,
-            status: status === 'active' ? 'active' : status,
-          });
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const tenantId = subscription.metadata?.tenantId;
-
-        if (tenantId) {
-          await updateTenantBilling(tenantId, {
-            status: 'cancelled',
-          });
-        }
-        break;
-      }
-
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const subscriptionId = (invoice as any).subscription;
-
-        if (subscriptionId) {
-          // Look up the subscription to get tenant metadata
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const tenantId = subscription.metadata?.tenantId;
-
-          if (tenantId) {
-            await updateTenantBilling(tenantId, {
-              status: 'past_due',
-            });
-          }
-        }
-        break;
-      }
+    const stripe = stripeClient();
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) throw new HttpError(503, 'Webhook verification is not configured');
+    const signature = request.headers.get('stripe-signature');
+    if (!signature) throw new HttpError(400, 'Missing signature');
+    let event: Stripe.Event;
+    try { event = stripe.webhooks.constructEvent(await request.text(), signature, secret); }
+    catch { throw new HttpError(400, 'Invalid signature'); }
+    let subscriptionId: string | null = null;
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id || null;
+    } else if (event.type.startsWith('customer.subscription.')) {
+      subscriptionId = (event.data.object as Stripe.Subscription).id;
+    } else if (['invoice.payment_failed', 'invoice.paid'].includes(event.type)) {
+      const invoice = event.data.object as Stripe.Invoice;
+      const subscription = invoice.parent?.subscription_details?.subscription;
+      subscriptionId = typeof subscription === 'string' ? subscription : subscription?.id || null;
     }
-  } catch (err) {
-    console.error('Webhook handler error:', err);
-    // Still return 200 so Stripe doesn't retry
-  }
-
-  return NextResponse.json({ received: true });
+    if (!subscriptionId) return NextResponse.json({ received: true });
+    // Retrieve current provider state rather than applying an old event snapshot.
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const db = createServiceClient();
+    const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+    const { data: billing, error: lookupError } = await db.from('tenant_billing').select('tenant_id').eq('stripe_customer_id', customerId).single();
+    if (lookupError || !billing) throw new Error('Billing customer not found');
+    if (subscription.metadata.tenantId && subscription.metadata.tenantId !== billing.tenant_id) throw new Error('Tenant metadata mismatch');
+    const item = subscription.items.data[0];
+    const priceId = item?.price.id;
+    const plan = priceId ? planForPrice(priceId) : null;
+    if (!plan) throw new Error('Unrecognized subscription price');
+    const { error } = await db.rpc('apply_billing_event', {
+      p_event_id: event.id, p_created: event.created, p_tenant_id: billing.tenant_id,
+      p_billing: {
+        plan, status: subscription.status, stripe_customer_id: customerId,
+        stripe_subscription_id: subscription.id, stripe_price_id: priceId,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_end: item?.current_period_end ? new Date(item.current_period_end * 1000).toISOString() : null,
+      },
+    });
+    if (error) throw error;
+    return NextResponse.json({ received: true });
+  } catch (error) { return routeError(error); }
 }

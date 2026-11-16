@@ -1,29 +1,26 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { usePathname, useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
-import Link from "next/link"
-import { Menu, Sun, Moon, Search, Command } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import Link from "next/link";
+import { Menu, Sun, Moon, Search, Command } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { NotificationBell } from "@/components/layout/notification-bell"
-import { User, Settings, LogOut } from "lucide-react"
-import { useAuth } from "@/components/providers/auth-provider"
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { User, Settings, LogOut } from "lucide-react";
+import { isReleasedRoute } from "@/lib/release-scope";
+import { useAuth } from "@/components/providers/auth-provider";
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -68,6 +65,7 @@ const pageTitles: Record<string, string> = {
   "/custom-fields": "Custom Fields",
   "/billing": "Billing",
   "/import-export": "Import / Export",
+  "/integrations/shipping": "Shipping account",
   "/integrations/quickbooks": "QuickBooks Integration",
   "/integrations/zapier": "Zapier Integration",
   "/labor": "Labor Tracking",
@@ -81,70 +79,75 @@ const pageTitles: Record<string, string> = {
   "/task-board": "Task Board",
   "/pos": "Point of Sale",
   "/profile": "Profile",
-}
+};
 
 // All searchable pages for command palette
-const searchablePages = Object.entries(pageTitles).map(([href, title]) => ({ href, title }))
+const searchablePages = Object.entries(pageTitles)
+  .filter(([href]) => isReleasedRoute(href))
+  .map(([href, title]) => ({ href, title }));
 
 function getPageTitle(pathname: string): string {
-  if (pageTitles[pathname]) return pageTitles[pathname]
+  if (pageTitles[pathname]) return pageTitles[pathname];
   for (const [route, title] of Object.entries(pageTitles)) {
-    if (pathname.startsWith(route + "/")) return title
+    if (pathname.startsWith(route + "/")) return title;
   }
-  return "Stokora WMS"
+  return "Stokora WMS";
 }
 
 interface HeaderProps {
-  onMenuClick: () => void
+  onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { setTheme, theme } = useTheme()
-  const { user, signOut } = useAuth()
-  const title = getPageTitle(pathname)
+  const pathname = usePathname();
+  const router = useRouter();
+  const { setTheme, theme } = useTheme();
+  const { user, signOut } = useAuth();
+  const title = getPageTitle(pathname);
 
   // Command palette state
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const searchRef = useRef<HTMLInputElement>(null)
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut: Ctrl+K or Cmd+K
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault()
-        setSearchOpen(true)
+        e.preventDefault();
+        setSearchOpen(true);
       }
     }
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [])
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (searchOpen) {
-      setTimeout(() => searchRef.current?.focus(), 50)
+      setTimeout(() => searchRef.current?.focus(), 50);
     } else {
-      setSearchQuery("")
+      setSearchQuery("");
     }
-  }, [searchOpen])
+  }, [searchOpen]);
 
   const filteredPages = searchQuery.trim()
-    ? searchablePages.filter((p) =>
-        p.title.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 8)
-    : searchablePages.slice(0, 8)
+    ? searchablePages
+        .filter((p) =>
+          p.title.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        .slice(0, 8)
+    : searchablePages.slice(0, 8);
 
-  const initials = user?.full_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "WM"
+  const initials =
+    user?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "WM";
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+    <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
@@ -157,17 +160,19 @@ export function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Page title */}
-      <h1 className="text-base font-semibold truncate min-w-0 flex-1">{title}</h1>
+      <h1 className="text-sm font-semibold tracking-tight truncate min-w-0 flex-1">
+        {title}
+      </h1>
 
       {/* Search button */}
       <Button
         variant="outline"
         size="sm"
-        className="hidden sm:flex items-center gap-2 text-muted-foreground h-8 w-56 justify-start"
+        className="hidden sm:flex items-center gap-2 text-muted-foreground h-10 w-64 justify-start"
         onClick={() => setSearchOpen(true)}
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="text-xs">Search...</span>
+        <span className="text-xs">Find a page...</span>
         <kbd className="ml-auto text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">
           <Command className="inline h-2.5 w-2.5" />K
         </kbd>
@@ -179,6 +184,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         onClick={() => setSearchOpen(true)}
       >
         <Search className="h-4 w-4" />
+        <span className="sr-only">Find a page</span>
       </Button>
 
       {/* Right side actions */}
@@ -201,15 +207,22 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* User menu — NOW FUNCTIONAL */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center justify-center rounded-full p-1 hover:bg-accent transition-colors">
+          <DropdownMenuTrigger
+            aria-label="Account menu"
+            className="flex items-center justify-center rounded-full p-1 hover:bg-accent transition-colors"
+          >
             <Avatar className="h-7 w-7">
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5 max-w-[200px]">
-              <p className="text-sm font-medium truncate">{user?.full_name || "User"}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">
+                {user?.full_name || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -247,28 +260,32 @@ export function Header({ onMenuClick }: HeaderProps) {
               className="border-0 focus-visible:ring-0 h-11"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && filteredPages.length > 0) {
-                  router.push(filteredPages[0].href)
-                  setSearchOpen(false)
+                  router.push(filteredPages[0].href);
+                  setSearchOpen(false);
                 }
-                if (e.key === "Escape") setSearchOpen(false)
+                if (e.key === "Escape") setSearchOpen(false);
               }}
             />
           </div>
           <div className="max-h-72 overflow-y-auto py-1">
             {filteredPages.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No results</p>
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No results
+              </p>
             ) : (
               filteredPages.map((page) => (
                 <button
                   key={page.href}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left"
                   onClick={() => {
-                    router.push(page.href)
-                    setSearchOpen(false)
+                    router.push(page.href);
+                    setSearchOpen(false);
                   }}
                 >
                   <span className="font-medium">{page.title}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{page.href}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {page.href}
+                  </span>
                 </button>
               ))
             )}
@@ -276,5 +293,5 @@ export function Header({ onMenuClick }: HeaderProps) {
         </DialogContent>
       </Dialog>
     </header>
-  )
+  );
 }
