@@ -68,6 +68,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { StokoraNavigationLogo } from "@/components/ui/stokora-logo"
 import { isSectionVisible } from "@/lib/presets"
 import {
   Collapsible,
@@ -319,7 +320,7 @@ function SidebarContent() {
     <div className="workspace-nav flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-5">
-        <Link href="/dashboard" className="text-xl font-bold tracking-tight">stokora<span className="text-primary">.</span></Link>
+        <Link href="/dashboard" aria-label="Stokora dashboard"><StokoraNavigationLogo /></Link>
       </div>
 
       {/* Navigation */}
@@ -411,7 +412,7 @@ export function WorkspaceNavigation() {
   )
   return (
     <div className="hidden shrink-0 items-center gap-5 border-b bg-card px-5 md:flex">
-      <Link href="/dashboard" className="py-4 text-lg font-bold tracking-tight">stokora<span className="text-primary">.</span></Link>
+      <Link href="/dashboard" aria-label="Stokora dashboard" className="shrink-0"><StokoraNavigationLogo /></Link>
       <nav aria-label="Main navigation" className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {sections.map(section => {
           const items = section.items.filter(item => !item.module || !hasModuleConfig || enabledModules?.[item.module])

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { StokoraNavigationLogo } from '@/components/ui/stokora-logo';
 import { ArrowUpRight, ChevronRight, Search, ScanLine, ArrowDown, Package, X } from 'lucide-react';
 
 type Order = { id: string; customer: string; channel: string; units: number; stage: 'To pick' | 'Packing' | 'On hold' | 'Shipped'; time: string; product: string; bin: string };
@@ -25,7 +26,7 @@ export default function WorkspacePreview() {
   return (
     <div className="workspace-theme min-h-screen text-sm">
       <header className="flex min-h-14 flex-wrap items-center gap-x-8 gap-y-2 border-b bg-card px-4 py-2 md:px-7">
-        <Link href="/demo" className="text-xl font-bold tracking-tight">stokora<span className="text-primary">.</span></Link>
+        <Link href="/demo" aria-label="Stokora demo" className="shrink-0"><StokoraNavigationLogo /></Link>
         <nav aria-label="Workspace navigation" className="flex items-center gap-5 overflow-x-auto text-xs font-medium">
           <span className="border-b-2 border-primary py-3 text-primary">Operations</span>
           <Link href="/products" className="text-muted-foreground hover:text-foreground">Inventory</Link><Link href="/customers" className="text-muted-foreground hover:text-foreground">Customers</Link><Link href="/reports" className="text-muted-foreground hover:text-foreground">Reports</Link>

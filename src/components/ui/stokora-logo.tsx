@@ -13,6 +13,16 @@ const SIZES = {
   xl: 'h-20',
 };
 
+/** Fit the supplied artwork's large white margins into a compact navigation slot. */
+export function StokoraNavigationLogo() {
+  return (
+    <span className="relative inline-block h-11 w-[124px] shrink-0 overflow-hidden bg-white align-middle">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/stokora-logo.png" alt="Stokora WMS" width={156} height={104} className="absolute -left-4 -top-7 h-[104px] w-[156px] max-w-none" />
+    </span>
+  );
+}
+
 export function StokoraLogo({ theme = 'light', size = 'md', className }: LogoProps) {
   const h = SIZES[size];
 
