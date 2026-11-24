@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { Mail, Clock, FileText, ExternalLink } from 'lucide-react';
+import { Mail, FileText, ExternalLink } from 'lucide-react';
 
-export const metadata = { title: 'Support | Stokora WMS' };
+export const metadata = { title: 'Support | Stokora WMS', description: 'Contact Stokora for technical and billing support.', alternates: { canonical: '/support' } };
 
 export default function SupportPage() {
   return (
@@ -29,24 +29,11 @@ export default function SupportPage() {
 
           <div className="rounded-xl border p-6">
             <div className="flex items-start gap-4">
-              <Clock className="h-6 w-6 text-primary mt-1 shrink-0" />
-              <div>
-                <h2 className="font-semibold text-lg">Response Time</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  We respond to all support requests within <strong>1 business day</strong>.
-                  Critical issues (system down, data access problems) are prioritized and typically addressed within 4 hours during business hours.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border p-6">
-            <div className="flex items-start gap-4">
               <FileText className="h-6 w-6 text-primary mt-1 shrink-0" />
               <div>
                 <h2 className="font-semibold text-lg">Documentation</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Complete setup and user guide covering all modules, operations, and integrations.
+                  Browse the Stokora user guide.
                 </p>
                 <Link href="/guide" className="text-primary font-medium mt-2 inline-block hover:underline">
                   View User Guide &rarr;
@@ -61,7 +48,7 @@ export default function SupportPage() {
               <div>
                 <h2 className="font-semibold text-lg">Live Demo</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Explore the full system with sample data — no account needed.
+                  Try representative warehouse workflows with sample data.
                 </p>
                 <Link href="/demo" className="text-primary font-medium mt-2 inline-block hover:underline">
                   Launch Demo &rarr;

@@ -1,476 +1,169 @@
-import Link from "next/link";
-import {
-  Package,
-  BarChart3,
-  Smartphone,
-  Shield,
-  Boxes,
-  Truck,
-  Users,
-  Zap,
-  CheckCircle2,
-  ArrowRight,
-  Grid3X3,
-  ScanLine,
-  Globe,
-  Clock,
-  Star,
-  Wrench,
-  CreditCard,
-  ShoppingBag,
-  Tag,
-  Send,
-} from "lucide-react";
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowRight, Barcode, Boxes, ClipboardCheck, MapPin, PackageCheck, Truck } from 'lucide-react';
+import { publicSiteOrigin } from '@/lib/public-site';
+import { plans } from '@/lib/plans';
+import { InquiryForm } from './inquiry-form';
+import { PublicHeader } from '@/components/layout/public-header';
 
-export default function LandingPage() {
+export const metadata: Metadata = {
+  title: 'Stokora WMS | Warehouse management for growing distributors',
+  description: 'Manage inventory, receiving, bin locations, cycle counts, and order fulfillment with Stokora WMS.',
+  alternates: { canonical: '/' },
+};
+
+const workflows = [
+  { icon: Boxes, title: 'Inventory management', description: 'Track SKUs, lots, and stock movements in one place.' },
+  { icon: MapPin, title: 'Bin-level visibility', description: 'Find inventory by warehouse location and bin.' },
+  { icon: PackageCheck, title: 'Receiving and putaway', description: 'Record inbound stock and direct it to warehouse bins.' },
+  { icon: ClipboardCheck, title: 'Cycle counts', description: 'Record physical counts and review inventory differences.' },
+  { icon: Truck, title: 'Picking and shipping', description: 'Move orders from the pick list to the shipping desk.' },
+  { icon: Barcode, title: 'Mobile barcode workflows', description: 'Use a mobile device for barcode lookups and warehouse tasks.' },
+];
+
+const primary = 'inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 font-semibold text-white hover:bg-emerald-900';
+const secondary = 'inline-flex items-center justify-center rounded-lg border border-slate-400 bg-white px-5 py-3 font-semibold text-slate-900 hover:bg-slate-100';
+
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Nav */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <img src="/stokora-logo.png" alt="Stokora WMS" className="h-10" />
-          </div>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
-            <a href="#features" className="hover:text-gray-900 transition">Features</a>
-            <a href="#industries" className="hover:text-gray-900 transition">Industries</a>
-            <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
-            <Link href="/demo" className="text-emerald-600 hover:text-emerald-700 font-semibold transition">Live Demo</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/auth/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition hidden sm:block">
-              Sign In
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition"
-            >
-              Start Free Trial
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="bg-white text-slate-950 [&_a:focus-visible]:outline [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-4">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3">Skip to content</a>
+      <PublicHeader />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6 pt-20 pb-24 md:pt-28 md:pb-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-gray-600 mb-6">
-              <Zap className="h-3 w-3" />
-              Now with Mobile Scanner &amp; Bin Management
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-6">
-              Inventory management
-              <br />
-              <span className="text-gray-400">that actually works.</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-xl mb-8 leading-relaxed">
-              From receiving to shipping, lot tracking to compliance — manage your entire
-              supply chain from one platform. Built for businesses that can&apos;t afford mistakes.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/auth/signup"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-base font-medium text-white hover:bg-gray-800 transition"
-              >
-                Start Free — No Credit Card
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="#features"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                See All Features
-              </a>
-            </div>
-            <div className="flex items-center gap-6 mt-8 text-sm text-gray-500">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> Free 14-day trial</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> No setup fees</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-green-500" /> Cancel anytime</span>
-            </div>
-          </div>
-        </div>
-        {/* Gradient bg */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gray-50 to-transparent -z-10" />
-      </section>
-
-      {/* Stats bar */}
-      <section className="border-y bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div>
-            <div className="text-3xl font-bold">97+</div>
-            <div className="text-sm text-gray-500 mt-1">App Routes</div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">100%</div>
-            <div className="text-sm text-gray-500 mt-1">Cloud-Based</div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">&lt; 5 min</div>
-            <div className="text-sm text-gray-500 mt-1">Setup Time</div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">24/7</div>
-            <div className="text-sm text-gray-500 mt-1">Access Anywhere</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="py-20 md:py-28">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything you need to run your warehouse</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              One platform replaces your spreadsheets, paper logs, and disconnected tools.
-              Every feature designed for speed and accuracy.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Package,
-                title: "Product & Lot Tracking",
-                desc: "Full lifecycle tracking with lot numbers, serial numbers, expiration dates, and FEFO picking logic.",
-              },
-              {
-                icon: Grid3X3,
-                title: "Bin Management",
-                desc: "Primary and secondary bins with min/max levels. Automated replenishment triggers when stock drops below reorder point.",
-              },
-              {
-                icon: Smartphone,
-                title: "Mobile Scanner",
-                desc: "Warehouse associates work from their phone. Scan-to-verify, cycle counts, bin moves — all guided step-by-step.",
-              },
-              {
-                icon: Truck,
-                title: "Receive & Ship",
-                desc: "Purchase orders with partial receiving, sales orders with FEFO picking, and complete shipment tracking.",
-              },
-              {
-                icon: BarChart3,
-                title: "Analytics & Reports",
-                desc: "Inventory valuation, turnover rates, dead stock detection, supplier scorecards, and CSV export for everything.",
-              },
-              {
-                icon: ScanLine,
-                title: "Audit Trail",
-                desc: "Every movement is logged immutably. Time-travel to see inventory state at any point in history.",
-              },
-              {
-                icon: Shield,
-                title: "Compliance Ready",
-                desc: "DSCSA tracking, controlled substance logs, DEA schedule management, and pre-built compliance reports.",
-              },
-              {
-                icon: Boxes,
-                title: "Kitting & Assembly",
-                desc: "Define kits with component BOMs. Assemble with full lot traceability — know which components went into every kit.",
-              },
-              {
-                icon: Users,
-                title: "Multi-Location",
-                desc: "Manage multiple warehouses with zone-based storage, inter-location transfers, and location-specific inventory.",
-              },
-              {
-                icon: Globe,
-                title: "Customer Portal",
-                desc: "Give your customers self-service access to place orders, view pricing, and track shipments.",
-              },
-              {
-                icon: Clock,
-                title: "Expiration Management",
-                desc: "Auto-quarantine expiring lots, track destructions with witness logs, manage donations of near-expiry stock.",
-              },
-              {
-                icon: Wrench,
-                title: "Work Orders",
-                desc: "Service tickets with parts + labor. Assign technicians, track jobs, auto-decrement inventory on completion. Invoice PDF generation.",
-              },
-              {
-                icon: CreditCard,
-                title: "Point of Sale",
-                desc: "Cashier register with barcode scanning, tax, discounts, hold/recall, cash/card/check payments. Separate UI for checkout staff.",
-              },
-              {
-                icon: ShoppingBag,
-                title: "Shopify Integration",
-                desc: "Sync products, orders, and inventory with your Shopify store. Real-time webhooks. Two-way stock levels.",
-              },
-              {
-                icon: Send,
-                title: "Dropship & Shipping",
-                desc: "Dropship orders auto-forward to suppliers. EasyPost integration for UPS/FedEx/USPS rate shopping, labels, and pickup scheduling.",
-              },
-              {
-                icon: Tag,
-                title: "Promotions & Sales",
-                desc: "Schedule sales with start/end dates, track markdown loss, auto-apply discounts at POS and customer portal.",
-              },
-              {
-                icon: Star,
-                title: "White-Label Ready",
-                desc: "Your company name and logo throughout. Custom fields, pricing tiers, feature toggles, and module-based access per tenant.",
-              },
-              {
-                icon: Zap,
-                title: "Auto-PO to Vendors",
-                desc: "One click generates purchase orders grouped by supplier and emails them directly. Full procurement loop automated.",
-              },
-              {
-                icon: Users,
-                title: "4 Separate UIs",
-                desc: "Management desktop, handheld scanner, cashier POS, and B2B customer portal — each role sees only what they need.",
-              },
-            ].map((feature) => (
-              <div key={feature.title} className="group rounded-xl border p-6 hover:border-gray-300 hover:shadow-sm transition">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-700 mb-4 group-hover:bg-gray-900 group-hover:text-white transition">
-                  <feature.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{feature.desc}</p>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'Stokora WMS',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web browser',
+        url: publicSiteOrigin,
+        offers: plans.map((plan) => ({
+          '@type': 'Offer', name: plan.name, price: plan.price, priceCurrency: 'USD',
+          url: `${publicSiteOrigin}/#pricing`,
+        })),
+      }).replace(/</g, '\\u003c') }} />
+      <main id="main">
+        <section className="border-b border-slate-200 bg-slate-50">
+          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:grid-cols-[1.12fr_1fr] md:items-center md:py-24 lg:px-8">
+            <div className="space-y-6">
+              <p className="font-semibold text-emerald-800">Warehouse management for growing distributors</p>
+              <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">Know what’s in stock and where to find it.</h1>
+              <p className="max-w-xl text-lg leading-relaxed text-slate-700">Manage inventory, receiving, bin locations, and order fulfillment in one workspace for your warehouse team.</p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/demo" className={primary}>Explore live demo <ArrowRight aria-hidden size={18} /></Link>
+                <Link href="#contact" className={secondary}>Request a pilot</Link>
               </div>
+            </div>
+            <figure className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-xl shadow-emerald-950/10">
+              <Image src="/product/dashboard.webp" width={1280} height={650}
+                sizes="(max-width: 767px) 95vw, 46vw" priority
+                alt="Stokora dashboard showing inventory totals and shortcuts for warehouse and fulfillment tasks" />
+              <figcaption className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">Warehouse dashboard with sample data</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="features" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+          <h2 className="text-3xl font-bold tracking-tight">Tools for your daily warehouse work</h2>
+          <p className="mt-3 max-w-2xl text-slate-700">Give managers and floor teams a shared view of inventory, activity, and fulfillment.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {workflows.map(({ icon: Icon, title, description }) => (
+              <article key={title} className="rounded-xl border border-slate-200 p-5">
+                <Icon aria-hidden className="text-emerald-800" />
+                <h3 className="mt-3 text-xl font-semibold">{title}</h3>
+                <p className="mt-2 text-slate-700">{description}</p>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Industries */}
-      <section id="industries" className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built for every industry</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Whether you&apos;re distributing medical supplies, auto parts, or food products — the same
-              powerful features adapt to your workflow.
-            </p>
+        <section aria-labelledby="product-tour" className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+            <h2 id="product-tour" className="text-3xl font-bold tracking-tight">Inside Stokora</h2>
+            <p className="mt-3 text-slate-700">Screens from a sample warehouse.</p>
+            <div className="mt-8 grid items-start gap-5 lg:grid-cols-[1fr_1fr_0.58fr]">
+              <figure className="overflow-hidden rounded-xl border border-slate-300 bg-white">
+                <Image src="/product/inventory.webp" width={1280} height={480} sizes="(max-width: 1023px) 95vw, 36vw"
+                  alt="Product catalog showing SKUs, stock on hand, and a low-stock indicator" />
+                <figcaption className="border-t border-slate-200 p-4 text-sm font-semibold">Product catalog and stock on hand</figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-xl border border-slate-300 bg-white">
+                <Image src="/product/bins.webp" width={1280} height={730} sizes="(max-width: 1023px) 95vw, 36vw"
+                  alt="Bin management showing pick bins, reserve bins, and receiving staging" />
+                <figcaption className="border-t border-slate-200 p-4 text-sm font-semibold">Bin management</figcaption>
+              </figure>
+              <figure className="max-w-xs overflow-hidden rounded-xl border border-slate-300 bg-white">
+                <Image src="/product/scanner.webp" width={390} height={580} sizes="(max-width: 1023px) 320px, 22vw"
+                  alt="Mobile scanner menu showing pick, putaway, replenishment, and cycle count tasks" />
+                <figcaption className="border-t border-slate-200 p-4 text-sm font-semibold">Mobile scanner</figcaption>
+              </figure>
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              "Medical Supply",
-              "Pharmaceutical",
-              "Food & Beverage",
-              "Auto Parts",
-              "Electronics",
-              "Industrial Supply",
-              "Tire & Auto Service",
-              "HVAC / Plumbing",
-              "Retail / Grocery",
-              "E-Commerce / Dropship",
-              "Veterinary",
-              "Cannabis / Hemp",
-              "Lab & Scientific",
-              "Property Maintenance",
-              "Cosmetics",
-              "Building Materials",
-              "Print / Packaging",
-              "3PL / Distribution",
-              "Janitorial",
-              "General Wholesale",
-            ].map((industry) => (
-              <div
-                key={industry}
-                className="flex items-center gap-2 rounded-lg border bg-white px-4 py-3 text-sm font-medium"
-              >
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                {industry}
-              </div>
+        </section>
+
+        <section id="solutions" className="bg-slate-950 text-white">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 md:grid-cols-2 lg:px-8">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Built around the way a warehouse works</h2>
+              <p className="mt-4 max-w-xl text-slate-300">Stokora draws on firsthand warehouse and inventory management experience, from checking inbound stock and counting bins to reporting inventory discrepancies.</p>
+            </div>
+            <ul className="grid content-start gap-3 text-slate-200">
+              <li className="rounded-lg border border-slate-600 p-4">Independent distributors and wholesalers</li>
+              <li className="rounded-lg border border-slate-600 p-4">Industrial and maintenance supply distributors</li>
+              <li className="rounded-lg border border-slate-600 p-4">Small and midsize warehouse teams</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="pricing" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+          <h2 className="text-3xl font-bold tracking-tight">Monthly pricing</h2>
+          <p className="mt-3 text-slate-700">Request a pilot to discuss the right plan and confirm team capacity before subscribing.</p>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {plans.map(({ id, name, price, audience }) => (
+              <article key={id} className="space-y-3 rounded-xl border border-slate-300 p-6">
+                <h3 className="text-xl font-semibold">{name}</h3>
+                <p className="text-4xl font-bold">${price}<span className="ml-1 text-sm font-normal text-slate-700">USD / month</span></p>
+                <p className="text-slate-700">{audience}.</p>
+              </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Demo CTA */}
-      <section className="py-16 md:py-20">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">See it in action</h2>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Try each interface — no signup required. See what managers, floor associates, cashiers, and customers experience.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="rounded-xl border p-4 text-center">
-              <BarChart3 className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-              <p className="text-sm font-semibold">Management</p>
-              <p className="text-xs text-gray-500 mt-1">Full desktop app</p>
+        <section id="contact" className="border-y border-slate-200 bg-slate-50">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 md:grid-cols-[0.8fr_1.2fr] lg:px-8">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Request a walkthrough or pilot</h2>
+              <p className="mt-4 max-w-md text-slate-700">Tell us what you stock, how your team works today, and what you want to improve. We’ll use that context to discuss whether Stokora fits your operation.</p>
+              <p className="mt-5 text-sm">Already using Stokora? <Link className="font-medium text-emerald-800 underline" href="/support">Visit support</Link>.</p>
             </div>
-            <div className="rounded-xl border p-4 text-center">
-              <Smartphone className="h-6 w-6 mx-auto mb-2 text-green-600" />
-              <p className="text-sm font-semibold">Scanner</p>
-              <p className="text-xs text-gray-500 mt-1">Handheld device</p>
-            </div>
-            <div className="rounded-xl border p-4 text-center">
-              <CreditCard className="h-6 w-6 mx-auto mb-2 text-amber-600" />
-              <p className="text-sm font-semibold">Cashier POS</p>
-              <p className="text-xs text-gray-500 mt-1">Checkout register</p>
-            </div>
-            <div className="rounded-xl border p-4 text-center">
-              <Globe className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-              <p className="text-sm font-semibold">Customer Portal</p>
-              <p className="text-xs text-gray-500 mt-1">B2B ordering</p>
-            </div>
+            <InquiryForm />
           </div>
-          <Link
-            href="/demo"
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-8 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 transition shadow-lg shadow-emerald-200"
-          >
-            Launch Live Demo
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-        </div>
-      </section>
+        </section>
+        <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+          <h2 className="text-3xl font-bold tracking-tight">Common questions</h2>
+          <dl className="mt-7 grid gap-6 md:grid-cols-2">
+            <div><dt className="font-semibold">Can I look around before contacting you?</dt><dd className="mt-2 text-slate-700">Yes. Open the live demo to explore the real dashboard, scanner, register, and customer portal with sample data.</dd></div>
+            <div><dt className="font-semibold">Can I evaluate my own workflow?</dt><dd className="mt-2 text-slate-700">Request a walkthrough or pilot and tell us which receiving, inventory, or fulfillment process you want to evaluate.</dd></div>
+          </dl>
+        </section>
+      </main>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-20 md:py-28 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, transparent pricing</h2>
-            <p className="text-gray-600">Start free. Upgrade when you&apos;re ready.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {/* Starter */}
-            <div className="rounded-xl border p-8">
-              <h3 className="font-semibold text-lg mb-2">Starter</h3>
-              <p className="text-sm text-gray-500 mb-4">For small businesses getting organized</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$49</span>
-                <span className="text-gray-500">/mo</span>
-              </div>
-              <ul className="space-y-3 text-sm mb-8">
-                {["Up to 3 users", "1 location", "500 products", "Lot tracking", "Basic reports", "Email support"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/auth/signup"
-                className="block text-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-
-            {/* Professional */}
-            <div className="rounded-xl border-2 border-gray-900 p-8 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-medium px-3 py-1 rounded-full">
-                Most Popular
-              </div>
-              <h3 className="font-semibold text-lg mb-2">Professional</h3>
-              <p className="text-sm text-gray-500 mb-4">For growing operations</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$99</span>
-                <span className="text-gray-500">/mo</span>
-              </div>
-              <ul className="space-y-3 text-sm mb-8">
-                {[
-                  "Up to 10 users",
-                  "Unlimited locations",
-                  "Unlimited products",
-                  "Bin management",
-                  "Mobile scanner",
-                  "Advanced analytics",
-                  "Customer portal",
-                  "Priority support",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/auth/signup"
-                className="block text-center rounded-lg bg-gray-900 text-white px-4 py-2.5 text-sm font-medium hover:bg-gray-800 transition"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-
-            {/* Enterprise */}
-            <div className="rounded-xl border p-8">
-              <h3 className="font-semibold text-lg mb-2">Enterprise</h3>
-              <p className="text-sm text-gray-500 mb-4">For regulated industries</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">$199</span>
-                <span className="text-gray-500">/mo</span>
-              </div>
-              <ul className="space-y-3 text-sm mb-8">
-                {[
-                  "Unlimited users",
-                  "Everything in Pro",
-                  "DSCSA compliance",
-                  "Controlled substances",
-                  "Custom fields",
-                  "API access",
-                  "White-label branding",
-                  "Dedicated support",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/auth/signup"
-                className="block text-center rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition"
-              >
-                Contact Sales
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 bg-gray-900 text-white">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Stop losing money to inventory mistakes
-          </h2>
-          <p className="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
-            Join businesses that switched from spreadsheets and outdated systems.
-            Set up in under 5 minutes — no IT team needed.
-          </p>
-          <Link
-            href="/auth/signup"
-            className="inline-flex items-center gap-2 rounded-lg bg-white text-gray-900 px-8 py-3.5 text-base font-medium hover:bg-gray-100 transition"
-          >
-            Start Your Free Trial
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t py-12">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-900 text-white">
-                <Package className="h-3.5 w-3.5" />
-              </div>
-              <span className="font-semibold">Stokora WMS</span>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              <a href="#features" className="hover:text-gray-900 transition">Features</a>
-              <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
-              <Link href="/demo" className="hover:text-gray-900 transition">Demo</Link>
-              <Link href="/support" className="hover:text-gray-900 transition">Support</Link>
-              <Link href="/legal/privacy" className="hover:text-gray-900 transition">Privacy</Link>
-              <Link href="/legal/terms" className="hover:text-gray-900 transition">Terms</Link>
-              <Link href="/auth/login" className="hover:text-gray-900 transition">Sign In</Link>
-            </div>
-            <p className="text-sm text-gray-400">
-              &copy; {new Date().getFullYear()} Stokora WMS. All rights reserved.
-            </p>
-          </div>
-        </div>
+      <footer className="border-t border-slate-200 bg-slate-50">
+        <nav aria-label="Footer navigation" className="mx-auto flex max-w-7xl flex-wrap gap-x-6 gap-y-3 px-5 py-8 text-sm text-slate-700 lg:px-8">
+          {[
+            ['Contact', '/#contact'],
+            ['Features', '/#features'],
+            ['Live demo', '/demo'],
+            ['Pricing', '/#pricing'],
+            ['Privacy Policy', '/legal/privacy'],
+            ['Solutions', '/#solutions'],
+            ['Support', '/support'],
+            ['Terms of Service', '/legal/terms'],
+          ].map(([label, href]) => (
+            <Link key={href} href={href} className="hover:underline">{label}</Link>
+          ))}
+        </nav>
       </footer>
     </div>
   );

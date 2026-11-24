@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Terms of Service | Stokora WMS' };
+export const metadata = { title: 'Terms of Service | Stokora WMS', description: 'Review the terms for using Stokora WMS.', alternates: { canonical: '/legal/terms' } };
 
 export default function TermsPage() {
   return (
@@ -23,15 +23,15 @@ export default function TermsPage() {
               <li>You are responsible for maintaining the security of your account credentials</li>
               <li>You are responsible for all activity that occurs under your account</li>
               <li>You must be at least 18 years old to use this Service</li>
-              <li>One person or legal entity may maintain no more than one free account</li>
+              <li>Keep your organization account and billing information current</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold">3. Subscription & Payment</h2>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Paid plans are billed monthly via Stripe</li>
-              <li>You may cancel your subscription at any time — access continues through the end of the billing period</li>
+              <li>When online billing is available, paid plans are billed monthly via Stripe</li>
+              <li>You may cancel your subscription at any time - access continues through the end of the billing period</li>
               <li>Refunds are handled on a case-by-case basis</li>
               <li>We reserve the right to change pricing with 30 days notice</li>
             </ul>
@@ -57,7 +57,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold">6. Service Availability</h2>
-            <p>We strive for 99.9% uptime but do not guarantee uninterrupted access. The Service depends on third-party infrastructure (Vercel, Supabase, Stripe) and their availability. We are not liable for downtime caused by third-party providers, scheduled maintenance, or force majeure events.</p>
+            <p>Service availability may vary. The Service depends on third-party infrastructure (Vercel, Supabase, Stripe) and their availability. We are not liable for downtime caused by third-party providers, scheduled maintenance, or force majeure events.</p>
           </section>
 
           <section>

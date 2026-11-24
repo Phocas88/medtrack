@@ -18,10 +18,10 @@ test.describe('Error Handling', () => {
   });
 
   test('malformed JSON body returns 400', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
+    const response = await request.post('/api/contact', {
       headers: { 'Content-Type': 'application/json' },
       data: 'not json',
     });
-    expect(response.status()).toBeGreaterThanOrEqual(400);
+    expect(response.status()).toBe(400);
   });
 });

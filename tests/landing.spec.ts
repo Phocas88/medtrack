@@ -1,77 +1,52 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Landing Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+test('anonymous buyers can view the complete page and reach the pilot form', async ({ page }) => {
+  const response = await page.goto('/');
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Know what’s in stock and where to find it.');
+  await expect(page.locator('body')).not.toContainText(/free trial|14.day trial|start.*trial/i);
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Live demo', 'Pricing', 'Sign in', 'Solutions']);
+  await nav.getByRole('link', { name: 'Pricing' }).click();
+  await expect(page).toHaveURL(/#pricing$/);
+  for (const price of [49, 99, 199]) await expect(page.locator('#pricing')).toContainText('$' + price);
+  await nav.getByRole('link', { name: 'Contact' }).click();
+  await expect(page).toHaveURL(/#contact$/);
+  await expect(page.getByLabel('Work email')).toBeVisible();
+});
+
+test('demo roles are available and marketing makes no compliance guarantee', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByRole('heading', { name: 'See Stokora in action' })).toBeVisible();
+  await expect(page.locator('[aria-label="Demo roles"] button')).toHaveCount(4);
+  await expect(page.getByRole('button', { name: /Management Desktop/ })).toBeEnabled();
+  await expect(page.locator('body')).not.toContainText(/100%.*compliant|free trial/i);
+});
+
+test('contact reports provider failure and acknowledges only accepted submissions', async ({ page }) => {
+  await page.goto('/#contact');
+  await page.getByLabel('Contact name').fill('Fixture Name');
+  await page.getByLabel('Business name').fill('Sample Wholesale');
+  await page.getByLabel('Work email').fill('fixture@example.test');
+  await page.getByLabel('What workflow would you like to improve?').fill('We want to organize our inventory counts.');
+  let attempts = 0;
+  await page.route('**/api/contact', async (route) => {
+    attempts++;
+    await route.fulfill(attempts === 1
+      ? { status: 503, json: { error: 'Try again later' } }
+      : { status: 202, json: { status: 'accepted' } });
   });
+  const send = page.getByRole('button', { name: 'Send inquiry' });
+  await send.click();
+  await expect(page.locator('form').getByRole('alert')).toHaveText('Try again later');
+  await send.click();
+  await expect(page.getByRole('status')).toContainText('Your inquiry was received.');
+});
 
-  test('hero section displays', async ({ page }) => {
-    // Check for h1
-    const h1 = page.locator('h1');
-    await expect(h1).toBeVisible();
-    await expect(h1).toContainText('Inventory management');
-
-    // Check for CTA buttons
-    await expect(page.getByRole('link', { name: /Start Free/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /See All Features/i })).toBeVisible();
-  });
-
-  test('features section has 12 items', async ({ page }) => {
-    const featuresSection = page.locator('#features');
-    await featuresSection.scrollIntoViewIfNeeded();
-
-    // Each feature card is a div inside the grid with an h3
-    const featureCards = featuresSection.locator('.grid > div');
-    await expect(featureCards).toHaveCount(12);
-  });
-
-  test('pricing section shows 3 plans', async ({ page }) => {
-    const pricingSection = page.locator('#pricing');
-    await pricingSection.scrollIntoViewIfNeeded();
-
-    // Verify the three price points
-    await expect(pricingSection.getByText('$49')).toBeVisible();
-    await expect(pricingSection.getByText('$99')).toBeVisible();
-    await expect(pricingSection.getByText('$199')).toBeVisible();
-
-    // Verify three plan names
-    await expect(pricingSection.getByText('Starter')).toBeVisible();
-    await expect(pricingSection.getByText('Professional')).toBeVisible();
-    await expect(pricingSection.getByText('Enterprise')).toBeVisible();
-  });
-
-  test('industries section shows verticals', async ({ page }) => {
-    const industriesSection = page.locator('#industries');
-    await industriesSection.scrollIntoViewIfNeeded();
-
-    // Check for some specific industry items
-    await expect(industriesSection.getByText('Medical Supply')).toBeVisible();
-    await expect(industriesSection.getByText('Pharmaceutical')).toBeVisible();
-    await expect(industriesSection.getByText('Food & Beverage')).toBeVisible();
-    await expect(industriesSection.getByText('Auto Parts')).toBeVisible();
-
-    // There should be 16 industry items in the grid
-    const industryItems = industriesSection.locator('.grid > div');
-    await expect(industryItems).toHaveCount(16);
-  });
-
-  test('navigation links work', async ({ page }) => {
-    // Click Features nav link and verify scroll target is in view
-    await page.locator('nav a[href="#features"]').click();
-    await expect(page.locator('#features')).toBeInViewport();
-
-    // Click Pricing nav link and verify scroll target is in view
-    await page.locator('nav a[href="#pricing"]').click();
-    await expect(page.locator('#pricing')).toBeInViewport();
-  });
-
-  test('CTA buttons link to signup', async ({ page }) => {
-    // Click the nav "Start Free Trial" button
-    const ctaButton = page.locator('nav').getByRole('link', { name: /Start Free Trial/i });
-    await expect(ctaButton).toHaveAttribute('href', '/auth/signup');
-
-    await ctaButton.click();
-    await page.waitForURL('**/auth/signup');
-    expect(page.url()).toContain('/auth/signup');
-  });
+test('mobile navigation stays within the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 820 });
+  await page.goto('/');
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Live demo' }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

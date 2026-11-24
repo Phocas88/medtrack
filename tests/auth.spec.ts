@@ -13,7 +13,7 @@ test('login page loads', async ({ page }) => {
 
 test('signup page loads', async ({ page }) => {
   await page.goto('/auth/signup');
-  await expect(page.getByLabel(/company name/i)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Request a pilot' })).toHaveAttribute('href', '/#contact');
 });
 
 test('portal login page loads', async ({ page }) => {

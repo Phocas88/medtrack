@@ -1,16 +1,22 @@
+import { publicSiteOrigin } from '@/lib/public-site';
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import "./globals.css"
 import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
-import { Analytics } from "@vercel/analytics/react"
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
   title: "Stokora WMS | Warehouse Management System",
-  description: "Complete inventory management for every industry. Lot tracking, bin management, mobile scanning, compliance, and more. Start free.",
+  metadataBase: new URL(publicSiteOrigin),
+  description: "Warehouse management for growing distributors, with inventory, receiving, bin locations, and order fulfillment.",
+  openGraph: {
+    title: "Stokora WMS",
+    description: "Warehouse management for growing distributors.",
+    siteName: "Stokora WMS",
+    type: "website",
+    images: [{ url: "/stokora-logo.png", alt: "Stokora WMS logo" }],
+  },
+  twitter: { card: "summary", images: ["/stokora-logo.png"] },
 }
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className={cn("min-h-screen bg-background font-sans antialiased", inter.variable)}>
+      <body className={cn("min-h-screen bg-background font-sans antialiased")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -35,7 +41,6 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>

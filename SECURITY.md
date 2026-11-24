@@ -12,12 +12,6 @@ Please include:
 - Potential impact
 - Any suggested fixes
 
-## Response Timeline
-
-- **Acknowledgment:** Within 24 hours
-- **Initial assessment:** Within 72 hours
-- **Fix deployed:** Critical vulnerabilities within 7 days, others within 30 days
-
 ## Scope
 
 This policy covers:
@@ -35,13 +29,12 @@ This policy covers:
 
 ## Security Measures
 
-- Row-Level Security (RLS) on all database tables
+- Row-level security policies on warehouse tables
 - AES-256-GCM encryption for third-party access tokens
 - HMAC-SHA256 verification on all Shopify webhooks
 - Content Security Policy (CSP) headers
 - HTTP Strict Transport Security (HSTS)
-- Rate limiting on API endpoints
-- Multi-tenant isolation via tenant_id + RLS policies
+- Rate limiting on inquiry and job endpoints
 - Authentication required on all non-public routes
 
 ## Responsible Disclosure
