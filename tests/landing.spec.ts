@@ -4,6 +4,9 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Know what’s in stock and where to find it.');
+  const launch = page.getByText('Launching June 2027', { exact: true });
+  await expect(launch).toBeVisible();
+  await expect(launch.locator('time')).toHaveAttribute('datetime', '2027-06');
   await expect(page.locator('body')).not.toContainText(/free trial|14.day trial|start.*trial/i);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Live demo', 'Pricing', 'Sign in', 'Solutions']);
@@ -46,6 +49,10 @@ test('contact reports provider failure and acknowledges only accepted submission
 test('mobile navigation stays within the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 820 });
   await page.goto('/');
+  const logo = page.locator('header').getByRole('img', { name: 'Stokora WMS' });
+  await expect(logo).toBeVisible();
+  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByText('Launching June 2027', { exact: true })).toBeInViewport();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Live demo' }).click();
   await expect(page).toHaveURL(/\/demo$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);

@@ -9,7 +9,7 @@ import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata: Metadata = {
   title: 'Stokora WMS | Warehouse management for growing distributors',
-  description: 'Manage inventory, receiving, bin locations, cycle counts, and order fulfillment with Stokora WMS.',
+  description: 'Stokora WMS launches June 2027. Manage inventory, receiving, bin locations, cycle counts, and order fulfillment.',
   alternates: { canonical: '/' },
 };
 
@@ -47,9 +47,9 @@ export default function HomePage() {
         <section className="border-b border-slate-200 bg-slate-50">
           <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:grid-cols-[1.12fr_1fr] md:items-center md:py-24 lg:px-8">
             <div className="space-y-6">
-              <p className="font-semibold text-emerald-800">Warehouse management for growing distributors</p>
+              <p className="font-semibold text-emerald-800">Launching <time dateTime="2027-06">June 2027</time></p>
               <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">Know what’s in stock and where to find it.</h1>
-              <p className="max-w-xl text-lg leading-relaxed text-slate-700">Manage inventory, receiving, bin locations, and order fulfillment in one workspace for your warehouse team.</p>
+              <p className="max-w-xl text-lg leading-relaxed text-slate-700">Stokora gives growing distributors one place to manage inventory, receiving, bin locations, and order fulfillment.</p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/demo" className={primary}>Explore live demo <ArrowRight aria-hidden size={18} /></Link>
                 <Link href="#contact" className={secondary}>Request a pilot</Link>
