@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { usePortal } from './portal-context';
 import { formatDate, formatCurrency, formatNumber } from '@/lib/format';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Package, CheckCircle2,
-  ChevronDown, ChevronUp, RefreshCw, Loader2, ShoppingBag, ClipboardList, User,
+  ChevronDown, ChevronUp, RefreshCw, Loader2, ClipboardList,
 } from 'lucide-react';
 
 // ────────────────────────── Types ──────────────────────────
@@ -71,8 +71,7 @@ interface Order {
 // ────────────────────────── Main Page ──────────────────────────
 
 export default function PortalPage() {
-  const { customer, tenantId } = usePortal();
-  const [activeTab, setActiveTab] = useState('shop');
+  const { customer, tenantId, setActiveTab } = usePortal();
 
   // ── Cart state (shared across tabs so Reorder can populate it) ──
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -92,22 +91,10 @@ export default function PortalPage() {
     toast.success(`Added ${qty} x ${product.name} to cart`);
   }, []);
 
-  const switchToShop = useCallback(() => setActiveTab('shop'), []);
+  const switchToShop = useCallback(() => setActiveTab('shop'), [setActiveTab]);
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="mb-6">
-        <TabsTrigger value="shop" className="gap-2">
-          <ShoppingBag className="h-4 w-4" /> Shop
-        </TabsTrigger>
-        <TabsTrigger value="orders" className="gap-2">
-          <ClipboardList className="h-4 w-4" /> My Orders
-        </TabsTrigger>
-        <TabsTrigger value="account" className="gap-2">
-          <User className="h-4 w-4" /> My Account
-        </TabsTrigger>
-      </TabsList>
-
+    <>
       <TabsContent value="shop">
         <ShopTab
           customer={customer}
@@ -130,7 +117,7 @@ export default function PortalPage() {
       <TabsContent value="account">
         <AccountTab customer={customer} tenantId={tenantId} />
       </TabsContent>
-    </Tabs>
+    </>
   );
 }
 

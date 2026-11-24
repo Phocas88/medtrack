@@ -779,7 +779,7 @@ export default function OnboardingPage() {
                 state.createdProducts === 0 &&
                 state.createdSuppliers === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    No items created yet, but you can add them anytime from the sidebar.
+                    You can add items any time from the Inventory menu.
                   </p>
                 )}
             </div>

@@ -32,56 +32,48 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
   }
 
   const tabs = [
+    { label: 'Find item', href: '/scan/find', icon: Search },
+    { label: 'My stats', href: '/scan/stats', icon: BarChart3 },
     { label: 'Tasks', href: '/scan', icon: ClipboardList },
-    { label: 'Find Item', href: '/scan/find', icon: Search },
-    { label: 'My Stats', href: '/scan/stats', icon: BarChart3 },
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Minimal top bar */}
-      <header className="flex items-center justify-between px-4 py-2 border-b bg-slate-950 text-white shrink-0">
-        <div className="flex items-center gap-2">
+    <div className="flex h-dvh flex-col bg-background">
+      <header className="shrink-0 border-b bg-slate-950 text-white">
+        <div className="flex items-center justify-between px-4 py-2">
           <StokoraLogo theme="dark" size="sm" />
+          <div className="flex items-center gap-3">
+            <OnlineIndicator />
+            <span className="hidden text-xs text-slate-400 sm:inline">{user.full_name}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-slate-300 hover:text-white"
+              aria-label="Sign out"
+              onClick={() => signOut()}
+            >
+              <LogOut aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <OnlineIndicator />
-          <span className="text-xs text-slate-400 hidden sm:inline">{user.full_name}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-slate-400 hover:text-white h-8 px-2"
-            onClick={() => signOut()}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
-
-      {/* Scanner content */}
-      <main className="flex-1 overflow-hidden">
-        {children}
-      </main>
-
-      {/* Bottom tab bar — compact for small devices */}
-      <nav className="flex items-center border-t bg-background shrink-0 safe-area-pb">
-        {tabs.map((tab) => {
-          const isActive = pathname === tab.href;
-          return (
+        <nav aria-label="Scanner navigation" className="flex items-center border-t border-slate-800 px-2">
+          {tabs.map(({ label, href, icon: Icon }) => (
             <Link
-              key={tab.href}
-              href={tab.href}
+              key={href}
+              href={href}
+              aria-current={pathname === href ? 'page' : undefined}
               className={cn(
-                'flex-1 flex flex-col items-center gap-0 py-1.5 text-[10px] font-medium transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground'
+                'flex min-h-11 flex-1 items-center justify-center gap-2 border-b-2 border-transparent px-2 text-sm font-medium text-slate-300 hover:bg-slate-900',
+                pathname === href && 'border-emerald-400 text-white',
               )}
             >
-              <tab.icon className={cn('h-4 w-4', isActive && 'text-primary')} />
-              {tab.label}
+              <Icon aria-hidden="true" className="size-4" />
+              {label}
             </Link>
-          );
-        })}
-      </nav>
+          ))}
+        </nav>
+      </header>
+      <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
     </div>
   );
 }

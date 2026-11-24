@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Sidebar, MobileSidebar } from "@/components/layout/sidebar"
 import { Header } from "@/components/layout/header"
 import { AuthProvider, useAuth } from "@/components/providers/auth-provider"
 import { createClient } from "@/lib/supabase/client"
@@ -48,25 +47,14 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   return (
     <AuthProvider>
       <OnboardingGate>
-        <div className="flex h-screen overflow-hidden">
-          {/* Desktop sidebar */}
-          <Sidebar />
-
-          {/* Mobile sidebar */}
-          <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
-
-          {/* Main content area */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header onMenuClick={() => setMobileOpen(true)} />
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">
-              {children}
-            </main>
-          </div>
+        <div className="flex h-dvh flex-col overflow-hidden">
+          <Header />
+          <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
         </div>
       </OnboardingGate>
     </AuthProvider>

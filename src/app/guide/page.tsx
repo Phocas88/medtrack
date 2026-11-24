@@ -61,7 +61,7 @@ const sections = [
       },
       {
         subtitle: 'Importing Data',
-        note: 'Go to Import/Export in the sidebar to bulk-import:',
+        note: 'Open Tools & Reports, then Import / Export to bulk-import:',
         items: [
           'Products \u2014 CSV with columns: SKU, Name, Category, Cost, Price, UOM',
           'Suppliers \u2014 CSV with columns: Name, Contact, Email, Phone',
@@ -101,7 +101,7 @@ const sections = [
     content: [
       {
         subtitle: 'Products',
-        nav: 'Sidebar \u203a Products',
+        nav: 'Inventory \u203a Products',
         items: [
           'Add, edit, and archive products',
           'Each product has: SKU, name, manufacturer, category, cost, price, UOM',
@@ -112,7 +112,7 @@ const sections = [
       },
       {
         subtitle: 'Suppliers',
-        nav: 'Sidebar \u203a Suppliers',
+        nav: 'Suppliers \u203a Suppliers',
         items: [
           'Manage your supplier directory',
           'Store contact info, account numbers, and notes',
@@ -121,7 +121,7 @@ const sections = [
       },
       {
         subtitle: 'Customers',
-        nav: 'Sidebar \u203a Customers',
+        nav: 'Sales & Customers \u203a Customers',
         items: [
           'Customer directory with contact info and shipping addresses',
           'License tracking (type, number, expiration) for regulated industries',
@@ -130,7 +130,7 @@ const sections = [
       },
       {
         subtitle: 'Lots',
-        nav: 'Sidebar \u203a Lots',
+        nav: 'Inventory \u203a Lots & Serials',
         items: [
           'View all inventory lots with quantities, locations, and expirations',
           'Color-coded expiration status (green/yellow/red)',
@@ -140,7 +140,7 @@ const sections = [
       },
       {
         subtitle: 'Stock Movements',
-        nav: 'Sidebar \u203a Movements',
+        nav: 'Inventory \u203a Stock Movements',
         items: [
           'Complete audit trail of every inventory change',
           'Filter by product, lot, user, date range, or movement type',
@@ -157,7 +157,7 @@ const sections = [
     content: [
       {
         subtitle: 'Receiving',
-        nav: 'Sidebar \u203a Receive',
+        nav: 'Orders & Fulfillment \u203a Receive',
         steps: [
           'Select a Purchase Order or start a blind receive',
           'Scan or enter the product barcode/SKU',
@@ -168,7 +168,7 @@ const sections = [
       },
       {
         subtitle: 'Put-Away',
-        nav: 'Sidebar \u203a Put-Away',
+        nav: 'Orders & Fulfillment \u203a Put-Away',
         items: [
           'System suggests optimal bin locations based on product category and available space',
           'Confirm or override the suggested location',
@@ -177,7 +177,7 @@ const sections = [
       },
       {
         subtitle: 'Picking & Shipping',
-        nav: 'Sidebar \u203a Ship',
+        nav: 'Orders & Fulfillment \u203a Ship',
         steps: [
           'Select a sales order to pick',
           'System suggests lots using FEFO (First Expired, First Out)',
@@ -188,7 +188,7 @@ const sections = [
       },
       {
         subtitle: 'Wave Picking',
-        nav: 'Sidebar \u203a Wave Picking',
+        nav: 'Orders & Fulfillment \u203a Wave Picking',
         items: [
           'Group multiple orders into a single pick wave',
           'Optimized pick path by location',
@@ -197,7 +197,7 @@ const sections = [
       },
       {
         subtitle: 'Cycle Counts',
-        nav: 'Sidebar \u203a Cycle Counts',
+        nav: 'Warehouse \u203a Cycle Counts',
         steps: [
           'Create a new count \u2014 select products/locations to count',
           'Enter actual quantities found',
@@ -207,7 +207,7 @@ const sections = [
       },
       {
         subtitle: 'Transfers',
-        nav: 'Sidebar \u203a Transfers',
+        nav: 'Warehouse \u203a Transfers',
         items: [
           'Move inventory between warehouse locations',
           'Track in-transit quantities',
@@ -216,7 +216,7 @@ const sections = [
       },
       {
         subtitle: 'Bin Management',
-        nav: 'Sidebar \u203a Bins',
+        nav: 'Warehouse \u203a Bins',
         items: [
           'Define bin locations with min/max quantities',
           'View bin inventory at a glance',
@@ -234,7 +234,7 @@ const sections = [
         subtitle: 'Mobile-Optimized Interface',
         nav: 'URL: /scan',
         items: [
-          'Full screen \u2014 no desktop sidebar or header',
+          'Scanner header with Find item, My stats, and Tasks',
           'Large buttons \u2014 designed for gloved hands',
           'Camera scanning \u2014 use your device camera as a barcode scanner',
           'Quick actions \u2014 Receive, Pick, Count, Move, Lookup',
@@ -303,7 +303,7 @@ const sections = [
     content: [
       {
         subtitle: 'Plans',
-        nav: 'Sidebar \u203a Billing (Admin only)',
+        nav: 'Integrations \u203a Billing (Admin only)',
         table: {
           headers: ['Plan', 'Price', 'Users', 'Locations', 'Products'],
           rows: [
@@ -367,7 +367,7 @@ const sections = [
     content: [
       {
         subtitle: 'User Management',
-        nav: 'Sidebar \u203a Admin \u203a Users (Admin only)',
+        nav: 'Admin \u203a User Management',
         items: [
           'Add users \u2014 enter email, name, and role',
           'Edit roles \u2014 change a user\u2019s access level',
@@ -378,7 +378,7 @@ const sections = [
       },
       {
         subtitle: 'Settings',
-        nav: 'Sidebar \u203a Settings (Admin only)',
+        nav: 'Admin \u203a Settings',
         items: [
           'Company info \u2014 name, address, logo',
           'Feature toggles \u2014 enable/disable modules for your organization',
@@ -395,7 +395,7 @@ const sections = [
     content: [
       {
         subtitle: 'Available Reports',
-        nav: 'Sidebar \u203a Reports',
+        nav: 'Tools & Reports \u203a Reports',
         table: {
           headers: ['Report', 'Description'],
           rows: [
@@ -412,7 +412,7 @@ const sections = [
       },
       {
         subtitle: 'Analytics Dashboard',
-        nav: 'Sidebar \u203a Analytics',
+        nav: 'Overview \u203a Analytics',
         items: [
           'Inventory trends over time',
           'Top products by movement volume',
@@ -429,7 +429,7 @@ const sections = [
     content: [
       {
         subtitle: 'Controlled Substances',
-        nav: 'Sidebar \u203a Controlled Substances',
+        nav: 'Compliance \u203a Controlled Substances',
         items: [
           'DEA schedule tracking',
           'Reconciliation workflows with audit trails',
@@ -438,7 +438,7 @@ const sections = [
       },
       {
         subtitle: 'Recall Management',
-        nav: 'Sidebar \u203a Recall / Recall Monitor',
+        nav: 'Tools & Reports \u203a Recall Lookup or Compliance \u203a Recall Monitor',
         items: [
           'Enter a lot number to trace all affected customers',
           'Export recall contact lists to CSV',
@@ -485,7 +485,7 @@ const sections = [
         ],
       },
       {
-        subtitle: 'Missing sidebar items?',
+        subtitle: 'Missing menu items?',
         items: [
           'Some modules are only visible to Admin or Manager roles',
           'Check Settings \u203a Feature Toggles \u2014 some modules may be disabled',
