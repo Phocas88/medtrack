@@ -41,12 +41,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
 
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let requestId = 0;
+
     async function loadUser() {
+      const current = ++requestId;
       try {
         const {
           data: { user: authUser },
         } = await supabase.auth.getUser();
 
+        if (current !== requestId) return;
         if (!authUser) {
           setUser(null);
           setLoading(false);
@@ -59,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', authUser.id)
           .single();
 
+        if (current !== requestId) return;
         setUser(data ?? null);
 
         // Fetch tenant name + settings + preset for white-label branding and module config
@@ -68,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .select('name, settings')
             .eq('id', data.tenant_id)
             .single();
+          if (current !== requestId) return;
           setTenantName(tenant?.name ?? null);
 
           // Extract enabled_modules and preset from tenant settings
@@ -80,10 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setPreset(tenantPreset);
         }
       } catch {
-        setUser(null);
-        setTenantName(null);
+        if (current === requestId) {
+          setUser(null);
+          setTenantName(null);
+        }
       } finally {
-        setLoading(false);
+        if (current === requestId) setLoading(false);
       }
     }
 
@@ -91,17 +100,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+      clearTimeout(refreshTimer);
       if (!session) {
+        requestId++;
         setUser(null);
+        setTenantName(null);
+        setEnabledModules({});
+        setPreset('full');
         setLoading(false);
       } else {
-        // Re-fetch user record on auth state change
-        loadUser();
+        // Supabase holds the auth lock while it dispatches this callback.
+        refreshTimer = setTimeout(() => { void loadUser(); }, 0);
       }
     });
 
     return () => {
+      requestId++;
+      clearTimeout(refreshTimer);
       subscription.unsubscribe();
     };
   }, []);
