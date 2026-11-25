@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -125,7 +126,7 @@ export default function ScannerAppPage() {
       .from('scan_tasks')
       .select('task_type')
       .eq('tenant_id', tenantId)
-      .eq('assigned_to', user.id)
+      .or(`assigned_to.eq.${user.id},and(task_type.eq.putaway,assigned_to.is.null)`)
       .in('status', ['pending', 'assigned', 'in_progress'])
       .then(({ data }) => {
         const counts: Record<string, number> = {};
@@ -140,17 +141,19 @@ export default function ScannerAppPage() {
     setLoading(true);
     const supabase = createClient();
 
-    const { data } = await supabase
+    const query = supabase
       .from('scan_tasks')
       .select(`*, bin:bins!scan_tasks_bin_id_fkey(*), product:products!scan_tasks_product_id_fkey(*),
         source_bin:bins!scan_tasks_source_bin_id_fkey(*), target_bin:bins!scan_tasks_target_bin_id_fkey(*), location:locations(*)`)
       .eq('tenant_id', tenantId)
-      .eq('assigned_to', user.id)
       .eq('task_type', taskType)
       .in('status', ['pending', 'assigned', 'in_progress'])
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true });
 
+    const { data } = await (taskType === 'putaway'
+      ? query.or(`assigned_to.eq.${user.id},assigned_to.is.null`)
+      : query.eq('assigned_to', user.id));
     setTasks((data as TaskWithDetails[]) || []);
     setLoading(false);
   }, [tenantId, user]);
@@ -312,7 +315,7 @@ export default function ScannerAppPage() {
 
   // ── Complete Task ──
   const handleCompleteTask = async () => {
-    if (!activeTask || !user) return;
+    if (!activeTask || !user || activeTask.task_type === 'putaway') return;
     setCompleting(true);
     const supabase = createClient();
     const now = new Date().toISOString();
@@ -514,9 +517,15 @@ export default function ScannerAppPage() {
                     {task.bin && <p className="text-[10px] text-muted-foreground font-mono">{task.bin.bin_code}</p>}
                     {task.product && <p className="text-[10px] text-muted-foreground truncate">{task.product.name}</p>}
                   </div>
-                  <Button onClick={() => handleStartTask(task)} className="h-9 w-9 shrink-0 rounded-lg">
-                    <Play className="h-4 w-4" />
-                  </Button>
+                  {task.task_type === 'putaway' ? (
+                    <Button asChild size="sm" className="h-9 shrink-0">
+                      <Link href={`/put-away?task=${encodeURIComponent(task.id)}`}>Open task</Link>
+                    </Button>
+                  ) : (
+                    <Button onClick={() => handleStartTask(task)} aria-label={`Start ${task.title}`} className="h-9 w-9 shrink-0 rounded-lg">
+                      <Play aria-hidden className="h-4 w-4" />
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))

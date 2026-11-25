@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -107,6 +108,11 @@ export default function PutAwayPage() {
 
   // Active put-away workflow
   const [activeTask, setActiveTask] = useState<PutAwayTask | null>(null);
+  const [scannerTaskId, setScannerTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setScannerTaskId(new URLSearchParams(window.location.search).get('task'));
+  }, []);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [scanInput, setScanInput] = useState('');
   const [confirmedQty, setConfirmedQty] = useState('');
@@ -272,10 +278,11 @@ export default function PutAwayPage() {
   // ── Start Put-Away Workflow ──
 
   const handleStartPutAway = async (task: PutAwayTask) => {
+    if (!user || !tenantId) return;
     const supabase = createClient();
     const updates: Record<string, unknown> = {
       status: 'in_progress',
-      started_at: new Date().toISOString(),
+      started_at: task.started_at ?? new Date().toISOString(),
     };
     if (!task.assigned_to && user) {
       updates.assigned_to = user.id;
@@ -283,13 +290,15 @@ export default function PutAwayPage() {
       updates.assigned_at = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('scan_tasks')
-      .update(updates)
-      .eq('id', task.id);
+    const update = supabase.from('scan_tasks').update(updates)
+      .eq('tenant_id', tenantId).eq('id', task.id).eq('task_type', 'putaway').eq('status', task.status);
+    const { data, error } = await (task.assigned_to
+      ? update.eq('assigned_to', task.assigned_to)
+      : update.is('assigned_to', null)).select('id').maybeSingle();
 
-    if (error) {
-      toast.error('Failed to start task');
+    if (error || !data) {
+      toast.error('Could not start this task. It may have changed.');
+      void loadData();
       return;
     }
 
@@ -394,40 +403,34 @@ export default function PutAwayPage() {
   // ── Complete Put-Away ──
 
   const handleCompletePutAway = async () => {
-    if (!activeTask || !user || !tenantId) return;
+    if (!activeTask || !user || !tenantId || completing) return;
+    const qty = Number(confirmedQty);
+    const targetBin = scannedTargetBin;
+    if (!targetBin || !activeTask.product_id || !Number.isSafeInteger(qty) || qty <= 0) {
+      toast.error('Confirm the product, destination bin, and a positive whole quantity.');
+      return;
+    }
     setCompleting(true);
     const supabase = createClient();
-    const qty = parseInt(confirmedQty, 10) || 0;
-    const targetBin = scannedTargetBin;
     const now = new Date().toISOString();
 
     try {
-      // 1. Upsert bin_inventory - add quantity to target bin for this product/lot
-      if (targetBin) {
-        const { data: existing } = await supabase
-          .from('bin_inventory')
-          .select('id, quantity')
-          .eq('tenant_id', tenantId)
-          .eq('bin_id', targetBin.id)
-          .eq('product_id', activeTask.product_id!)
-          .eq('lot_id', activeTask.lot_id || '')
-          .maybeSingle();
+      const binStock = supabase.from('bin_inventory').select('id, quantity')
+        .eq('tenant_id', tenantId).eq('bin_id', targetBin.id).eq('product_id', activeTask.product_id);
+      const { data: existing, error: readError } = await (activeTask.lot_id
+        ? binStock.eq('lot_id', activeTask.lot_id)
+        : binStock.is('lot_id', null)).maybeSingle();
+      if (readError) throw readError;
 
-        if (existing) {
-          await supabase
-            .from('bin_inventory')
+      const { error: inventoryError } = existing
+        ? await supabase.from('bin_inventory')
             .update({ quantity: existing.quantity + qty, updated_at: now })
-            .eq('id', existing.id);
-        } else {
-          await supabase.from('bin_inventory').insert({
-            tenant_id: tenantId,
-            bin_id: targetBin.id,
-            product_id: activeTask.product_id!,
-            lot_id: activeTask.lot_id || null,
-            quantity: qty,
+            .eq('tenant_id', tenantId).eq('id', existing.id)
+        : await supabase.from('bin_inventory').insert({
+            tenant_id: tenantId, bin_id: targetBin.id, product_id: activeTask.product_id,
+            lot_id: activeTask.lot_id, quantity: qty,
           });
-        }
-      }
+      if (inventoryError) throw inventoryError;
 
       // 2. Update lot's location_id to the bin's location
       if (activeTask.lot_id && targetBin) {
@@ -447,7 +450,7 @@ export default function PutAwayPage() {
         product_id: activeTask.product_id!,
         lot_id: activeTask.lot_id || null,
         user_id: user.id,
-        quantity: qty,
+        quantity: 0,
         movement_type: 'adjust',
         reason: `Put-away from receiving to bin ${targetBin?.bin_code || 'unknown'}`,
         reference_number: refPo ? `PO ${refPo}` : activeTask.title,
@@ -455,6 +458,7 @@ export default function PutAwayPage() {
           scan_task_id: activeTask.id,
           target_bin_id: targetBin?.id,
           put_away: true,
+          put_away_quantity: qty,
         },
       });
 
@@ -823,6 +827,28 @@ export default function PutAwayPage() {
       <div className="space-y-6">
         <PageHeader title="Put-Away" description="Manage put-away tasks from receiving to bins" />
         <div className="py-12 text-center text-muted-foreground">Loading put-away tasks...</div>
+      </div>
+    );
+  }
+
+  if (scannerTaskId) {
+    const task = [...pendingTasks, ...inProgressTasks].find(item =>
+      item.id === scannerTaskId && (!item.assigned_to || item.assigned_to === user?.id));
+    return (
+      <div className="mx-auto max-w-lg space-y-4">
+        <PageHeader title="Scanner putaway" />
+        {task ? (
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <p className="break-words font-semibold">{task.title}</p>
+              <p className="text-sm text-muted-foreground">{task.instructions}</p>
+              <Button onClick={() => void handleStartPutAway(task)}>
+                {task.status === 'in_progress' ? 'Resume putaway' : 'Start putaway'}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : <p role="status">This task is complete, unavailable, or assigned to another operator.</p>}
+        <Button asChild variant="outline"><Link href="/scan">Back to Scanner</Link></Button>
       </div>
     );
   }
