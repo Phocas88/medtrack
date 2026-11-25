@@ -6,6 +6,13 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout/public-header';
 import { roleRoutes } from '@/lib/demo-roles';
 
+const sampleTasks = {
+  cashier: ['Add packing tape to a sample sale.', 'Add sample item', 'Packing tape added. Sample subtotal: $4.50.'],
+  customer: ['Check the status of sample order SO-1042.', 'View sample order', 'SO-1042 is packed and awaiting carrier pickup.'],
+  associate: ['Pick six cartons of shipping labels from bin B-04.', 'Confirm sample pick', 'Six cartons picked from bin B-04.'],
+  manager: ['Review a sample count of 24 rolls of packing tape in bin A-01.', 'Record sample count', 'Count recorded. Bin A-01 has 24 rolls of packing tape.'],
+} as const;
+
 const roles = [
   { key: 'cashier', title: 'Cashier Register', detail: 'Explore the product catalog and register layout.' },
   { key: 'customer', title: 'Customer Portal', detail: 'Browse a sample catalog and view order history.' },
@@ -17,13 +24,16 @@ export default function DemoPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [sampleRole, setSampleRole] = useState<keyof typeof sampleTasks | null>(null);
+  const [taskDone, setTaskDone] = useState(false);
+  const sample = sampleRole ? sampleTasks[sampleRole] : null;
   useEffect(() => { setReady(true); }, []);
 
   async function launch(role: (typeof roles)[number]['key']) {
     if (loading) return;
     setLoading(role);
-    setError('');
+    setSampleRole(null);
+    setTaskDone(false);
     try {
       const response = await fetch('/api/demo/session', {
         method: 'POST',
@@ -34,7 +44,7 @@ export default function DemoPage() {
       router.push(roleRoutes[role]);
       router.refresh();
     } catch {
-      setError('The demo could not sign in. Please try again in a moment.');
+      setSampleRole(role);
       setLoading(null);
     }
   }
@@ -45,8 +55,8 @@ export default function DemoPage() {
       <main className="mx-auto max-w-6xl space-y-7 px-5 py-12 sm:py-16">
         <div className="max-w-2xl space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">See Stokora in action</h1>
-          <p className="text-lg text-slate-700">Choose a role to open the real Stokora interface in a shared sample warehouse.</p>
-          <p className="text-sm text-slate-700">Use sample information only. Other demo visitors share this warehouse.</p>
+          <p className="text-lg text-slate-700">Choose a role to explore a sample warehouse workflow.</p>
+          <p className="text-sm text-slate-700">Use sample information only. The full demo uses a shared sample warehouse.</p>
         </div>
         <div aria-label="Demo roles" className="grid gap-4 sm:grid-cols-2">
           {roles.map(({ key, title, detail }) => (
@@ -54,6 +64,7 @@ export default function DemoPage() {
               type="button"
               key={key}
               disabled={!ready || loading !== null}
+              aria-pressed={sampleRole === key}
               onClick={() => launch(key)}
               className="space-y-2 rounded-lg border border-slate-300 bg-white p-5 text-left hover:border-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-70"
             >
@@ -62,7 +73,23 @@ export default function DemoPage() {
             </button>
           ))}
         </div>
-        {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-red-900">{error}</p>}
+        {sample && (
+          <section aria-labelledby="sample-title" className="space-y-3 rounded-lg border border-slate-300 bg-white p-5">
+            <h2 id="sample-title" className="text-xl font-semibold">
+              {roles.find(({ key }) => key === sampleRole)?.title} sample walkthrough
+            </h2>
+            <p className="text-sm text-slate-700">The full demo is temporarily unavailable. This walkthrough uses sample data in your browser.</p>
+            <p>{sample[0]}</p>
+            <button
+              type="button"
+              onClick={() => setTaskDone(!taskDone)}
+              className="rounded-md bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+            >
+              {taskDone ? 'Reset sample task' : sample[1]}
+            </button>
+            <p role="status" className="text-sm text-emerald-900">{taskDone && sample[2]}</p>
+          </section>
+        )}
         <Link href="/#contact" className="inline-block font-medium text-emerald-800 underline">Request a walkthrough or pilot</Link>
       </main>
     </div>
