@@ -3,7 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Barcode, Boxes, ClipboardCheck, MapPin, PackageCheck, Truck } from 'lucide-react';
 import { publicSiteOrigin } from '@/lib/public-site';
-import { plans } from '@/lib/plans';
 import { InquiryForm } from './inquiry-form';
 import { PublicHeader } from '@/components/layout/public-header';
 
@@ -38,10 +37,6 @@ export default function HomePage() {
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web browser',
         url: publicSiteOrigin,
-        offers: plans.map((plan) => ({
-          '@type': 'Offer', name: plan.name, price: plan.price, priceCurrency: 'USD',
-          url: `${publicSiteOrigin}/#pricing`,
-        })),
       }).replace(/</g, '\\u003c') }} />
       <p className="border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-center text-sm font-semibold text-emerald-900">
         Stokora launches <time dateTime="2027-06">June 2027</time>
@@ -120,14 +115,17 @@ export default function HomePage() {
         </section>
 
         <section id="pricing" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight">Monthly pricing</h2>
-          <p className="mt-3 text-slate-700">Request a pilot to discuss the right plan and confirm team capacity before subscribing.</p>
+          <h2 className="text-3xl font-bold tracking-tight">Planned pricing</h2>
+          <p className="mt-3 text-slate-700">Rates will be announced closer to launch. Request a pilot to discuss your warehouse locations and order volume.</p>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {plans.map(({ id, name, price, audience }) => (
-              <article key={id} className="space-y-3 rounded-xl border border-slate-300 p-6">
-                <h3 className="text-xl font-semibold">{name}</h3>
-                <p className="text-4xl font-bold">${price}<span className="ml-1 text-sm font-normal text-slate-700">USD / month</span></p>
-                <p className="text-slate-700">{audience}.</p>
+            {[
+              ['Per warehouse', 'A monthly subscription based on the number of warehouse locations.'],
+              ['Order-volume tiers', 'Choose a tier based on the number of orders you fulfill each month.'],
+              ['Team seats included', 'Give managers, floor staff, and seasonal workers their own logins.'],
+            ].map(([title, detail]) => (
+              <article key={title} className="space-y-3 rounded-xl border border-slate-300 p-6">
+                <h3 className="text-xl font-semibold">{title}</h3>
+                <p className="text-slate-700">{detail}</p>
               </article>
             ))}
           </div>

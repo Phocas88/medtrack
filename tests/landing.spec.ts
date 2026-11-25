@@ -9,7 +9,11 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
   await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Live demo', 'Pricing', 'Sign in', 'Solutions']);
   await nav.getByRole('link', { name: 'Pricing' }).click();
   await expect(page).toHaveURL(/#pricing$/);
-  for (const price of [49, 99, 199]) await expect(page.locator('#pricing')).toContainText('$' + price);
+  const pricing = page.locator('#pricing');
+  for (const heading of ['Per warehouse', 'Order-volume tiers', 'Team seats included']) {
+    await expect(pricing.getByRole('heading', { name: heading })).toBeVisible();
+  }
+  await expect(pricing).toContainText('Rates will be announced closer to launch.');
   await nav.getByRole('link', { name: 'Contact' }).click();
   await expect(page).toHaveURL(/#contact$/);
   await expect(page.getByLabel('Work email')).toBeVisible();
