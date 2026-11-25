@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Header } from "@/components/layout/header"
 import { AuthProvider, useAuth } from "@/components/providers/auth-provider"
@@ -11,6 +12,13 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [checked, setChecked] = useState(false)
+  const [slow, setSlow] = useState(false)
+
+  useEffect(() => {
+    setSlow(false)
+    const timeout = window.setTimeout(() => setSlow(true), 10000)
+    return () => window.clearTimeout(timeout)
+  }, [loading, tenantId, pathname])
 
   useEffect(() => {
     if (loading || !tenantId) return
@@ -39,8 +47,24 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
       })
   }, [tenantId, loading, pathname, router])
 
-  if (!checked && !pathname.startsWith("/onboarding")) {
-    return null
+  if (loading || !tenantId || (!checked && !pathname.startsWith("/onboarding"))) {
+    const missing = !loading && !tenantId
+    return (
+      <main className="mx-auto max-w-lg space-y-3 px-5 py-16">
+        <h1 className="text-xl font-semibold">{missing ? "Warehouse workspace unavailable" : "Loading your warehouse workspace"}</h1>
+        <p role="status" className="text-sm text-muted-foreground">
+          {missing
+            ? "Your warehouse profile could not be loaded. Contact your workspace administrator if this continues."
+            : slow ? "This is taking longer than expected. Try reloading the page." : "Checking your account and workspace settings."}
+        </p>
+        {(missing || slow) && (
+          <div className="flex flex-wrap gap-4 text-sm">
+            <button type="button" className="underline" onClick={() => window.location.reload()}>Reload page</button>
+            {missing && <Link className="underline" href="/support">Get support</Link>}
+          </div>
+        )}
+      </main>
+    )
   }
 
   return <>{children}</>
