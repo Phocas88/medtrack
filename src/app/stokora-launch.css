@@ -1,0 +1,243 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+.stokora-launch {
+  --ink: #142a22;
+  --paper: #f8f9f2;
+  --green: #183c2d;
+  --lime: #d9f788;
+  --line: #d8e0d3;
+}
+.stokora-launch * {
+  box-sizing: border-box;
+}
+.stokora-launch {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 "DM Sans",sans-serif;
+}
+.stokora-launch a {
+  color: inherit;
+}
+.stokora-launch a:focus-visible,.stokora-launch button:focus-visible,.stokora-launch input:focus-visible {
+  outline: 3px solid #688944;
+  outline-offset: 4px;
+}
+.stokora-launch .wrap {
+  width: min(1160px,calc(100% - 48px));
+  margin: auto;
+}
+.stokora-launch .banner {
+  background: var(--lime);
+  text-align: center;
+  padding: 10px 16px;
+  font-size: .9rem;
+  font-weight: 700;
+}
+.stokora-launch .banner a {
+  text-decoration: underline;
+  margin-left: .6em;
+  text-underline-offset: 3px;
+}
+.stokora-launch header {
+  border-bottom: 1px solid var(--line);
+}
+.stokora-launch nav,.stokora-launch .footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 18px;
+}
+.stokora-launch .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.stokora-launch .mark {
+  background: var(--green);
+  color: var(--lime);
+  border-radius: 8px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+}
+.stokora-launch .links {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+}
+.stokora-launch .links a {
+  text-decoration: none;
+  font-size: .9rem;
+  font-weight: 700;
+}
+.stokora-launch .button {
+  background: var(--green);
+  color: white;
+  padding: 12px 19px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: inherit;
+  font-weight: 700;
+  display: inline-block;
+  text-decoration: none;
+  cursor: pointer;
+}
+.stokora-launch .hero {
+  padding-block: 65px 72px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+.stokora-launch h1,.stokora-launch h2 {
+  font: 400 clamp(3.3rem,7.2vw,7rem)/.91 "Instrument Serif",Georgia,serif;
+  letter-spacing: -.035em;
+  margin: .15em 0 .3em;
+}
+.stokora-launch h1 em {
+  font-style: italic;
+  color: #42704e;
+}
+.stokora-launch h2 {
+  font-size: clamp(2.9rem,5.4vw,4.9rem);
+}
+.stokora-launch .eyebrow {
+  font-size: .82rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.stokora-launch .hero p {
+  max-width: 39ch;
+  font-size: 1.15rem;
+}
+.stokora-launch .photo {
+  min-height: 490px;
+  border-radius: 12px;
+  background: #2b5340 url('/stokora-launch-warehouse.jpg') center/cover;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.stokora-launch .flow {
+  border-block: 1px solid var(--line);
+  padding-block: 60px;
+}
+.stokora-launch .steps {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 30px;
+}
+.stokora-launch .steps article {
+  border-top: 2px solid #738e6d;
+  padding-top: 12px;
+}
+.stokora-launch h3 {
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-bottom: 5px;
+}
+.stokora-launch .steps p,.stokora-launch .pricing p {
+  margin-top: 0;
+}
+.stokora-launch .pricing {
+  padding-block: 65px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 45px;
+}
+.stokora-launch .pricing ul {
+  margin: 0;
+  padding-left: 1.25em;
+}
+.stokora-launch .pricing li {
+  margin-bottom: 12px;
+}
+.stokora-launch .signup {
+  background: var(--green);
+  color: white;
+  padding-block: 65px;
+}
+.stokora-launch .signup .wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+.stokora-launch .signup h2 {
+  color: var(--lime);
+}
+.stokora-launch form {
+  display: grid;
+  gap: 9px;
+}
+.stokora-launch label {
+  font-weight: 700;
+}
+.stokora-launch input {
+  background: white;
+  color: var(--ink);
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #b7c4b7;
+  border-radius: 6px;
+  font: inherit;
+}
+.stokora-launch .signup button {
+  background: var(--lime);
+  color: var(--ink);
+  justify-self: start;
+}
+.stokora-launch .note {
+  font-size: .9rem;
+  margin: 0;
+  color: #e0ecd9;
+}
+.stokora-launch .footer {
+  font-size: .9rem;
+  flex-wrap: wrap;
+}
+@media(max-width:760px) {
+  .stokora-launch .hero,.stokora-launch .pricing,.stokora-launch .signup .wrap {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .stokora-launch .hero {
+    padding-block: 38px;
+  }
+  .stokora-launch .photo {
+    min-height: 310px;
+  }
+  .stokora-launch .steps {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .stokora-launch .links a:not(.button) {
+    display: none;
+  }
+  .stokora-launch .wrap {
+    width: calc(100% - 32px);
+  }
+}
+.stokora-launch p,.stokora-launch h3 {
+  margin-block-start: 1em;
+}
+.stokora-launch .hero p,.stokora-launch .signup p:not(.note) {
+  margin-block-end: 1em;
+}
+.stokora-launch .steps p,.stokora-launch .pricing p,.stokora-launch p.note {
+  margin-block-start: 0;
+}
+.stokora-launch .pricing ul {
+  list-style: disc;
+}
+.stokora-launch .button:disabled {
+  opacity: .7;
+  cursor: wait;
+}

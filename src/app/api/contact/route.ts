@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const accessKey = process.env.WEB3FORMS_ACCESS_KEY;
+    const accessKey = process.env.WEB3FORMS_ACCESS_KEY || process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
     if (!accessKey) {
       console.error('WEB3FORMS_ACCESS_KEY not configured');
       return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to send' }, { status: 500 });
     }
 
-    console.log('Contact form submission:', { name, email, company, interest });
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Contact form error:', err);

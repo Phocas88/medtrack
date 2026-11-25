@@ -10,10 +10,10 @@ test.describe('Mobile Responsiveness', () => {
     // Hero text should be visible on mobile
     const h1 = page.locator('h1');
     await expect(h1).toBeVisible();
-    await expect(h1).toContainText('Inventory management');
+    await expect(h1).toContainText('Keep orders moving');
 
     // CTA button should be visible
-    await expect(page.getByRole('link', { name: /Start Free/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Join the waitlist/i }).first()).toBeVisible();
 
     // Page should not have horizontal overflow (basic mobile check)
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
