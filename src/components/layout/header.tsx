@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator"
 import { WorkspaceNavigation } from "@/components/layout/workspace-navigation"
 import { StokoraLogo } from "@/components/ui/stokora-logo"
 import { NotificationBell } from "@/components/layout/notification-bell"
-import { User, Settings, LogOut } from "lucide-react"
+import { User, Settings, LogOut, Sparkles } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 
 const pageTitles: Record<string, string> = {
@@ -191,8 +191,10 @@ export function Header() {
 
           {/* Notifications */}
           {user?.is_active && (user.role === "admin" || user.role === "manager") && (
-            <Link href="/inventory-assistant" className="rounded-md px-2 py-1 text-sm font-medium hover:bg-muted">
-              Inventory assistant
+            <Link href="/inventory-assistant" aria-label="Inventory assistant"
+              className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-sm font-medium hover:bg-muted">
+              <Sparkles className="size-4" aria-hidden />
+              <span className="hidden lg:inline">Inventory assistant</span>
             </Link>
           )}
           <NotificationBell />
