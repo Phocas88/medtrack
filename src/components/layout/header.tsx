@@ -29,6 +29,7 @@ import { useAuth } from "@/components/providers/auth-provider"
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
+  "/inventory-assistant": "Inventory assistant",
   "/metrics": "Metrics",
   "/analytics": "Analytics",
   "/products": "Products",
@@ -189,6 +190,11 @@ export function Header() {
           </Button>
 
           {/* Notifications */}
+          {user?.is_active && (user.role === "admin" || user.role === "manager") && (
+            <Link href="/inventory-assistant" className="rounded-md px-2 py-1 text-sm font-medium hover:bg-muted">
+              Inventory assistant
+            </Link>
+          )}
           <NotificationBell />
 
           <Separator orientation="vertical" className="mx-1 h-6" />
