@@ -12,6 +12,7 @@ interface AuthContextValue {
   user: User | null;
   tenantId: string | null;
   tenantName: string | null;
+  accountEmail: string | null;
   role: UserRole | null;
   preset: TenantPreset;
   loading: boolean;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   tenantId: null,
   tenantName: null,
+  accountEmail: null,
   role: null,
   preset: 'full',
   loading: true,
@@ -33,6 +35,7 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [enabledModules, setEnabledModules] = useState<EnabledModules>({});
   const [preset, setPreset] = useState<TenantPreset>('full');
@@ -47,45 +50,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function loadUser() {
       const current = ++requestId;
       try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-
+        const response = await fetch('/api/workspace/profile', { cache: 'no-store' });
+        const profile = await response.json();
         if (current !== requestId) return;
-        if (!authUser) {
+        setAccountEmail(profile.email ?? null);
+        if (!response.ok) {
           setUser(null);
-          setLoading(false);
+          setTenantName(null);
+          setEnabledModules({});
+          setPreset('full');
           return;
         }
-
-        const { data } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
-
-        if (current !== requestId) return;
-        setUser(data ?? null);
-
-        // Fetch tenant name + settings + preset for white-label branding and module config
-        if (data?.tenant_id) {
-          const { data: tenant } = await supabase
-            .from('tenants')
-            .select('name, settings')
-            .eq('id', data.tenant_id)
-            .single();
-          if (current !== requestId) return;
-          setTenantName(tenant?.name ?? null);
-
-          // Extract enabled_modules and preset from tenant settings
-          const settings = (tenant?.settings as Record<string, unknown>) || {};
-          const modules = (settings.enabled_modules as Record<string, boolean>) || {};
-          setEnabledModules(modules);
-
-          // Read preset from settings (column may not exist yet — fallback to 'full')
-          const tenantPreset = (settings.preset as TenantPreset) || 'full';
-          setPreset(tenantPreset);
-        }
+        setUser(profile.user);
+        setTenantName(profile.tenant?.name ?? null);
+        const settings = (profile.tenant?.settings ?? {}) as Record<string, unknown>;
+        setEnabledModules((settings.enabled_modules as EnabledModules) ?? {});
+        setPreset((settings.preset as TenantPreset) ?? 'full');
       } catch {
         if (current === requestId) {
           setUser(null);
@@ -107,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         requestId++;
         setUser(null);
         setTenantName(null);
+        setAccountEmail(null);
         setEnabledModules({});
         setPreset('full');
         setLoading(false);
@@ -140,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         tenantId: user?.tenant_id ?? null,
         tenantName,
+        accountEmail,
         role: user?.role ?? null,
         preset,
         loading,

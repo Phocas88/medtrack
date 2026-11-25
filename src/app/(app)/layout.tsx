@@ -8,7 +8,7 @@ import { AuthProvider, useAuth } from "@/components/providers/auth-provider"
 import { createClient } from "@/lib/supabase/client"
 
 function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { tenantId, loading } = useAuth()
+  const { tenantId, loading, accountEmail, signOut } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const [checked, setChecked] = useState(false)
@@ -57,10 +57,16 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
             ? "Your warehouse profile could not be loaded. Contact your workspace administrator if this continues."
             : slow ? "This is taking longer than expected. Try reloading the page." : "Checking your account and workspace settings."}
         </p>
+        {missing && accountEmail && <p className="text-sm">Signed in as {accountEmail}</p>}
         {(missing || slow) && (
           <div className="flex flex-wrap gap-4 text-sm">
             <button type="button" className="underline" onClick={() => window.location.reload()}>Reload page</button>
-            {missing && <Link className="underline" href="/support">Get support</Link>}
+            {missing && (
+              <>
+                <button type="button" className="underline" onClick={() => void signOut()}>Switch account</button>
+                <Link className="underline" href="/support">Get support</Link>
+              </>
+            )}
           </div>
         )}
       </main>
