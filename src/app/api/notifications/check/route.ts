@@ -16,19 +16,13 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
-    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
-    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-
-    // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
-    if (apiKey) {
-      const providedKey = request.headers.get('x-api-key');
-      if (providedKey !== apiKey) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    if (!apiKey || request.headers.get('x-api-key') !== apiKey) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const address = request.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim() || 'local';
+    if (!checkRateLimit('notifications:' + address, 30, 60000).allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
     const supabase = createServiceClient();
@@ -36,7 +30,7 @@ export async function POST(request: Request) {
     // Get all active tenants
     const { data: tenants, error: tenantErr } = await supabase
       .from('tenants')
-      .select('id, name');
+      .select('id');
 
     if (tenantErr) {
       console.error('Failed to fetch tenants:', tenantErr);
@@ -47,33 +41,23 @@ export async function POST(request: Request) {
     }
 
     let totalCreated = 0;
-    const results: { tenantId: string; tenantName: string; created: number }[] = [];
+    let failures = 0;
 
     for (const tenant of tenants ?? []) {
       try {
         const created = await checkAndNotify(supabase, tenant.id);
         totalCreated += created;
-        results.push({
-          tenantId: tenant.id,
-          tenantName: tenant.name,
-          created,
-        });
-      } catch (err) {
-        console.error(`Error checking tenant ${tenant.id}:`, err);
-        results.push({
-          tenantId: tenant.id,
-          tenantName: tenant.name,
-          created: -1, // indicates error
-        });
+      } catch {
+        failures++;
       }
     }
 
     return NextResponse.json({
-      success: true,
+      success: failures === 0,
       totalCreated,
-      tenants: results,
+      failures,
       checkedAt: new Date().toISOString(),
-    });
+    }, { status: failures ? 502 : 200 });
   } catch (err) {
     console.error('Notification check error:', err);
     return NextResponse.json(

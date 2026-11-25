@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Privacy Policy | Stokora WMS' };
+export const metadata = { title: 'Privacy Policy | Stokora WMS', description: 'Read how Stokora handles account, warehouse, and inquiry information.', alternates: { canonical: '/legal/privacy' } };
 
 export default function PrivacyPolicyPage() {
   return (
@@ -15,11 +15,11 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-lg font-semibold">1. Information We Collect</h2>
             <p>Stokora WMS collects the following categories of information:</p>
             <ul className="list-disc pl-6 space-y-1">
+              <li><strong>Inquiry Information:</strong> Contact and business details submitted through the inquiry form</li>
               <li><strong>Account Information:</strong> Name, email address, company name, password (hashed)</li>
               <li><strong>Business Data:</strong> Products, inventory levels, orders, customers, suppliers, work orders, and related operational data you enter into the system</li>
               <li><strong>Shopify Data:</strong> When you connect a Shopify store, we access products, orders, customers, and inventory levels via the Shopify Admin API</li>
-              <li><strong>Payment Information:</strong> Processed by Stripe — we do not store credit card numbers</li>
-              <li><strong>Usage Data:</strong> Page views, feature usage via Vercel Analytics (anonymized)</li>
+              <li><strong>Payment Information:</strong> Card processing will use Stripe when enabled</li>
             </ul>
           </section>
 
@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-6 space-y-1">
               <li>Provide and operate the warehouse management service</li>
               <li>Sync inventory and orders with connected platforms (Shopify)</li>
-              <li>Process payments and manage subscriptions</li>
+              <li>Manage accounts and subscriptions when billing is enabled</li>
               <li>Send transactional emails (purchase orders to vendors, password resets, notifications)</li>
               <li>Improve the service and fix bugs</li>
             </ul>
@@ -37,10 +37,8 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold">3. Data Storage & Security</h2>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Data is stored in Supabase (PostgreSQL) with Row-Level Security (RLS) enforcing tenant isolation</li>
-              <li>All data is encrypted in transit (TLS) and at rest</li>
-              <li>Shopify access tokens are encrypted with AES-256-GCM before storage</li>
-              <li>Application hosted on Vercel with enterprise-grade infrastructure</li>
+              <li>Account and warehouse records are stored in Supabase PostgreSQL</li>
+              <li>The application is hosted on Vercel</li>
               <li>Security headers: CSP, HSTS, X-Frame-Options, Permissions-Policy</li>
             </ul>
           </section>
@@ -48,10 +46,8 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold">4. Data Retention</h2>
             <ul className="list-disc pl-6 space-y-1">
-              <li>Account data is retained while your subscription is active</li>
-              <li>Upon Shopify app uninstall: data retained for 48 hours, then anonymized per Shopify GDPR requirements</li>
-              <li>Upon account deletion request: PII is anonymized, financial records retained for legal compliance</li>
-              <li>Audit trail and stock movement records are immutable for traceability</li>
+              <li>Account records are retained while your organization uses the service</li>
+              <li>Warehouse movement records are retained for operational traceability</li>
             </ul>
           </section>
 
@@ -74,7 +70,8 @@ export default function PrivacyPolicyPage() {
               <thead><tr className="border-b"><th className="text-left py-2">Service</th><th className="text-left py-2">Purpose</th><th className="text-left py-2">Location</th></tr></thead>
               <tbody>
                 <tr className="border-b"><td className="py-2">Supabase</td><td>Database & authentication</td><td>US (AWS)</td></tr>
-                <tr className="border-b"><td className="py-2">Vercel</td><td>Hosting & analytics</td><td>US (AWS/Edge)</td></tr>
+                <tr className="border-b"><td className="py-2">Vercel</td><td>Hosting</td><td>US (AWS/Edge)</td></tr>
+                <tr className="border-b"><td className="py-2">Web3Forms</td><td>Public inquiry delivery</td><td>Provider-managed</td></tr>
                 <tr className="border-b"><td className="py-2">Stripe</td><td>Payment processing</td><td>US</td></tr>
                 <tr className="border-b"><td className="py-2">Resend</td><td>Transactional email</td><td>US</td></tr>
                 <tr className="border-b"><td className="py-2">EasyPost</td><td>Shipping labels & tracking</td><td>US</td></tr>
@@ -86,7 +83,7 @@ export default function PrivacyPolicyPage() {
 
           <section>
             <h2 className="text-lg font-semibold">7. Cookies</h2>
-            <p>We use essential cookies for authentication (Supabase session tokens). We do not use advertising or third-party tracking cookies. Vercel Analytics is cookieless and privacy-compliant.</p>
+            <p>We use essential cookies for authentication (Supabase session tokens). We do not use advertising or third-party tracking cookies.</p>
           </section>
 
           <section>

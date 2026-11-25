@@ -19,28 +19,12 @@ test.describe('Accessibility', () => {
     await expect(page.locator('input#password')).toBeVisible();
   });
 
-  test('signup page has labels', async ({ page }) => {
-    await page.goto('/auth/signup');
-
-    // Full Name label and input
-    const nameLabel = page.locator('label[for="fullName"]');
-    await expect(nameLabel).toBeVisible();
-    await expect(page.locator('input#fullName')).toBeVisible();
-
-    // Email label and input
-    const emailLabel = page.locator('label[for="email"]');
-    await expect(emailLabel).toBeVisible();
-    await expect(page.locator('input#email')).toBeVisible();
-
-    // Password label and input
-    const passwordLabel = page.locator('label[for="password"]');
-    await expect(passwordLabel).toBeVisible();
-    await expect(page.locator('input#password')).toBeVisible();
-
-    // Company Name label and input
-    const companyLabel = page.locator('label[for="companyName"]');
-    await expect(companyLabel).toBeVisible();
-    await expect(page.locator('input#companyName')).toBeVisible();
+  test('pilot inquiry fields have accessible labels', async ({ page }) => {
+    await page.goto('/#contact');
+    await expect(page.getByLabel('Contact name')).toBeVisible();
+    await expect(page.getByLabel('Business name')).toBeVisible();
+    await expect(page.getByLabel('Work email')).toBeVisible();
+    await expect(page.getByLabel('What workflow would you like to improve?')).toBeVisible();
   });
 
   test('all buttons have text or aria-label', async ({ page }) => {

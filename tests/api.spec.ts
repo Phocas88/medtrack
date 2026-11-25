@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-test('notification check endpoint exists', async ({ request }) => {
+test('notification jobs require an authorization key', async ({ request }) => {
   const response = await request.post('/api/notifications/check');
-  // Endpoint should exist (200 or 401), not be missing (404)
-  expect([200, 401]).toContain(response.status());
+  expect(response.status()).toBe(401);
+  expect((await request.post('/api/notifications/send-email')).status()).toBe(401);
 });
 
-test('portal invite requires body', async ({ request }) => {
+test('portal invite authenticates before reading the body', async ({ request }) => {
   const response = await request.post('/api/portal/invite', {
     data: {},
   });
-  expect(response.status()).toBe(400);
+  expect(response.status()).toBe(401);
 });

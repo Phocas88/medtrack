@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { formatDate, daysUntilExpiry } from '@/lib/format';
 import { CustomerDialog } from './customer-dialog';
-import { PortalInviteButton } from './portal-invite-button';
 import type { Customer } from '@/types/database';
 
 export default function CustomersPage() {
@@ -42,17 +41,6 @@ export default function CustomersPage() {
     { key: 'phone', label: 'Phone' },
     { key: 'license_type', label: 'License Type' },
     { key: 'license_number', label: 'License #' },
-    {
-      key: 'id' as keyof Customer,
-      label: 'Portal',
-      render: (row) => (
-        <PortalInviteButton
-          customerId={row.id}
-          customerEmail={row.email}
-          customerName={row.name}
-        />
-      ),
-    },
     {
       key: 'license_expiration',
       label: 'License Exp.',

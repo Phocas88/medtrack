@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
@@ -20,20 +21,16 @@ function createServiceClient() {
 
 export async function POST(request: Request) {
   try {
-    const { allowed } = checkRateLimit(request.headers.get('x-forwarded-for') || 'unknown', 30, 60000);
-    if (!allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-
-    // Auth check: require x-api-key header if NOTIFICATION_API_KEY is set
     const apiKey = process.env.NOTIFICATION_API_KEY;
-    if (apiKey) {
-      const providedKey = request.headers.get('x-api-key');
-      if (providedKey !== apiKey) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    if (!apiKey || request.headers.get('x-api-key') !== apiKey) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const address = request.headers.get('x-vercel-forwarded-for')?.split(',')[0].trim() || 'local';
+    if (!checkRateLimit('notifications:' + address, 30, 60000).allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
+    if (!resend) return NextResponse.json({ error: 'Email delivery is unavailable.' }, { status: 503 });
 
     const supabase = createServiceClient();
 
@@ -129,37 +126,22 @@ export async function POST(request: Request) {
       const fromAddress = 'notifications@' + (process.env.NEXT_PUBLIC_APP_DOMAIN || 'stokora.com');
 
       for (const recipientEmail of recipients) {
-        if (resend) {
-          try {
-            await resend.emails.send({
-              from: fromAddress,
-              to: recipientEmail,
-              subject: notification.title,
-              html: `<div style="font-family: sans-serif; padding: 20px;">
-      <h2>${notification.title}</h2>
-      <p>${notification.message || ''}</p>
-      <p style="color: #666; font-size: 12px;">This is an automated notification from your inventory management system.</p>
-    </div>`
-            });
-          } catch (emailErr) {
-            console.error(`Failed to send email to ${recipientEmail}:`, emailErr);
-          }
-        } else {
-          // Resend not configured — log to console as fallback
-          console.log('─── EMAIL (mock - set RESEND_API_KEY to enable) ───');
-          console.log(`  To:      ${recipientEmail}`);
-          console.log(`  Subject: ${notification.title}`);
-          console.log(`  Body:    ${notification.message ?? notification.title}`);
-          console.log(`  Priority: ${notification.priority}`);
-          console.log('────────────────────');
-        }
+        const recipientHash = createHash('sha256').update(recipientEmail).digest('hex');
+        const { error } = await resend.emails.send({
+          from: fromAddress,
+          to: recipientEmail,
+          subject: notification.title,
+          text: notification.message || notification.title,
+        }, { idempotencyKey: 'notification-' + notification.id + '-' + recipientHash });
+        if (error) return NextResponse.json({ error: 'A notification could not be delivered.' }, { status: 502 });
       }
 
       // Mark notification as email sent
-      await supabase
+      const { error: updateError } = await supabase
         .from('notifications')
         .update({ is_email_sent: true })
         .eq('id', notification.id);
+      if (updateError) return NextResponse.json({ error: 'Delivery status could not be saved.' }, { status: 502 });
 
       sentCount++;
     }
@@ -170,10 +152,9 @@ export async function POST(request: Request) {
       skipped: skippedCount,
       total: (notifications ?? []).length,
       processedAt: new Date().toISOString(),
-      provider: resend ? 'resend' : 'mock',
+      provider: 'resend',
     });
-  } catch (err) {
-    console.error('Email send error:', err);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

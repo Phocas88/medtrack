@@ -1,27 +1,34 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('API Security', () => {
-  test('signup API rejects empty body', async ({ request }) => {
+  test('old signup requests cannot provision an administrator', async ({ request }) => {
     const response = await request.post('/api/auth/signup', {
-      data: {},
+      data: { userId: 'fixture', email: 'fixture@example.test', fullName: 'Fixture', companyName: 'Fixture' },
     });
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBeTruthy();
+    expect(response.status()).toBe(503);
   });
 
-  test('signup API rejects partial body', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
-      data: { userId: '123' },
-    });
-    expect(response.status()).toBe(400);
+  test('card charging, billing, and demo seed routes fail closed', async ({ request }) => {
+    for (const path of ['/api/pos/charge', '/api/stripe/checkout', '/api/stripe/portal']) {
+      const response = await request.post(path, {data: {}});
+      expect(response.status()).toBe(503);
+      expect(await response.json()).not.toHaveProperty('success');
+    }
+    const seed = await request.post('/api/demo/seed');
+    expect(seed.status()).toBe(410);
+    const demoSession = await request.post('/api/demo/session', {data: {role: 'not-a-role', email: 'fixture@example.test'}});
+    expect(demoSession.status()).toBe(400);
   });
 
-  test('signup API rejects missing companyName', async ({ request }) => {
-    const response = await request.post('/api/auth/signup', {
-      data: { userId: '123', email: 'test@test.com', fullName: 'Test' },
-    });
-    expect(response.status()).toBe(400);
+  test('public pages and warehouse routes enforce different access rules', async ({ request }) => {
+    for (const path of ['/', '/demo', '/support', '/guide', '/legal/privacy', '/legal/terms', '/robots.txt', '/sitemap.xml']) {
+      expect((await request.get(path, { maxRedirects: 0 })).status()).toBe(200);
+    }
+    for (const path of ['/dashboard', '/billing', '/pos', '/scan', '/portal']) {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status()).toBe(307);
+      expect(response.headers()['location']).toContain(path === '/portal' ? '/portal/login' : '/auth/login');
+    }
   });
 
   test('notification check API exists', async ({ request }) => {

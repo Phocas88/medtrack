@@ -9,6 +9,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+      : undefined,
   },
   projects: [
     {
@@ -17,8 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: process.env.PLAYWRIGHT_PRODUCTION_BUILD === '1' ? 'npm run start' : 'npm run dev',
     port: 3000,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 });
