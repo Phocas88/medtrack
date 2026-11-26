@@ -124,8 +124,8 @@ export default function InventoryAssistantPage() {
               <ul className="space-y-2 text-sm">
                 {answer.order.lines.map(line => (
                   <li key={line.productId} className="break-words">
-                    <span className="font-medium">{line.sku}</span> · {line.remaining} remaining · {line.eligibleOnHand} eligible lot units
-                    {line.archived ? ' · Review inactive product' : line.shortage > 0 ? ` · Short ${line.shortage} units. Check replenishment or inbound stock.` : ' · Enough eligible lot stock'}
+                    <span className="font-medium">{line.sku}</span> · {line.remaining} remaining · {line.eligibleOnHand} eligible lot units · {line.reservedForOrder} reserved here · {line.reservedElsewhere} reserved elsewhere · {line.availableToOrder} available to this order
+                    {line.archived ? ' · Review inactive product' : line.shortage > 0 ? ` · Short ${line.shortage} units. Check replenishment or inbound stock.` : ' · Enough stock available to this order'}
                     {line.serialTracked && ' · Verify serial scans before shipping.'}
                     {line.bins.length > 0 && (
                       <p className="text-muted-foreground">

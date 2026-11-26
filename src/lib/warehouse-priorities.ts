@@ -53,9 +53,16 @@ export async function orderReadiness({ db, tenant }: InventorySession, orderNumb
     return { ...record, href: null, lines: [] };
   }
 
-  const lines = await allRows((from, to) => db.from('sales_order_lines')
+  const reservationRequest = db.rpc('order_reservation_status', { p_order: record.id });
+  const [reservationResult, lines] = await Promise.all([reservationRequest,
+    allRows((from, to) => db.from('sales_order_lines')
     .select('id, product_id, quantity_ordered, quantity_shipped, product:products(sku, is_archived, is_serial_tracked)')
-    .eq('tenant_id', tenant).eq('order_id', record.id).order('id').range(from, to));
+    .eq('tenant_id', tenant).eq('order_id', record.id).order('id').range(from, to)),
+  ]);
+  if (reservationResult.error) throw reservationResult.error;
+  const reservation = new Map<string, { on_hand: number; reserved_for_order: number; reserved_other: number }>(
+    (reservationResult.data ?? []).map((row: { product_id: string; on_hand: number; reserved_for_order: number; reserved_other: number }) => [row.product_id, row]),
+  );
   const demand = new Map<string, { sku: string; remaining: number; archived: boolean; serialTracked: boolean }>();
   for (const line of lines) {
     const remaining = Math.max(0, line.quantity_ordered - (line.quantity_shipped ?? 0));
@@ -75,7 +82,7 @@ export async function orderReadiness({ db, tenant }: InventorySession, orderNumb
   const products = [...demand];
   for (let offset = 0; offset < products.length; offset += 10) {
     const batch = await Promise.all(products.slice(offset, offset + 10).map(async ([id, line]) => {
-      if (line.archived) return { ...line, productId: id, eligibleOnHand: 0, shortage: line.remaining, bins: [] };
+      if (line.archived) return { ...line, productId: id, eligibleOnHand: 0, reservedForOrder: 0, reservedElsewhere: 0, availableToOrder: 0, shortage: line.remaining, bins: [] };
       const [lots, binRows] = await Promise.all([
         allRows((from, to) => db.from('lots')
           .select('id, quantity_on_hand, holds:quarantine_holds(status)')
@@ -94,7 +101,11 @@ export async function orderReadiness({ db, tenant }: InventorySession, orderNumb
         const code = relatedRow(row.bin)?.bin_code;
         return eligibleIds.has(row.lot_id) && typeof code === 'string' ? [code] : [];
       }))].sort();
-      return { ...line, productId: id, eligibleOnHand, shortage: Math.max(0, line.remaining - eligibleOnHand), bins };
+      const reservedForOrder = reservation.get(id)?.reserved_for_order ?? 0;
+      const reservedElsewhere = reservation.get(id)?.reserved_other ?? 0;
+      const availableToOrder = Math.max(0, (reservation.get(id)?.on_hand ?? eligibleOnHand) - reservedElsewhere);
+      return { ...line, productId: id, eligibleOnHand, reservedForOrder, reservedElsewhere, availableToOrder,
+        shortage: Math.max(0, line.remaining - availableToOrder), bins };
     }));
     results.push(...batch);
   }

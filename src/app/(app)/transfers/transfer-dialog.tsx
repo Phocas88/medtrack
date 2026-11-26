@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -47,6 +48,9 @@ interface LineItem {
   lot_number?: string;
 }
 
+type TransferReceipt = { usable: number; damaged: number; missing: number; note: string };
+const blankReceipt: TransferReceipt = { usable: 0, damaged: 0, missing: 0, note: '' };
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -64,6 +68,9 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
   const [toLocationId, setToLocationId] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<LineItem[]>([]);
+  const [receipt, setReceipt] = useState<Record<string, TransferReceipt>>({});
+  const [transit, setTransit] = useState<{ id: string; quantities?: Record<string, number>; error?: string }>();
+  const [receiptRequest, setReceiptRequest] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
 
   const isNew = !transfer;
@@ -71,6 +78,23 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
   const isInTransit = transfer?.status === 'in_transit';
   const isReceived = transfer?.status === 'received';
 
+  const transferId = transfer?.id;
+  useEffect(() => { setReceiptRequest(crypto.randomUUID()); }, [transferId]);
+  useEffect(() => {
+    if (!open || !tenantId || !transferId || (!isInTransit && !isReceived)) return;
+    const controller = new AbortController();
+    void createClient().from('transfer_stock')
+      .select('transfer_line_id,quantity_damaged, transfer_lines!inner(transfer_id)')
+      .eq('tenant_id', tenantId).eq('transfer_lines.transfer_id', transferId)
+      .abortSignal(controller.signal).then(({ data, error }) => {
+        if (controller.signal.aborted) return;
+        setTransit({ id: transferId, error: error?.message, quantities: data ?
+          Object.fromEntries(data.map(row => [row.transfer_line_id, row.quantity_damaged])) : undefined });
+      });
+    return () => controller.abort();
+  }, [open, tenantId, transferId, isInTransit, isReceived]);
+
+  const damagedByLine = transit?.id === transferId ? transit?.quantities : undefined;
   const loadRefs = useCallback(async () => {
     if (!tenantId) return;
     const supabase = createClient();
@@ -89,6 +113,8 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
   }, [open, loadRefs]);
 
   useEffect(() => {
+    setTransit(undefined);
+    setReceipt({});
     if (transfer) {
       setFromLocationId(transfer.from_location_id);
       setToLocationId(transfer.to_location_id);
@@ -199,17 +225,19 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
   }
 
   async function receiveTransfer() {
-    if (!transfer || !tenantId) return;
-    if (lines.some((l) => l.quantity_received < 0)) {
-      toast.error('Received quantities cannot be negative');
-      return;
-    }
+    if (!transfer || !tenantId || saving || !damagedByLine) return;
+    const items = lines.flatMap(line => {
+      const input = line.id ? receipt[line.id] : undefined;
+      return input && (input.usable || input.damaged || input.missing) ? [{ id: line.id, ...input }] : [];
+    });
+    if (!items.length) { toast.error('Enter usable, damaged, or missing quantities'); return; }
     setSaving(true);
-    const supabase = createClient();
-
-    const { error } = await supabase.rpc('receive_transfer', { p_transfer_id: transfer.id, p_lines: lines.map(line => ({ id: line.id, quantity_received: line.quantity_received })) });
+    const { error } = await createClient().rpc('review_transfer_receipt', {
+      p_request: receiptRequest, p_transfer: transfer.id, p_lines: items,
+    });
     if (error) { toast.error(error.message); setSaving(false); return; }
-    toast.success('Transfer received and stock updated');
+    setReceiptRequest(crypto.randomUUID());
+    toast.success('Transfer receipt posted');
     setSaving(false);
     onOpenChange(false);
     onSaved();
@@ -223,7 +251,7 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
   const locationName = (id: string) => locations.find((l) => l.id === id)?.name || '—';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={next => { if (!saving) onOpenChange(next); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -307,8 +335,7 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
                     <TableHead>Product</TableHead>
                     <TableHead>Lot</TableHead>
                     <TableHead className="w-[100px]">Qty</TableHead>
-                    {isInTransit && <TableHead className="w-[100px]">Received</TableHead>}
-                    {isReceived && <TableHead className="w-[100px]">Received</TableHead>}
+                    {(isInTransit || isReceived) && <TableHead>Usable received</TableHead>}
                     {isNew && <TableHead className="w-[50px]"></TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -369,22 +396,8 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
                             <span className="text-sm">{line.quantity}</span>
                           )}
                         </TableCell>
-                        {isInTransit && (
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min={0}
-                              max={line.quantity}
-                              className="h-8 text-sm"
-                              value={line.quantity_received}
-                              onChange={(e) => updateLine(idx, 'quantity_received', parseInt(e.target.value) || 0)}
-                            />
-                          </TableCell>
-                        )}
-                        {isReceived && (
-                          <TableCell>
-                            <span className="text-sm">{line.quantity_received}</span>
-                          </TableCell>
+                        {(isInTransit || isReceived) && (
+                          <TableCell><span className="text-sm">{line.quantity_received}</span></TableCell>
                         )}
                         {isNew && (
                           <TableCell>
@@ -400,6 +413,49 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
               </Table>
             </div>
           </div>
+
+          {(isInTransit || isReceived) && (
+            <section aria-label="Destination receiving" className="space-y-3">
+              <h3 className="font-semibold">Destination receiving</h3>
+              <p className="text-sm text-muted-foreground">Usable units enter destination stock. Set damaged units aside. Reported missing units stay in transit for follow-up.</p>
+              {!damagedByLine && <p role="status" className="text-sm">{transit?.error || 'Loading in-transit quantities…'}</p>}
+              {damagedByLine && lines.map(line => {
+                if (!line.id) return null;
+                const id = line.id;
+                const damaged = damagedByLine[id] ?? 0;
+                const remaining = line.quantity - line.quantity_received - damaged;
+                const input = receipt[id] ?? blankReceipt;
+                const over = input.usable + input.damaged + input.missing > remaining;
+                return (
+                  <fieldset key={id} disabled={saving} className="space-y-2 rounded border p-3">
+                    <legend className="px-1 font-medium">{line.product_name || productName(line.product_id)} · {line.lot_number}</legend>
+                    <p className="text-sm">{line.quantity} dispatched · {line.quantity_received} usable received · {damaged} damaged · {remaining} in transit</p>
+                    {isInTransit && remaining > 0 && (
+                      <>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          {(['usable','damaged','missing'] as const).map(field => (
+                            <label className="text-sm capitalize" key={field}>{field} this receipt
+                              <Input type="number" min={0} max={remaining} value={input[field] || ''}
+                                onChange={event => setReceipt(current => ({
+                                  ...current, [id]: { ...(current[id] ?? blankReceipt), [field]: Number(event.target.value) },
+                                }))} />
+                            </label>
+                          ))}
+                        </div>
+                        {over && <p role="alert" className="text-sm text-destructive">Entered quantities exceed stock in transit.</p>}
+                        {(input.damaged > 0 || input.missing > 0) && <label className="block text-sm">Discrepancy note
+                          <Textarea value={input.note} maxLength={2000} onChange={event => setReceipt(current => ({
+                            ...current, [id]: { ...(current[id] ?? blankReceipt), note: event.target.value },
+                          }))} />
+                        </label>}
+                      </>
+                    )}
+                  </fieldset>
+                );
+              })}
+              <Link className="inline-block text-sm underline" href={`/warehouse-followups?transfer=${transferId}`}>View transfer follow-ups</Link>
+            </section>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
@@ -418,7 +474,7 @@ export function TransferDialog({ open, onOpenChange, transfer, onSaved }: Props)
               </Button>
             )}
             {isInTransit && (
-              <Button onClick={receiveTransfer} disabled={saving}>
+              <Button onClick={receiveTransfer} disabled={saving || !damagedByLine}>
                 <PackageCheck className="h-4 w-4 mr-2" />
                 {saving ? 'Receiving...' : 'Receive Transfer'}
               </Button>

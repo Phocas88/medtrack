@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -35,6 +36,8 @@ import { Truck, Plus, Trash2, AlertTriangle, Check } from "lucide-react";
 import { pickLotsForQuantity } from "@/lib/fefo";
 import { formatDate } from "@/lib/format";
 import { ExpiryBadge } from "@/components/ui/expiry-badge";
+import { OrderReservation } from "./order-reservation";
+import { PackingReview, type Carton } from "./packing-review";
 import { InvoiceButton } from "./invoice-button";
 import type { Customer, Product, Lot, SalesOrder } from "@/types/database";
 
@@ -42,6 +45,11 @@ interface OrderLine {
   product_id: string;
   quantity: number;
   unit_price: number;
+}
+
+interface ShippedOrder extends SalesOrder {
+  customer?: Customer;
+  shipments?: { cartons: { id: string; carton_number: string; tracking_number: string; contents: string[] }[] }[];
 }
 
 interface PickSuggestion {
@@ -82,9 +90,10 @@ export default function ShipPage() {
   const [pickSuggestions, setPickSuggestions] = useState<PickSuggestion[]>([]);
   const [showPicking, setShowPicking] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [cartons, setCartons] = useState<Carton[]>([]);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [recentOrders, setRecentOrders] = useState<
-    (SalesOrder & { customer?: Customer })[]
+    ShippedOrder[]
   >([]);
 
   useEffect(() => {
@@ -128,10 +137,10 @@ export default function ShipPage() {
     setCustomerId(order.customer_id);
     setLines(
       order.lines
-        .filter((line) => line.quantity_ordered > line.quantity_shipped)
+        .filter((line) => line.quantity_ordered > (line.quantity_shipped ?? 0))
         .map((line) => ({
           product_id: line.product_id,
-          quantity: line.quantity_ordered - line.quantity_shipped,
+          quantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
           unit_price: line.unit_price,
         })),
     );
@@ -142,12 +151,12 @@ export default function ShipPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from("sales_orders")
-      .select("*, customer:customers(id, name)")
+      .select("*, customer:customers(id, name), shipments(cartons:shipment_cartons(id,carton_number,tracking_number,contents))")
       .eq("tenant_id", tenantId)
       .eq("status", "shipped")
       .order("created_at", { ascending: false })
       .limit(20);
-    setRecentOrders((data as (SalesOrder & { customer?: Customer })[]) || []);
+    setRecentOrders((data as ShippedOrder[]) || []);
   }
 
   function addLine() {
@@ -255,7 +264,7 @@ export default function ShipPage() {
   }
 
   async function handleConfirmShipment() {
-    if (!tenantId || !user) return;
+    if (!tenantId || !user || processing) return;
     setProcessing(true);
     const supabase = createClient();
 
@@ -266,7 +275,8 @@ export default function ShipPage() {
         customer_id: customerId,
         ship_date: shipDate,
         notes,
-        tracking_number: trackingNumber,
+        tracking_number: trackingNumber.trim() || cartons[0]?.tracking.trim() || "",
+        ...(cartons.length ? { cartons: cartons.map(({ number, tracking, scans }) => ({ number, tracking, scans })) } : {}),
         lines,
         serial_numbers: Object.fromEntries(
           Object.entries(serials).map(([id, value]) => [
@@ -286,6 +296,7 @@ export default function ShipPage() {
     }
     const orderNum = posted.order_number;
     setRequestId(crypto.randomUUID());
+    setCartons([]);
 
     toast.success(`Shipment ${orderNum} created successfully`);
     setShowPicking(false);
@@ -301,6 +312,12 @@ export default function ShipPage() {
     setPickSuggestions([]);
     setProcessing(false);
     loadRecentOrders();
+  }
+
+  const packingDemand = new Map<string, number>();
+  for (const line of lines) {
+    const sku = products.find(product => product.id === line.product_id)?.sku.toLowerCase();
+    if (sku && line.quantity > 0) packingDemand.set(sku, (packingDemand.get(sku) ?? 0) + line.quantity);
   }
 
   return (
@@ -319,6 +336,8 @@ export default function ShipPage() {
           onChange={(event) => {
             const id = event.target.value;
             setSelectedOrderId(id);
+            setCartons([]);
+            setSerials({});
             const order = existingOrders.find(
               (candidate) => candidate.id === id,
             );
@@ -327,11 +346,11 @@ export default function ShipPage() {
               order
                 ? order.lines
                     .filter(
-                      (line) => line.quantity_ordered > line.quantity_shipped,
+                      (line) => line.quantity_ordered > (line.quantity_shipped ?? 0),
                     )
                     .map((line) => ({
                       product_id: line.product_id,
-                      quantity: line.quantity_ordered - line.quantity_shipped,
+                      quantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
                       unit_price: line.unit_price,
                     }))
                 : [],
@@ -346,6 +365,7 @@ export default function ShipPage() {
             </option>
           ))}
         </select>
+        {selectedOrderId && <OrderReservation key={selectedOrderId} orderId={selectedOrderId} />}
         {selectedOrderId && (
           <p className="text-sm text-muted-foreground">
             This workflow ships all remaining quantities on the selected order.
@@ -530,6 +550,9 @@ export default function ShipPage() {
               </div>
             ))}
 
+          <PackingReview key={selectedOrderId} demand={packingDemand} cartons={cartons}
+            setCartons={setCartons} tracking={trackingNumber} disabled={processing} />
+
           <div className="flex gap-2 pt-2">
             <Button
               onClick={handlePrepareShipment}
@@ -555,7 +578,7 @@ export default function ShipPage() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Ship Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-24">Documents</TableHead>
+                  <TableHead>Cartons and documents</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -570,6 +593,19 @@ export default function ShipPage() {
                       <Badge variant="default">Shipped</Badge>
                     </TableCell>
                     <TableCell>
+                      {!!order.shipments?.some(shipment => shipment.cartons.length) && (
+                        <details className="mb-1 text-sm">
+                          <summary className="cursor-pointer">Cartons</summary>
+                          <ul className="space-y-1">
+                            {order.shipments.flatMap(shipment => shipment.cartons).map(carton => (
+                              <li key={carton.id} className="break-words">
+                                {carton.carton_number} · {carton.contents.length} items · {carton.tracking_number}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      <Link className="mb-1 block text-sm underline" href={`/warehouse-followups?order=${order.id}`}>Customer follow-up</Link>
                       <InvoiceButton
                         orderId={order.id}
                         tenantId={order.tenant_id}

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -295,6 +296,7 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
         {history.length > 0 && (
           <section className="space-y-2" aria-label="Recent receiving discrepancies">
             <h3 className="text-sm font-semibold">Recent discrepancies</h3>
+            <Link className="text-sm underline" href={`/warehouse-followups?po=${po.id}`}>View supplier follow-ups</Link>
             {history.map(row => (
               <div key={row.request_id + row.po_line_id} className="rounded border p-2 text-sm">
                 <p>{lines.find(line => line.po_line_id === row.po_line_id)?.sku} · {row.created_at.slice(0, 10)} · {row.usable_quantity} usable · {row.damaged_quantity} damaged · {row.remaining_quantity} open{row.confirmed_shortage ? ' · Confirmed shortage' : ''}</p>

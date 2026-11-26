@@ -27,6 +27,8 @@ const pageTitles: Record<string, string> = {
   "/metrics": "Metrics",
   "/inventory-overview": "Inventory Overview",
   "/inventory-assistant": "Inventory Assistant",
+  "/replenishment": "Pick-Bin Replenishment",
+  "/warehouse-followups": "Warehouse Follow-Ups",
   "/analytics": "Analytics",
   "/products": "Products",
   "/uom": "Units & Parts",

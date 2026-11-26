@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
@@ -39,6 +39,7 @@ export default function TransfersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTransfer, setEditTransfer] = useState<TransferWithDetails | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const openedLinkedTransfer = useRef(false);
 
   const loadTransfers = useCallback(async () => {
     if (!tenantId) return;
@@ -61,6 +62,16 @@ export default function TransfersPage() {
   useEffect(() => {
     loadTransfers();
   }, [loadTransfers]);
+
+  useEffect(() => {
+    if (openedLinkedTransfer.current) return;
+    const id = new URLSearchParams(window.location.search).get('transfer');
+    const linked = transfers.find(row => row.id === id);
+    if (!linked) return;
+    openedLinkedTransfer.current = true;
+    setEditTransfer(linked);
+    setDialogOpen(true);
+  }, [transfers]);
 
   const columns: Column<TransferWithDetails>[] = [
     { key: 'transfer_number', label: 'Transfer #', sortable: true },

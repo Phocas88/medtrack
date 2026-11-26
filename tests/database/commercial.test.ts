@@ -508,3 +508,89 @@ describe('purchase order discrepancies', () => {
     expect((await db.query('select po_id from po_receiving_discrepancies where po_id=$1', [po])).rows).toEqual([]);
   });
 });
+
+describe('warehouse execution workflows', () => {
+  it('moves approved pick-bin stock and guards competing reservations and carton posts', async () => {
+    const createRow = async (statement: string, values: unknown[]) =>
+      (await db.query<{id: string}>(statement, values)).rows[0].id;
+    await owner();
+    await db.query("update tenant_billing set plan='enterprise' where tenant_id=$1",[tenant]);
+    const item = await createRow("insert into products(tenant_id,name,sku) values($1,'Execution item','EXEC-1') returning id",[tenant]);
+    const location = await createRow("insert into locations(tenant_id,name,code) values($1,'Execution warehouse','EXEC') returning id",[tenant]);
+    const primary = await createRow("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'EXEC-PICK') returning id",[tenant,location]);
+    const reserve = await createRow("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'EXEC-BULK') returning id",[tenant,location]);
+    const lot = await createRow("insert into lots(tenant_id,product_id,lot_number,location_id,quantity_on_hand) values($1,$2,'EXEC-LOT',$3,10) returning id",[tenant,item,location]);
+    const assignment = await createRow('insert into product_bin_assignments(tenant_id,product_id,bin_id,max_quantity) values($1,$2,$3,8) returning id',[tenant,item,primary]);
+    await db.query('insert into bin_inventory(tenant_id,bin_id,product_id,lot_id,quantity) values($1,$2,$3,$4,10)',[tenant,reserve,item,lot]);
+    const order = await createRow("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'EXEC-ORDER','confirmed') returning id",[tenant,customer]);
+    const competing = await createRow("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'EXEC-OTHER','confirmed') returning id",[tenant,customer]);
+    await db.query('insert into sales_order_lines(tenant_id,order_id,product_id,quantity_ordered) values($1,$2,$4,6),($1,$3,$4,5)',[tenant,order,competing,item]);
+
+    await login(manager);
+    expect((await db.query('select suggested_quantity,source_code,target_code from pick_bin_replenishment() where assignment_id=$1',[assignment])).rows)
+      .toEqual([{ suggested_quantity: 8, source_code: 'EXEC-BULK', target_code: 'EXEC-PICK' }]);
+    const task = (await db.query<{id:string}>('select approve_pick_bin_replenishment($1,$2) id',[assignment,staff])).rows[0].id;
+    expect((await db.query('select approve_pick_bin_replenishment($1,$2) id',[assignment,staff])).rows).toEqual([{id:task}]);
+    await login(staff);
+    await db.query('select start_scan_task($1)',[task]);
+    await db.query("select complete_scan_task($1,8,null,'EXEC-BULK','EXEC-PICK',$2::jsonb)",[task,JSON.stringify([{value:'EXEC-1'}])]);
+    expect((await db.query('select quantity from bin_inventory where bin_id=$1 and product_id=$2',[primary,item])).rows).toEqual([{quantity:8}]);
+    await expect(db.query('select set_order_reservation($1,true)',[order])).rejects.toThrow('Manager required');
+
+    await login(manager);
+    await db.query('select set_order_reservation($1,true)',[order]);
+    await expect(db.query('select set_order_reservation($1,true)',[competing])).rejects.toThrow('Cannot reserve');
+    expect((await db.query('select on_hand,reserved_other,reserved_for_order from order_reservation_status($1)',[competing])).rows)
+      .toEqual([{on_hand:10,reserved_other:6,reserved_for_order:0}]);
+    const post = 'select ship_inventory($1,$2::jsonb) result';
+    const request = '88888888-0000-4000-8000-000000000001';
+    await expect(db.query(post,[request,JSON.stringify({order_id:competing})])).rejects.toThrow('reserved for another order');
+    await expect(db.query(post,[request,JSON.stringify({order_id:order,tracking_number:'TRACK',cartons:[{number:'C1',scans:['WRONG']} ]})]))
+      .rejects.toThrow('Packed items must match');
+    expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:10}]);
+    const payload = JSON.stringify({order_id:order,tracking_number:'TRACK',cartons:[
+      {number:'C1',scans:Array(3).fill('EXEC-1')},{number:'C2',tracking:'TRACK-2',scans:Array(3).fill('EXEC-1')},
+    ]});
+    const first = await db.query(post,[request,payload]);
+    expect((await db.query(post,[request,payload])).rows).toEqual(first.rows);
+    expect((await db.query("select carton_number,tracking_number from shipment_cartons where tracking_number like 'TRACK%' order by carton_number")).rows)
+      .toEqual([{carton_number:'C1',tracking_number:'TRACK'},{carton_number:'C2',tracking_number:'TRACK-2'}]);
+    expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:4}]);
+    expect((await db.query('select quantity from order_reservations where order_id=$1',[order])).rows).toEqual([]);
+    await login(other);
+    expect((await db.query("select id from shipment_cartons where tracking_number='TRACK'")).rows).toEqual([]);
+  });
+
+  it('accounts for transfer damage and missing units and keeps resolution history', async () => {
+    const createRow = async (statement: string, values: unknown[]) =>
+      (await db.query<{id: string}>(statement,values)).rows[0].id;
+    await owner();
+    const origin = await createRow("insert into locations(tenant_id,name,code) values($1,'Execution source','EXEC-SRC') returning id",[tenant]);
+    const destination = await createRow("insert into locations(tenant_id,name,code) values($1,'Execution store','EXEC-DST') returning id",[tenant]);
+    const lot = await createRow("insert into lots(tenant_id,product_id,lot_number,location_id,quantity_on_hand) values($1,$2,'EXEC-TRANSFER-LOT',$3,10) returning id",[tenant,product,origin]);
+    const transfer = await createRow("insert into transfers(tenant_id,transfer_number,from_location_id,to_location_id,status) values($1,'EXEC-TRANSFER',$2,$3,'pending') returning id",[tenant,origin,destination]);
+    const line = await createRow('insert into transfer_lines(tenant_id,transfer_id,product_id,lot_id,quantity) values($1,$2,$3,$4,10) returning id',[tenant,transfer,product,lot]);
+    await login(manager);
+    await db.query('select dispatch_transfer($1)',[transfer]);
+    const receipt = 'select review_transfer_receipt($1,$2,$3::jsonb)';
+    const first = ['88888888-0000-4000-8000-000000000011',transfer,JSON.stringify([{id:line,usable:7,damaged:1,missing:2,note:'Carton was damaged'}])];
+    await db.query(receipt,first);
+    await db.query(receipt,first);
+    expect((await db.query('select quantity_received,quantity_damaged from transfer_stock where transfer_line_id=$1',[line])).rows)
+      .toEqual([{quantity_received:7,quantity_damaged:1}]);
+    expect((await db.query('select status from transfers where id=$1',[transfer])).rows).toEqual([{status:'in_transit'}]);
+    expect((await db.query("select quantity_on_hand from lots where location_id=$1 and lot_number='EXEC-TRANSFER-LOT'",[destination])).rows)
+      .toEqual([{quantity_on_hand:7}]);
+    const [{id: followup}] = (await db.query<{id:string}>('select id from warehouse_followups where source_id=$1',[transfer])).rows;
+    await db.query("select save_warehouse_followup($1,'transfer','',null,null,$2,current_date,'Received missing units the next day',true)",[followup,manager]);
+    expect((await db.query('select owner_id,resolved_at is not null as resolved from warehouse_followups where id=$1',[followup])).rows)
+      .toEqual([{owner_id:manager,resolved:true}]);
+    expect((await db.query('select id from warehouse_followup_events where followup_id=$1',[followup])).rows).toHaveLength(2);
+    await db.query(receipt,['88888888-0000-4000-8000-000000000012',transfer,JSON.stringify([{id:line,usable:2}])]);
+    expect((await db.query('select status from transfers where id=$1',[transfer])).rows).toEqual([{status:'received'}]);
+    expect((await db.query("select quantity_on_hand from lots where location_id=$1 and lot_number='EXEC-TRANSFER-LOT'",[destination])).rows)
+      .toEqual([{quantity_on_hand:9}]);
+    await login(other);
+    expect((await db.query('select id from warehouse_followups where id=$1',[followup])).rows).toEqual([]);
+  });
+});

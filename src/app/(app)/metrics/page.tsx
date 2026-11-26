@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ShiftPriorities } from '@/components/workspace/shift-priorities';
@@ -525,6 +527,10 @@ export default function MetricsPage() {
       <PageHeader title="Metrics Command Center" description="Track inventory health, movement, and fulfillment." />
 
       <ShiftPriorities />
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        <Link className="underline" href="/replenishment">Pick-bin replenishment</Link>
+        <Link className="underline" href="/warehouse-followups">Warehouse follow-ups</Link>
+      </div>
 
       {/* Top-level KPIs */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">

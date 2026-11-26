@@ -123,6 +123,8 @@ const navSections: NavSection[] = [
       },
       { label: "Receive", href: "/receive", icon: PackagePlus },
       { label: "Put-Away", href: "/put-away", icon: PackageOpen },
+      { label: "Pick-Bin Replenishment", href: "/replenishment", icon: Boxes },
+      { label: "Warehouse Follow-Ups", href: "/warehouse-followups", icon: ClipboardList },
       { label: "Wave Picking", href: "/wave-picking", icon: Layers },
       { label: "Ship", href: "/ship", icon: Truck },
       { label: "Returns", href: "/returns", icon: RotateCcw },
