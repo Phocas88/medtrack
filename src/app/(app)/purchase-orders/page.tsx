@@ -259,7 +259,7 @@ export default function PurchaseOrdersPage() {
                 Send
               </Button>
             )}
-            {canReceive && (
+            {(canReceive || row.status === 'received') && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -269,7 +269,7 @@ export default function PurchaseOrdersPage() {
                 }}
               >
                 <PackageCheck className="h-4 w-4 mr-1" />
-                Receive
+                {canReceive ? 'Receive' : 'Receiving history'}
               </Button>
             )}
           </div>

@@ -464,3 +464,47 @@ describe('staff floor-only data access',()=>{
   expect((await db.query('select id from staff_products where id=$1',[product])).rows).toHaveLength(1);
  });
 });
+
+describe('purchase order discrepancies', () => {
+  it('records 96 delivered, puts away 92 usable, and leaves four missing without duplicating the receipt', async () => {
+    await owner();
+    const location = (await db.query<{id: string}>(
+      "insert into locations(tenant_id,name,code) values($1,'Receiving review','RCV-REVIEW') returning id", [tenant],
+    )).rows[0].id;
+    const supplier = (await db.query<{id: string}>(
+      "insert into suppliers(tenant_id,name) values($1,'Discrepancy supplier') returning id", [tenant],
+    )).rows[0].id;
+    const po = (await db.query<{id: string}>(
+      "insert into purchase_orders(tenant_id,po_number,supplier_id,status) values($1,'PO-DISCREPANCY',$2,'sent') returning id",
+      [tenant, supplier],
+    )).rows[0].id;
+    const line = (await db.query<{id: string}>(
+      'insert into po_lines(tenant_id,po_id,product_id,quantity_ordered,unit_cost) values($1,$2,$3,100,2) returning id',
+      [tenant, po, product],
+    )).rows[0].id;
+    await login(manager);
+    const payload = {
+      po_line_id: line, quantity_to_receive: 92, damaged_quantity: 4, confirmed_shortage: true,
+      lot_number: 'REVIEW-LOT', discrepancy_note: 'Check supplier disposition for damage and the outstanding units.',
+    };
+    const rpc = 'select receive_purchase_order($1,$2,$3,$4::jsonb)';
+    const requestId = '50000000-0000-4000-8000-000000000081';
+    await expect(db.query(rpc, [requestId, po, location, JSON.stringify([{ ...payload, damaged_quantity: 9 }])]))
+      .rejects.toThrow('overage');
+    const args = [requestId, po, location, JSON.stringify([payload])];
+    await db.query(rpc, args);
+    await db.query(rpc, args);
+    expect((await db.query('select quantity_received from po_lines where id=$1', [line])).rows)
+      .toEqual([{quantity_received: 96}]);
+    expect((await db.query('select status from purchase_orders where id=$1', [po])).rows)
+      .toEqual([{status: 'partial'}]);
+    expect((await db.query("select quantity_on_hand from lots where lot_number='REVIEW-LOT'")).rows)
+      .toEqual([{quantity_on_hand: 92}]);
+    expect((await db.query("select requested_quantity from scan_tasks where title='Put away lot REVIEW-LOT'")).rows)
+      .toEqual([{requested_quantity: 92}]);
+    expect((await db.query('select usable_quantity, damaged_quantity, remaining_quantity, confirmed_shortage from po_receiving_discrepancies where po_id=$1', [po])).rows)
+      .toEqual([{usable_quantity: 92, damaged_quantity: 4, remaining_quantity: 4, confirmed_shortage: true}]);
+    await login(other);
+    expect((await db.query('select po_id from po_receiving_discrepancies where po_id=$1', [po])).rows).toEqual([]);
+  });
+});

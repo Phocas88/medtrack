@@ -1,3 +1,4 @@
+import { askOpenAI } from '@/lib/warehouse-openai';
 import { orderReadiness, warehousePriorities } from '@/lib/warehouse-priorities';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -28,32 +29,6 @@ const intent = z.object({
   sku: z.string().max(100),
 });
 
-async function askOpenAI(key: string, instructions: string, input: string, structured = false) {
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'gpt-4.1-mini', instructions, input, store: false, max_output_tokens: 600,
-      ...(structured && { text: { format: {
-        type: 'json_schema', name: 'inventory_question', strict: true,
-        schema: {
-          type: 'object', additionalProperties: false, required: ['task', 'sku'],
-          properties: {
-            task: { type: 'string', enum: intent.shape.task.options },
-            sku: { type: 'string' },
-          },
-        },
-      } } }),
-    }),
-    signal: AbortSignal.timeout(12000),
-  });
-  if (!response.ok) throw new Error('OpenAI request failed.');
-  const body = await response.json();
-  const message = body.output?.find((item: { type: string }) => item.type === 'message');
-  const text = message?.content?.find((item: { type: string }) => item.type === 'output_text')?.text;
-  if (typeof text !== 'string' || !text) throw new Error('OpenAI returned no answer.');
-  return text;
-}
 
 export async function POST(request: Request) {
   if (request.headers.get('sec-fetch-site') === 'cross-site') return reply({ error: 'Forbidden.' }, 403);
@@ -69,7 +44,10 @@ export async function POST(request: Request) {
 
     const requestIntent = intent.parse(JSON.parse(await askOpenAI(key,
       'Classify the warehouse question. Use priorities for shift priorities or what to do first. Use orderReadiness for shipping readiness or blockers of a specific order. For orderReadiness, put the explicitly supplied exact order number in the sku field. Use sku only for a specific SKU explicitly supplied by the user and copy it exactly. Use summary for a summary of all warehouse alerts. Use unsupported for write requests, unrelated questions or ambiguous requests. Return an empty sku for tasks other than sku and orderReadiness.',
-      body.data.question, true)));
+      body.data.question, {
+        type: 'object', additionalProperties: false, required: ['task', 'sku'],
+        properties: { task: { type: 'string', enum: intent.shape.task.options }, sku: { type: 'string' } },
+      })));
     const { task, sku } = requestIntent;
     if (task === 'priorities') {
       const priorities = await warehousePriorities(session);
