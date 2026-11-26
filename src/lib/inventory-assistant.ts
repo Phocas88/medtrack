@@ -13,9 +13,9 @@ export async function inventorySession() {
   return { db, tenant: profile.tenant_id as string, userId: user.id };
 }
 
-type Session = NonNullable<Awaited<ReturnType<typeof inventorySession>>>;
+export type InventorySession = NonNullable<Awaited<ReturnType<typeof inventorySession>>>;
 
-async function allRows<T>(query: (from: number, to: number) => PromiseLike<{
+export async function allRows<T>(query: (from: number, to: number) => PromiseLike<{
   data: T[] | null; error: unknown;
 }>) {
   const rows: T[] = [];
@@ -29,7 +29,7 @@ async function allRows<T>(query: (from: number, to: number) => PromiseLike<{
   throw new Error('Inventory scan exceeds its current query limit.');
 }
 
-export async function inventoryAlerts({ db, tenant }: Session) {
+export async function inventoryAlerts({ db, tenant }: InventorySession) {
   const now = new Date();
   const staleBefore = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
   const today = now.toISOString().slice(0, 10);
@@ -75,7 +75,7 @@ export async function inventoryAlerts({ db, tenant }: Session) {
   };
 }
 
-export async function lookupInventory({ db, tenant }: Session, sku: string) {
+export async function lookupInventory({ db, tenant }: InventorySession, sku: string) {
   const { data: product, error } = await db.from('products').select('id, sku, name')
     .eq('tenant_id', tenant).eq('is_archived', false)
     .ilike('sku', sku.replace(/[\\%_]/g, '\\$&')).maybeSingle();

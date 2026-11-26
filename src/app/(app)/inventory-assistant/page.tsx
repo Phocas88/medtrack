@@ -3,14 +3,22 @@
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { PriorityList } from '@/components/workspace/shift-priorities';
+import type { orderReadiness, warehousePriorities } from '@/lib/warehouse-priorities';
 import { Button } from '@/components/ui/button';
 import type { inventoryAlerts } from '@/lib/inventory-assistant';
 
 type Alerts = Awaited<ReturnType<typeof inventoryAlerts>>;
-type Answer = { answer: string; evidence?: unknown };
+type Answer = {
+  answer: string;
+  evidence?: unknown;
+  priorities?: Awaited<ReturnType<typeof warehousePriorities>>;
+  order?: NonNullable<Awaited<ReturnType<typeof orderReadiness>>>;
+};
 
 const endpoint = '/api/inventory-assistant';
 const questions = [
+  'What should my team handle first today?',
   'Which SKUs are below reorder level?',
   'Which lots are expiring?',
   'Which orders are stalled?',
@@ -19,7 +27,7 @@ const questions = [
 
 export default function InventoryAssistantPage() {
   const { user, loading } = useAuth();
-  const allowed = !!user?.is_active && (user.role === 'admin' || user.role === 'manager');
+  const allowed = !!user?.is_active && user.access_level !== 'scanner_only' && (user.role === 'admin' || user.role === 'manager');
   const [alerts, setAlerts] = useState<Alerts | null>(null);
   const [alertError, setAlertError] = useState('');
   const [question, setQuestion] = useState('');
@@ -103,12 +111,36 @@ export default function InventoryAssistantPage() {
         <form onSubmit={ask} className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="inventory-question" className="sr-only">Warehouse question</label>
           <input id="inventory-question" className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2" value={question}
-            onChange={event => setQuestion(event.target.value)} placeholder="Where is SKU 1042 and how much is on hand?"
+            onChange={event => setQuestion(event.target.value)} placeholder="Why can’t order SO-123 ship?"
             maxLength={500} required disabled={busy} />
           <Button disabled={busy || !question.trim()}>{busy ? 'Checking records…' : 'Ask'}</Button>
         </form>
         {error && <p role="alert" className="text-destructive">{error}</p>}
         {answer && <div role="status" className="space-y-2"><p className="whitespace-pre-wrap">{answer.answer}</p></div>}
+        {answer?.priorities && <PriorityList groups={answer.priorities} />}
+        {answer?.order?.href && (
+          <div className="space-y-3">
+            {answer.order.lines.length ? (
+              <ul className="space-y-2 text-sm">
+                {answer.order.lines.map(line => (
+                  <li key={line.productId} className="break-words">
+                    <span className="font-medium">{line.sku}</span> · {line.remaining} remaining · {line.eligibleOnHand} eligible lot units
+                    {line.archived ? ' · Review inactive product' : line.shortage > 0 ? ` · Short ${line.shortage} units. Check replenishment or inbound stock.` : ' · Enough eligible lot stock'}
+                    {line.serialTracked && ' · Verify serial scans before shipping.'}
+                    {line.bins.length > 0 && (
+                      <p className="text-muted-foreground">
+                        Bins with eligible lots: {line.bins.slice(0, 5).join(', ')}
+                        {line.bins.length > 5 && ` and ${line.bins.length - 5} more`}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="text-sm">No unshipped units were found on the order lines.</p>}
+            <p className="text-sm text-muted-foreground">Eligible lot stock is a snapshot. Review bin availability and complete picking checks in Shipping.</p>
+            <Link className="inline-block text-sm underline" href={answer.order.href}>Open order in Shipping</Link>
+          </div>
+        )}
         {answer?.evidence !== undefined && (
           <details className="rounded border p-2">
             <summary className="cursor-pointer text-sm font-medium">Source records</summary>

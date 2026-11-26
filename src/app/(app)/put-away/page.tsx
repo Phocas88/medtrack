@@ -110,8 +110,12 @@ export default function PutAwayPage() {
   const [activeTask, setActiveTask] = useState<PutAwayTask | null>(null);
   const [scannerTaskId, setScannerTaskId] = useState<string | null>(null);
 
+  const [reviewTaskId, setReviewTaskId] = useState<string | null>(null);
+
   useEffect(() => {
-    setScannerTaskId(new URLSearchParams(window.location.search).get('task'));
+    const params = new URLSearchParams(window.location.search);
+    setScannerTaskId(params.get('task'));
+    setReviewTaskId(params.get('review'));
   }, []);
   const [workflowStep, setWorkflowStep] = useState(0);
   const [scanInput, setScanInput] = useState('');
@@ -762,6 +766,26 @@ export default function PutAwayPage() {
       <div className="space-y-6">
         <PageHeader title="Put-Away" description="Manage put-away tasks from receiving to bins" />
         <div className="py-12 text-center text-muted-foreground">Loading put-away tasks...</div>
+      </div>
+    );
+  }
+
+  if (reviewTaskId && (user?.role === 'admin' || user?.role === 'manager') && user.access_level !== 'scanner_only') {
+    const task = [...pendingTasks, ...inProgressTasks].find(item => item.id === reviewTaskId);
+    return (
+      <div className="mx-auto max-w-lg space-y-4">
+        <PageHeader title="Review putaway task" />
+        {task ? (
+          <Card>
+            <CardContent className="space-y-2 p-4">
+              <p className="break-words font-semibold">{task.title}</p>
+              <p>Status: {task.status.replaceAll('_', ' ')}</p>
+              <p>Assigned to: {task.assigned_user?.full_name ?? 'Unassigned'}</p>
+              <p>{task.instructions}</p>
+            </CardContent>
+          </Card>
+        ) : <p role="status">This task is no longer on the open putaway list.</p>}
+        <Button asChild variant="outline"><Link href="/put-away">Open putaway queue</Link></Button>
       </div>
     );
   }

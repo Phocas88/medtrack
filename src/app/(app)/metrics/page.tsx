@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { ShiftPriorities } from '@/components/workspace/shift-priorities';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -522,6 +523,8 @@ export default function MetricsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Metrics Command Center" description="Track inventory health, movement, and fulfillment." />
+
+      <ShiftPriorities />
 
       {/* Top-level KPIs */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">

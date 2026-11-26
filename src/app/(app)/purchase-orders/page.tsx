@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -58,6 +59,11 @@ export default function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<POWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [poId, setPoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPoId(new URLSearchParams(window.location.search).get('po'));
+  }, []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editPO, setEditPO] = useState<PurchaseOrder | null>(null);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -74,7 +80,8 @@ export default function PurchaseOrdersPage() {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
 
-    if (statusFilter !== 'all') {
+    if (poId) query = query.eq('id', poId);
+    if (!poId && statusFilter !== 'all') {
       query = query.eq('status', statusFilter);
     }
 
@@ -88,7 +95,7 @@ export default function PurchaseOrdersPage() {
 
     setOrders(enriched);
     setLoading(false);
-  }, [tenantId, statusFilter]);
+  }, [tenantId, statusFilter, poId]);
 
   useEffect(() => {
     loadOrders();
@@ -288,6 +295,11 @@ export default function PurchaseOrdersPage() {
         }
       />
 
+      {poId ? (
+        <Link href="/purchase-orders" onClick={() => setPoId(null)} className="inline-block text-sm underline">
+          View all purchase orders
+        </Link>
+      ) : (
       <div className="flex items-center gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[200px]">
@@ -300,6 +312,7 @@ export default function PurchaseOrdersPage() {
           </SelectContent>
         </Select>
       </div>
+      )}
 
       {loading ? (
         <div className="py-12 text-center text-muted-foreground">Loading purchase orders...</div>

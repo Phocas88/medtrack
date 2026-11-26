@@ -1,3 +1,4 @@
+import { orderReadiness, warehousePriorities } from '@/lib/warehouse-priorities';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { inventoryAlerts, inventorySession, lookupInventory } from '@/lib/inventory-assistant';
@@ -7,11 +8,14 @@ import { HttpError } from '@/lib/server-auth';
 const headers = { 'Cache-Control': 'private, no-store' };
 const reply = (data: unknown, status = 200) => NextResponse.json(data, { status, headers });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await inventorySession();
     if (!session) return reply({ error: 'Warehouse manager access is required.' }, 403);
     await enforceRateLimit('inventory-alerts', session.userId, 12);
+    if (new URL(request.url).searchParams.get('view') === 'priorities') {
+      return reply(await warehousePriorities(session));
+    }
     return reply(await inventoryAlerts(session));
   } catch (error) {
     if (error instanceof HttpError) return reply({ error: error.message }, error.status);
@@ -20,7 +24,7 @@ export async function GET() {
 }
 
 const intent = z.object({
-  task: z.enum(['sku', 'lowStock', 'expiring', 'fulfillment', 'summary', 'unsupported']),
+  task: z.enum(['sku', 'lowStock', 'expiring', 'fulfillment', 'summary', 'priorities', 'orderReadiness', 'unsupported']),
   sku: z.string().max(100),
 });
 
@@ -64,11 +68,25 @@ export async function POST(request: Request) {
     if (!key) return reply({ error: 'The inventory assistant is unavailable.' }, 503);
 
     const requestIntent = intent.parse(JSON.parse(await askOpenAI(key,
-      'Classify the warehouse question. Use sku only for a specific SKU explicitly supplied by the user and copy it exactly. Use summary for a summary of all warehouse alerts. Use unsupported for write requests, unrelated questions or ambiguous requests. Return an empty sku for non-SKU questions.',
+      'Classify the warehouse question. Use priorities for shift priorities or what to do first. Use orderReadiness for shipping readiness or blockers of a specific order. For orderReadiness, put the explicitly supplied exact order number in the sku field. Use sku only for a specific SKU explicitly supplied by the user and copy it exactly. Use summary for a summary of all warehouse alerts. Use unsupported for write requests, unrelated questions or ambiguous requests. Return an empty sku for tasks other than sku and orderReadiness.',
       body.data.question, true)));
     const { task, sku } = requestIntent;
+    if (task === 'priorities') {
+      const priorities = await warehousePriorities(session);
+      return reply({ answer: priorities.some(group => group.count)
+        ? 'Review these shift priorities. Within each group, the oldest records appear first.'
+        : 'No overdue receipts, aging putaway, or stalled orders were found.', priorities });
+    }
+    if (task === 'orderReadiness') {
+      if (!sku || !body.data.question.toLowerCase().includes(sku.toLowerCase())) {
+        return reply({ answer: 'Include the exact sales order number so I can check it.' });
+      }
+      const order = await orderReadiness(session, sku);
+      if (!order) return reply({ answer: 'I could not find a unique sales order with that number.' });
+      return reply({ answer: order.order_number + ' is ' + (order.status ?? 'missing a status') + '.', order });
+    }
     if (task === 'unsupported' || (task === 'sku' && (!sku || !body.data.question.toLowerCase().includes(sku.toLowerCase())))) {
-      return reply({ answer: 'Ask about a specific SKU, low stock, expiring lots, stalled orders, or a summary of alerts.' });
+      return reply({ answer: 'Ask about a specific SKU, low stock, expiring lots, stalled orders, shift priorities, or the readiness of a specific sales order.' });
     }
 
     const alerts = task === 'sku' ? null : await inventoryAlerts(session);
