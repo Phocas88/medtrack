@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { PackageCheck, Info, Printer } from 'lucide-react';
-import { formatCurrency } from '@/lib/format';
 import { generateReceivingDocumentPDF } from '@/lib/pdf';
+import { formatCurrency } from '@/lib/format';
 import type { PurchaseOrder, POLine, Product, Location } from '@/types/database';
 
 interface ReceiveLine {
@@ -50,6 +50,7 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
   const { user, tenantId } = useAuth();
   const [lines, setLines] = useState<ReceiveLine[]>([]);
   const [saving, setSaving] = useState(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [receivingLocationId, setReceivingLocationId] = useState<string>('');
@@ -166,112 +167,12 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
     const supabase = createClient();
 
     try {
-      let putawayTaskCount = 0;
-
-      for (const line of linesToReceive) {
-        // Create lot record — location is the RECEIVING location, not final bin
-        const { data: lot, error: lotErr } = await supabase
-          .from('lots')
-          .insert({
-            tenant_id: tenantId,
-            product_id: line.product_id,
-            lot_number: line.lot_number,
-            expiration_date: line.expiration_date || null,
-            quantity_on_hand: line.quantity_to_receive,
-            received_date: new Date().toISOString().split('T')[0],
-            supplier_id: po.supplier_id,
-            cost_at_receipt: line.unit_cost,
-            location: receivingLocation?.name || null,
-            location_id: receivingLocationId,
-            status: 'active',
-          })
-          .select('id')
-          .single();
-        if (lotErr) throw lotErr;
-
-        // Create stock movement
-        const { error: mvErr } = await supabase.from('stock_movements').insert({
-          tenant_id: tenantId,
-          product_id: line.product_id,
-          lot_id: lot.id,
-          user_id: user.id,
-          quantity: line.quantity_to_receive,
-          movement_type: 'receive',
-          reason: `Received against PO ${po.po_number}`,
-          reference_number: po.po_number,
-          metadata: { po_id: po.id, po_line_id: line.po_line_id },
-        });
-        if (mvErr) throw mvErr;
-
-        // Update po_line quantity_received
-        const { error: lineErr } = await supabase
-          .from('po_lines')
-          .update({
-            quantity_received: line.quantity_previously_received + line.quantity_to_receive,
-          })
-          .eq('id', line.po_line_id);
-        if (lineErr) throw lineErr;
-
-        // Look up primary bin assignment for this product
-        const { data: binAssignment } = await supabase
-          .from('product_bin_assignments')
-          .select('*, bin:bins(*)')
-          .eq('tenant_id', tenantId)
-          .eq('product_id', line.product_id)
-          .eq('bin_role', 'primary')
-          .eq('is_active', true)
-          .maybeSingle();
-
-        const targetBinId = binAssignment?.bin_id || null;
-        const targetBinCode = binAssignment?.bin?.bin_code || 'unassigned';
-
-        // Create put-away scan task
-        const { error: taskErr } = await supabase.from('scan_tasks').insert({
-          tenant_id: tenantId,
-          task_type: 'putaway',
-          status: 'pending',
-          priority: 5,
-          title: `Put away ${line.product_name} - Lot ${line.lot_number}`,
-          instructions: `Move ${line.quantity_to_receive} units from ${receivingLocation?.name || 'Receiving'} to bin ${targetBinCode}`,
-          assigned_to: null,
-          assigned_by: user.id,
-          location_id: receivingLocationId,
-          bin_id: null,
-          product_id: line.product_id,
-          lot_id: lot.id,
-          source_bin_id: null,
-          target_bin_id: targetBinId,
-          requested_quantity: line.quantity_to_receive,
-        });
-        if (taskErr) throw taskErr;
-        putawayTaskCount++;
-      }
-
-      // Check if all lines are fully received
-      const { data: updatedLines } = await supabase
-        .from('po_lines')
-        .select('quantity_ordered, quantity_received')
-        .eq('po_id', po.id);
-
-      const allReceived = updatedLines?.every(
-        (l: { quantity_ordered: number; quantity_received: number }) => l.quantity_received >= l.quantity_ordered
-      );
-      const anyReceived = updatedLines?.some(
-        (l: { quantity_ordered: number; quantity_received: number }) => l.quantity_received > 0
-      );
-
-      const newStatus = allReceived ? 'received' : anyReceived ? 'partial' : po.status;
-
-      if (newStatus !== po.status) {
-        await supabase
-          .from('purchase_orders')
-          .update({ status: newStatus })
-          .eq('id', po.id);
-      }
-
-      toast.success(
-        `${linesToReceive.length} item(s) received. ${putawayTaskCount} put-away task(s) created.`
-      );
+      const { error } = await supabase.rpc('receive_purchase_order', {
+        p_request_id: requestId, p_po_id: po.id, p_location_id: receivingLocationId, p_lines: linesToReceive,
+      });
+      if (error) throw error;
+      setRequestId(crypto.randomUUID());
+      toast.success('PO receipt posted and put-away tasks created');
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {

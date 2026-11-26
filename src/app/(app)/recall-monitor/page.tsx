@@ -85,81 +85,15 @@ interface ProductRef {
   manufacturer: string | null
 }
 
-// --- Mock FDA recall data ---
-const MOCK_FDA_RECALLS = [
-  {
-    recall_number: 'D-0123-2026',
-    product_description: 'Metformin Hydrochloride Extended-Release Tablets, 500mg',
-    reason_for_recall: 'CGMP Deviations: Presence of N-Nitrosodimethylamine (NDMA) above acceptable intake limit',
-    classification: 'Class II' as const,
-    recalling_firm: 'Marksans Pharma Limited',
-    recall_initiation_date: '2026-03-15',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'D-0456-2026',
-    product_description: 'Losartan Potassium Tablets, 50mg and 100mg',
-    reason_for_recall: 'Presence of N-Nitroso-N-methyl-4-aminobutyric acid (NMBA) above acceptable level',
-    classification: 'Class II' as const,
-    recalling_firm: 'Hetero Labs',
-    recall_initiation_date: '2026-02-20',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'D-0789-2026',
-    product_description: 'Ranitidine Tablets, 150mg',
-    reason_for_recall: 'NDMA impurity above acceptable daily intake limit',
-    classification: 'Class I' as const,
-    recalling_firm: 'Sanofi',
-    recall_initiation_date: '2026-01-10',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'D-1012-2026',
-    product_description: 'Valsartan/Hydrochlorothiazide Tablets, 160/12.5mg',
-    reason_for_recall: 'Detection of N-Nitrosodiethylamine (NDEA) impurity',
-    classification: 'Class I' as const,
-    recalling_firm: 'Zhejiang Huahai Pharmaceutical',
-    recall_initiation_date: '2026-04-01',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'F-0234-2026',
-    product_description: 'Surgical Gloves, Powder-Free Nitrile',
-    reason_for_recall: 'Failure to meet minimum tensile strength requirements; risk of tearing during use',
-    classification: 'Class I' as const,
-    recalling_firm: 'MedGlove International',
-    recall_initiation_date: '2026-03-28',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'D-1345-2026',
-    product_description: 'Acetaminophen Oral Solution, 160mg/5mL',
-    reason_for_recall: 'Subpotent: out-of-specification results for dissolved oxygen',
-    classification: 'Class III' as const,
-    recalling_firm: 'Perrigo Company',
-    recall_initiation_date: '2026-02-14',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'D-1678-2026',
-    product_description: 'Gabapentin Capsules, 300mg',
-    reason_for_recall: 'Failed dissolution testing specifications',
-    classification: 'Class II' as const,
-    recalling_firm: 'InvaGen Pharmaceuticals',
-    recall_initiation_date: '2026-04-10',
-    status: 'Ongoing',
-  },
-  {
-    recall_number: 'F-0567-2026',
-    product_description: 'Infusion Pump Model X200',
-    reason_for_recall: 'Software error may lead to over-infusion; potential for serious patient harm',
-    classification: 'Class I' as const,
-    recalling_firm: 'MedTech Systems Inc',
-    recall_initiation_date: '2026-03-05',
-    status: 'Ongoing',
-  },
-]
+interface FDARecall {
+  recall_number: string;
+  product_description: string;
+  reason_for_recall: string;
+  classification: 'Class I' | 'Class II' | 'Class III';
+  recalling_firm: string;
+  recall_initiation_date: string;
+  status: string;
+}
 
 function classificationBadge(cls: string) {
   const variants: Record<string, 'destructive' | 'default' | 'secondary'> = {
@@ -181,38 +115,15 @@ function alertStatusBadge(status: string) {
   return <Badge variant={c.variant}>{c.label}</Badge>
 }
 
-function fuzzyMatch(a: string, b: string): number {
-  const al = a.toLowerCase()
-  const bl = b.toLowerCase()
-  if (al === bl) return 100
-  if (al.includes(bl) || bl.includes(al)) return 80
-
-  const aWords = al.split(/\s+/)
-  const bWords = bl.split(/\s+/)
-  let matches = 0
-  for (const aw of aWords) {
-    if (aw.length < 3) continue
-    for (const bw of bWords) {
-      if (bw.length < 3) continue
-      if (aw.includes(bw) || bw.includes(aw)) {
-        matches++
-        break
-      }
-    }
-  }
-  const score = aWords.length > 0 ? (matches / Math.max(aWords.length, 1)) * 70 : 0
-  return Math.round(score)
-}
-
 export default function RecallMonitorPage() {
   const { user, tenantId } = useAuth()
   const [products, setProducts] = useState<ProductRef[]>([])
   const [alerts, setAlerts] = useState<RecallAlert[]>([])
   const [loading, setLoading] = useState(true)
-  const [checkResults, setCheckResults] = useState<
-    { recall: (typeof MOCK_FDA_RECALLS)[0]; product: ProductRef; score: number }[]
+  const [checkResults] = useState<
+    { recall: FDARecall; product: ProductRef; score: number }[]
   >([])
-  const [checking, setChecking] = useState(false)
+  const [checking] = useState(false)
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('all')
@@ -311,33 +222,7 @@ export default function RecallMonitorPage() {
   }
 
   const checkAgainstFDA = async () => {
-    setChecking(true)
-    // Simulate API call with mock data
-    await new Promise((r) => setTimeout(r, 1500))
-
-    const matches: { recall: (typeof MOCK_FDA_RECALLS)[0]; product: ProductRef; score: number }[] = []
-    for (const recall of MOCK_FDA_RECALLS) {
-      for (const product of products) {
-        const nameScore = fuzzyMatch(recall.product_description, product.name)
-        const mfgScore = product.manufacturer
-          ? fuzzyMatch(recall.recalling_firm, product.manufacturer)
-          : 0
-        const combinedScore = Math.max(nameScore, mfgScore)
-        if (combinedScore >= 30) {
-          matches.push({ recall, product, score: combinedScore })
-        }
-      }
-    }
-
-    matches.sort((a, b) => b.score - a.score)
-    setCheckResults(matches)
-    setChecking(false)
-
-    if (matches.length === 0) {
-      toast.success('No recall matches found for your products')
-    } else {
-      toast.warning(`Found ${matches.length} potential recall matches`)
-    }
+    toast.info('Automated FDA recall monitoring is not available. Use manual recall lookup and verified regulator notices.');
   }
 
   const saveAlert = async (alert: Omit<RecallAlert, 'id'>) => {
@@ -474,7 +359,7 @@ export default function RecallMonitorPage() {
     loadData()
   }
 
-  const createAlertFromMatch = async (recall: (typeof MOCK_FDA_RECALLS)[0], product: ProductRef, score: number) => {
+  const createAlertFromMatch = async (recall: FDARecall, product: ProductRef, score: number) => {
     await saveAlert({
       alert_date: new Date().toISOString(),
       product_id: product.id,

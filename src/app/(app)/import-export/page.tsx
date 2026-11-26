@@ -495,7 +495,7 @@ export default function ImportExportPage() {
               unit_of_measure: "each",
               is_active: true,
             },
-            { onConflict: "product_id,bin_id,bin_role" }
+            { onConflict: "tenant_id,product_id,bin_id" }
           )
         }
       }
@@ -512,7 +512,7 @@ export default function ImportExportPage() {
               unit_of_measure: "case",
               is_active: true,
             },
-            { onConflict: "product_id,bin_id,bin_role" }
+            { onConflict: "tenant_id,product_id,bin_id" }
           )
         }
       }
@@ -529,7 +529,7 @@ export default function ImportExportPage() {
               unit_of_measure: "each",
               is_active: true,
             },
-            { onConflict: "product_id,bin_id,bin_role" }
+            { onConflict: "tenant_id,product_id,bin_id" }
           )
         }
       }

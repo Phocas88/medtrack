@@ -24,7 +24,7 @@ export async function getCurrentUser(): Promise<AuthSession | null> {
     .eq('id', authUser.id)
     .single();
 
-  if (error || !user) {
+  if (error || !user || !user.is_active) {
     return null;
   }
 

@@ -280,24 +280,9 @@ export default function PutAwayPage() {
   const handleStartPutAway = async (task: PutAwayTask) => {
     if (!user || !tenantId) return;
     const supabase = createClient();
-    const updates: Record<string, unknown> = {
-      status: 'in_progress',
-      started_at: task.started_at ?? new Date().toISOString(),
-    };
-    if (!task.assigned_to && user) {
-      updates.assigned_to = user.id;
-      updates.assigned_by = user.id;
-      updates.assigned_at = new Date().toISOString();
-    }
-
-    const update = supabase.from('scan_tasks').update(updates)
-      .eq('tenant_id', tenantId).eq('id', task.id).eq('task_type', 'putaway').eq('status', task.status);
-    const { data, error } = await (task.assigned_to
-      ? update.eq('assigned_to', task.assigned_to)
-      : update.is('assigned_to', null)).select('id').maybeSingle();
-
-    if (error || !data) {
-      toast.error('Could not start this task. It may have changed.');
+    const { error } = await supabase.rpc('start_scan_task', { p_task_id: task.id });
+    if (error) {
+      toast.error(error.message);
       void loadData();
       return;
     }
@@ -412,68 +397,18 @@ export default function PutAwayPage() {
     }
     setCompleting(true);
     const supabase = createClient();
-    const now = new Date().toISOString();
-
     try {
-      const binStock = supabase.from('bin_inventory').select('id, quantity')
-        .eq('tenant_id', tenantId).eq('bin_id', targetBin.id).eq('product_id', activeTask.product_id);
-      const { data: existing, error: readError } = await (activeTask.lot_id
-        ? binStock.eq('lot_id', activeTask.lot_id)
-        : binStock.is('lot_id', null)).maybeSingle();
-      if (readError) throw readError;
-
-      const { error: inventoryError } = existing
-        ? await supabase.from('bin_inventory')
-            .update({ quantity: existing.quantity + qty, updated_at: now })
-            .eq('tenant_id', tenantId).eq('id', existing.id)
-        : await supabase.from('bin_inventory').insert({
-            tenant_id: tenantId, bin_id: targetBin.id, product_id: activeTask.product_id,
-            lot_id: activeTask.lot_id, quantity: qty,
-          });
-      if (inventoryError) throw inventoryError;
-
-      // 2. Update lot's location_id to the bin's location
-      if (activeTask.lot_id && targetBin) {
-        await supabase
-          .from('lots')
-          .update({
-            location_id: targetBin.location_id,
-            location: targetBin.bin_code,
-          })
-          .eq('id', activeTask.lot_id);
-      }
-
-      // 3. Create stock_movement
-      const refPo = activeTask.instructions?.match(/PO\s+([\w-]+)/)?.[1] || '';
-      await supabase.from('stock_movements').insert({
-        tenant_id: tenantId,
-        product_id: activeTask.product_id!,
-        lot_id: activeTask.lot_id || null,
-        user_id: user.id,
-        quantity: 0,
-        movement_type: 'adjust',
-        reason: `Put-away from receiving to bin ${targetBin?.bin_code || 'unknown'}`,
-        reference_number: refPo ? `PO ${refPo}` : activeTask.title,
-        metadata: {
-          scan_task_id: activeTask.id,
-          target_bin_id: targetBin?.id,
-          put_away: true,
-          put_away_quantity: qty,
-        },
+      const { error } = await supabase.rpc('complete_scan_task', {
+        p_task_id: activeTask.id,
+        p_quantity: qty,
+        p_variance: null,
+        p_source: activeTask.location?.code ?? '',
+        p_target: targetBin.bin_code,
+        p_scans: [
+          { value: activeTask.product?.sku ?? activeTask.product_id },
+          { value: targetBin.bin_code },
+        ],
       });
-
-      // 4. Update scan_task to completed
-      const { error } = await supabase
-        .from('scan_tasks')
-        .update({
-          status: 'completed',
-          completed_by: user.id,
-          completed_at: now,
-          scanned_quantity: qty,
-          target_bin_id: targetBin?.id || activeTask.target_bin_id,
-        })
-        .eq('id', activeTask.id);
-
       if (error) throw error;
 
       toast.success('Put-away completed successfully!', {

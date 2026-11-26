@@ -1,8 +1,10 @@
+import { requireUser, routeError } from '@/lib/server-auth';
 import { NextResponse } from 'next/server';
 import { createShopifyClient } from '@/lib/shopify';
 
 export async function POST(request: Request) {
   try {
+    await requireUser(['admin'], true);
     const { store_url, access_token } = await request.json();
     if (!store_url || !access_token) {
       return NextResponse.json({ error: 'Store URL and access token required' }, { status: 400 });
@@ -24,7 +26,6 @@ export async function POST(request: Request) {
       order_count: orderCount,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Connection failed';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return routeError(err);
   }
 }

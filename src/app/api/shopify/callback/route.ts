@@ -1,176 +1,152 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { encryptToken } from '@/lib/shopify-crypto';
-import { createShopifyClient } from '@/lib/shopify';
-import crypto from 'crypto';
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { randomBytes } from "node:crypto";
+import { shopDomain } from "@/lib/security";
+import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
+import { createShopifyClient } from "@/lib/shopify";
+import { saveShopifyConnection } from "@/lib/shopify-connection";
+import { verifyOAuth } from "@/lib/shopify-webhooks";
+import { routeError, HttpError } from "@/lib/server-auth";
 
-function svc() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
-
-/**
- * Shopify OAuth callback — Step 2.
- * Shopify redirects back here with the authorization code.
- * We exchange it for an access token and set up the tenant.
- */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const shop = searchParams.get('shop');
-  const code = searchParams.get('code');
-  const state = searchParams.get('state');
-  const hmac = searchParams.get('hmac');
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://stokora.vercel.app';
-
-  if (!shop || !code) {
-    return NextResponse.redirect(`${appUrl}/auth/login?error=missing_params`);
-  }
-
-  // Verify state (CSRF protection)
-  const cookieState = request.headers.get('cookie')?.match(/shopify_oauth_state=([^;]+)/)?.[1];
-  if (state && cookieState && state !== cookieState) {
-    return NextResponse.redirect(`${appUrl}/auth/login?error=invalid_state`);
-  }
-
-  // Verify HMAC if API secret is set
-  if (process.env.SHOPIFY_API_SECRET && hmac) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('hmac');
-    params.sort();
-    const message = params.toString();
-    const computed = crypto.createHmac('sha256', process.env.SHOPIFY_API_SECRET).update(message).digest('hex');
-    if (computed !== hmac) {
-      return NextResponse.redirect(`${appUrl}/auth/login?error=invalid_hmac`);
-    }
-  }
-
   try {
-    // Exchange code for access token
-    const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: process.env.SHOPIFY_API_KEY,
-        client_secret: process.env.SHOPIFY_API_SECRET,
-        code,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      return NextResponse.redirect(`${appUrl}/auth/login?error=token_exchange_failed`);
-    }
-
-    const { access_token } = await tokenRes.json();
-    const supabase = svc();
-
-    // Get shop info
-    const client = createShopifyClient({ store_url: shop, access_token });
-    const { shop: shopInfo } = await client.getShop();
-
-    // Check if tenant already exists for this shop (reinstall case)
-    const { data: tenants } = await supabase.from('tenants').select('id, settings');
-    const existingTenant = (tenants || []).find((t) => {
-      const s = (t.settings as Record<string, unknown>) || {};
-      const shopify = (s.shopify as Record<string, unknown>) || {};
-      return (shopify.shop_domain as string)?.includes(shop.replace('.myshopify.com', ''));
-    });
-
+    const params = new URL(request.url).searchParams;
+    const shop = shopDomain(params.get("shop") || "");
+    const cookieStore = await cookies();
+    if (
+      !verifyOAuth(
+        params,
+        cookieStore.get("shopify_oauth_state")?.value,
+        cookieStore.get("shopify_oauth_shop")?.value,
+      )
+    )
+      throw new HttpError(401, "Invalid Shopify authorization");
+    cookieStore.delete("shopify_oauth_state");
+    cookieStore.delete("shopify_oauth_shop");
+    const tokenResponse = await fetch(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env.SHOPIFY_API_KEY,
+          client_secret: process.env.SHOPIFY_API_SECRET,
+          code: params.get("code"),
+        }),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!tokenResponse.ok)
+      throw new HttpError(502, "Shopify authorization failed");
+    const { access_token: token } = await tokenResponse.json();
+    if (typeof token !== "string" || !token)
+      throw new HttpError(502, "Shopify returned no access token");
+    const { shop: info } = await createShopifyClient({
+      store_url: shop,
+      access_token: token,
+    }).getShop();
+    const db = createServiceClient();
+    const session = await createClient();
+    const {
+      data: { user: signedIn },
+    } = await session.auth.getUser();
+    const { data: existing, error: lookupError } = await db
+      .from("integration_credentials")
+      .select("tenant_id")
+      .eq("provider", "shopify")
+      .eq("shop_domain", shop)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
     let tenantId: string;
-    let userId: string;
-
-    if (existingTenant) {
-      // Reinstall — reactivate existing tenant
-      tenantId = existingTenant.id;
-      const settings = (existingTenant.settings as Record<string, unknown>) || {};
-      (settings.shopify as Record<string, unknown>) = {
-        ...((settings.shopify as Record<string, unknown>) || {}),
-        access_token: encryptToken(access_token),
-        connected: true,
-        uninstalled_at: null,
-        reinstalled_at: new Date().toISOString(),
-      };
-      await supabase.from('tenants').update({ settings }).eq('id', tenantId);
-
-      // Get existing admin user
-      const { data: adminUser } = await supabase.from('users').select('id').eq('tenant_id', tenantId).eq('role', 'admin').limit(1);
-      userId = adminUser?.[0]?.id || '';
-
-    } else {
-      // Fresh install — create new tenant + user
-      tenantId = crypto.randomUUID();
-
-      await supabase.from('tenants').insert({
-        id: tenantId,
-        name: shopInfo.name,
-        slug: shop.replace('.myshopify.com', '') + '-' + Date.now().toString(36),
-        settings: {
-          preset: 'lite',
-          onboarding_completed: false,
-          shopify: {
-            store_url: shop,
-            access_token: encryptToken(access_token),
-            shop_name: shopInfo.name,
-            shop_domain: shopInfo.domain,
-            connected: true,
-            installed_at: new Date().toISOString(),
-            auto_sync_orders: true,
-            auto_sync_inventory: true,
-          },
-        },
-      });
-
-      // Create auth user with shop email
-      const email = shopInfo.email || `admin@${shop}`;
-      const tempPassword = crypto.randomBytes(16).toString('hex');
-
-      const { data: authData } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-      });
-
-      if (!authData?.user) {
-        return NextResponse.redirect(`${appUrl}/auth/login?error=user_creation_failed`);
+    let loginEmail: string;
+    if (existing) {
+      const { data: admin, error } = await db
+        .from("users")
+        .select("tenant_id,email")
+        .eq("tenant_id", existing.tenant_id)
+        .eq("role", "admin")
+        .eq("is_active", true)
+        .order("created_at")
+        .limit(1)
+        .single();
+      if (error || !admin)
+        throw new HttpError(
+          409,
+          "Contact support to restore this store account",
+        );
+      tenantId = admin.tenant_id;
+      loginEmail = admin.email;
+      // Shopify authorization proves authority over this exact previously bound shop.
+      if (signedIn) {
+        const { data: profile } = await db
+          .from("users")
+          .select("tenant_id,role")
+          .eq("id", signedIn.id)
+          .eq("is_active", true)
+          .single();
+        if (
+          !profile ||
+          profile.tenant_id !== tenantId ||
+          profile.role !== "admin"
+        )
+          throw new HttpError(
+            403,
+            "Sign out or use this store’s administrator account",
+          );
       }
-
-      userId = authData.user.id;
-
-      await supabase.from('users').insert({
-        id: userId,
-        tenant_id: tenantId,
-        email,
-        full_name: shopInfo.name,
-        role: 'admin',
-        is_active: true,
+    } else if (signedIn) {
+      const { data: profile } = await db
+        .from("users")
+        .select("tenant_id,email,role")
+        .eq("id", signedIn.id)
+        .eq("is_active", true)
+        .single();
+      if (!profile || profile.role !== "admin")
+        throw new HttpError(403, "Administrator required");
+      tenantId = profile.tenant_id;
+      loginEmail = profile.email;
+    } else {
+      // Never attach an unrelated existing account just because its email matches Shopify.
+      const { data: created, error } = await db.auth.admin.createUser({
+        email: info.email,
+        password: randomBytes(32).toString("hex"),
+        email_confirm: true,
+        user_metadata: { company_name: info.name, full_name: info.name },
       });
-
-      // Send password reset so they can set their own password
-      await supabase.auth.admin.generateLink({ type: 'recovery', email });
+      if (error || !created.user)
+        throw new HttpError(
+          409,
+          "Sign in to your existing Stokora account, then install this store again",
+        );
+      const { data: profile, error: profileError } = await db
+        .from("users")
+        .select("tenant_id,email")
+        .eq("id", created.user.id)
+        .single();
+      if (profileError || !profile)
+        throw new Error("Account provisioning failed");
+      tenantId = profile.tenant_id;
+      loginEmail = profile.email;
     }
-
-    // Register webhooks
-    const webhookBase = appUrl;
-    const webhooks = [
-      { topic: 'orders/create', address: `${webhookBase}/api/shopify/webhook` },
-      { topic: 'app/uninstalled', address: `${webhookBase}/api/shopify/webhooks/app-uninstalled` },
-    ];
-    for (const wh of webhooks) {
-      try { await client.createWebhook(wh.topic, wh.address); } catch { /* may exist */ }
+    await saveShopifyConnection(tenantId, shop, token, info.name);
+    if (!signedIn) {
+      const { data: link, error } = await db.auth.admin.generateLink({
+        type: "magiclink",
+        email: loginEmail,
+      });
+      if (error || !link.properties.hashed_token)
+        throw new Error("Session creation failed");
+      const { error: sessionError } = await session.auth.verifyOtp({
+        type: "magiclink",
+        token_hash: link.properties.hashed_token,
+      });
+      if (sessionError) throw sessionError;
     }
-
-    // Sign the user in by redirecting to a login-with-token endpoint
-    // For now, redirect to the Shopify onboarding or dashboard
-    const redirectUrl = existingTenant
-      ? `${appUrl}/dashboard`
-      : `${appUrl}/onboarding`;
-
-    const response = NextResponse.redirect(redirectUrl);
-    // Clear the OAuth state cookie
-    response.cookies.delete('shopify_oauth_state');
-
-    return response;
-  } catch (err) {
-    console.error('Shopify OAuth callback error:', err);
-    return NextResponse.redirect(`${appUrl}/auth/login?error=oauth_failed`);
+    return NextResponse.redirect(
+      `https://${shop}/admin/apps/${encodeURIComponent(process.env.SHOPIFY_API_KEY || "")}`,
+    );
+  } catch (error) {
+    return routeError(error);
   }
 }

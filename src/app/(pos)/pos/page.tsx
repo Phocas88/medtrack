@@ -22,6 +22,7 @@ import {
   Trash2,
   Plus,
   Minus,
+  CreditCard,
   ShoppingCart,
   Receipt,
   X,
@@ -60,14 +61,14 @@ interface WOResult {
   grand_total: number;
 }
 
-type PaymentMethod = 'cash' | 'check';
+type PaymentMethod = 'card' | 'cash' | 'check';
 
 export default function POSRegisterPage() {
   const { user, tenantId } = useAuth();
   const [scanInput, setScanInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [processing, setProcessing] = useState(false);
-  const checkoutInProgress = useRef(false);
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [cashTendered, setCashTendered] = useState('');
   const [lastReceipt, setLastReceipt] = useState<{ items: CartItem[]; total: number; tax: number; ref: string; payment: PaymentMethod; change: number } | null>(null);
@@ -85,7 +86,11 @@ export default function POSRegisterPage() {
   const [woLoading, setWoLoading] = useState(false);
   const scanRef = useRef<HTMLInputElement>(null);
 
-  const TAX_RATE = 0.0825; // 8.25%
+  const [TAX_RATE, setTaxRate] = useState(0);
+  useEffect(() => {
+    if (!tenantId) return;
+    createClient().from('tenants').select('settings').eq('id', tenantId).single().then(({ data }) => setTaxRate(Number(data?.settings?.sales_tax_rate || 0)));
+  }, [tenantId]);
 
   useEffect(() => { scanRef.current?.focus(); }, []);
 
@@ -226,7 +231,6 @@ export default function POSRegisterPage() {
   const taxableAmount = subtotal - discountAmount;
   const tax = taxableAmount * TAX_RATE;
   const total = taxableAmount + tax;
-  const change = paymentMethod === 'cash' && cashTendered ? parseFloat(cashTendered) - total : 0;
 
   // Hold transaction
   const holdTransaction = () => {
@@ -253,50 +257,27 @@ export default function POSRegisterPage() {
   };
 
   const handleCheckout = async () => {
-    if (checkoutInProgress.current || !tenantId || !user || cart.length === 0) return;
-    const tendered = Number(cashTendered);
-    if (paymentMethod === 'cash' && (!cashTendered || !Number.isFinite(tendered) || tendered < total)) {
+    if (!tenantId || !user || cart.length === 0) return;
+    if (paymentMethod === 'cash' && (!cashTendered || parseFloat(cashTendered) < total)) {
       toast.error('Insufficient cash tendered');
       return;
     }
-    if (cart.some(item => item.lineType !== 'product' || !item.productId)) {
-      toast.error('Service and work-order payments are unavailable at the register.');
-      return;
-    }
-
-    checkoutInProgress.current = true;
     setProcessing(true);
-    const ref = 'POS-' + crypto.randomUUID().slice(0, 12).toUpperCase();
-    try {
-      const { error } = await createClient().from('stock_movements').insert(cart.map(item => ({
-        tenant_id: tenantId, product_id: item.productId!, user_id: user.id,
-        quantity: -item.quantity, movement_type: 'ship', reason: 'POS in-store sale',
-        reference_number: ref,
-        metadata: {
-          channel: 'in_store', payment_method: paymentMethod,
-          payment_status: paymentMethod === 'check' ? 'check_received' : 'cash_received',
-          unit_price: item.unitPrice, item_discount: item.discount,
-          line_total: (item.unitPrice - item.discount) * item.quantity,
-          customer_name: customerName || null,
-          order_discount_pct: orderDiscount,
-          tax_rate: TAX_RATE,
-        },
-      })));
-      if (error) throw error;
-    } catch {
-      toast.error('The sale record could not be confirmed. Check the transaction history before retrying.');
-      return;
-    } finally {
-      checkoutInProgress.current = false;
-      setProcessing(false);
-    }
+    const supabase = createClient();
 
-    setLastReceipt({ items: [...cart], total, tax, ref, payment: paymentMethod, change: Math.max(change, 0) });
+    if (paymentMethod !== 'cash') {
+      toast.error('Only cash checkout is currently available. No payment has been recorded.'); setProcessing(false); return;
+    }
+    const { data: posted, error } = await supabase.rpc('post_cash_sale', { p_request_id: requestId, p_items: cart, p_customer_name: customerName, p_order_discount: orderDiscount, p_tendered: Number(cashTendered) });
+    if (error) { toast.error(error.message); setProcessing(false); return; }
+    setRequestId(crypto.randomUUID());
+    setProcessing(false);
+    setLastReceipt({ items: posted.items, total: posted.total, tax: posted.tax, ref: posted.ref, payment: paymentMethod, change: posted.change });
     setCart([]);
     setCustomerName('');
     setOrderDiscount(0);
     setCashTendered('');
-    toast.success(`Sale: ${ref}`);
+    toast.success(`Sale: ${posted.ref}`);
     scanRef.current?.focus();
   };
 
@@ -374,7 +355,7 @@ export default function POSRegisterPage() {
                   <div>
                     <p className="font-bold text-lg">{formatCurrency(lastReceipt.total)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {lastReceipt.ref} · {lastReceipt.payment === 'check' ? 'CHECK RECEIVED' : 'CASH RECEIVED'}
+                      {lastReceipt.ref} — {lastReceipt.payment.toUpperCase()}
                       {lastReceipt.change > 0 && ` — Change: ${formatCurrency(lastReceipt.change)}`}
                     </p>
                   </div>
@@ -493,9 +474,9 @@ export default function POSRegisterPage() {
           </div>
 
           {/* Payment method */}
-          <p className="text-sm text-muted-foreground">Card payments are unavailable. The register records cash and check transactions. Reconcile on-hand inventory separately.</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {([
+              { key: 'card', icon: CreditCard, label: 'Card' },
               { key: 'cash', icon: Banknote, label: 'Cash' },
               { key: 'check', icon: DollarSign, label: 'Check' },
             ] as const).map(({ key, icon: Icon, label }) => (
@@ -535,7 +516,7 @@ export default function POSRegisterPage() {
                     ${amt}
                   </Button>
                 ))}
-                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCashTendered(String(total.toFixed(2)))}>
+                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCashTendered(String(Math.ceil(total)))}>
                   Exact
                 </Button>
                 <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCashTendered('')}>
@@ -553,7 +534,7 @@ export default function POSRegisterPage() {
             size="lg"
           >
             {processing ? 'Processing...' : (
-              <><Receipt className="h-5 w-5 mr-2" /> Record {formatCurrency(total)}</>
+              <><CreditCard className="h-5 w-5 mr-2" /> Pay {formatCurrency(total)}</>
             )}
           </Button>
         </div>

@@ -126,6 +126,7 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState('America/New_York');
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   const [currency, setCurrency] = useState('USD');
+  const [salesTax, setSalesTax] = useState(0);
   const [savingGeneral, setSavingGeneral] = useState(false);
 
   // --- Team state ---
@@ -177,6 +178,7 @@ export default function SettingsPage() {
           setTimezone(s.timezone || 'America/New_York');
           setDateFormat(s.date_format || 'MM/DD/YYYY');
           setCurrency(s.currency || 'USD');
+          setSalesTax(Number(s.sales_tax_rate || 0) * 100);
         }
       });
 
@@ -185,12 +187,12 @@ export default function SettingsPage() {
       .then(({ data }) => setUsers(data || []));
 
     // Load notification preferences
-    supabase.from('notification_preferences').select('*').eq('tenant_id', tenantId)
+    supabase.from('notification_preferences').select('*').eq('tenant_id', tenantId).eq('user_id', currentUser!.id)
       .then(({ data }) => {
         if (data && data.length > 0) {
           const prefs: NotifPrefs = {};
-          data.forEach((row: { type: string; in_app: boolean; email: boolean }) => {
-            prefs[row.type] = { inApp: row.in_app, email: row.email };
+          data.forEach((row: { notification_type: string; in_app: boolean; email: boolean }) => {
+            prefs[row.notification_type] = { inApp: row.in_app, email: row.email };
           });
           // Fill in any missing types with defaults
           notificationTypes.forEach(({ key }) => {
@@ -219,15 +221,7 @@ export default function SettingsPage() {
   async function saveGeneral() {
     if (!tenantId) return;
     setSavingGeneral(true);
-    const { error } = await supabase.from('tenants').update({
-      name: companyName,
-      settings: {
-        logo_url: logoUrl,
-        timezone,
-        date_format: dateFormat,
-        currency,
-      },
-    }).eq('id', tenantId);
+    const { error } = await supabase.rpc('update_tenant_settings', { p_name: companyName, p_patch: { logo_url: logoUrl, timezone, date_format: dateFormat, currency, sales_tax_rate: salesTax / 100 } });
     if (error) toast.error(error.message);
     else toast.success('Settings saved');
     setSavingGeneral(false);
@@ -246,13 +240,12 @@ export default function SettingsPage() {
   async function inviteUser() {
     if (!tenantId || !inviteEmail) return;
     setInviting(true);
-    const { error } = await supabase.from('users').insert({
-      tenant_id: tenantId,
-      email: inviteEmail,
-      role: inviteRole,
-      full_name: inviteEmail.split('@')[0],
-      is_active: true,
+    const response = await fetch('/api/admin/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: tenantId, email: inviteEmail, full_name: inviteEmail.split('@')[0], role: inviteRole }),
     });
+    const result = await response.json();
+    const error = response.ok ? null : { message: result.error || 'Invitation failed' };
     if (error) {
       toast.error(error.message);
     } else {
@@ -281,16 +274,17 @@ export default function SettingsPage() {
     // Upsert each notification preference
     const rows = Object.entries(notifPrefs).map(([type, prefs]) => ({
       tenant_id: tenantId,
-      type,
+      user_id: currentUser!.id,
+      notification_type: type,
       in_app: prefs.inApp,
       email: prefs.email,
     }));
     const { error } = await supabase.from('notification_preferences').upsert(rows, {
-      onConflict: 'tenant_id,type',
+      onConflict: 'tenant_id,user_id,notification_type',
     });
     if (error) {
       // If the table doesn't exist yet, just show a toast
-      toast.info('Notification preferences saved locally');
+      toast.error('Notification preferences could not be saved');
     } else {
       toast.success('Notification preferences saved');
     }
@@ -317,7 +311,7 @@ export default function SettingsPage() {
       const [productsRes, lotsRes, movementsRes] = await Promise.all([
         supabase.from('products').select('*').eq('tenant_id', tenantId),
         supabase.from('lots').select('*').eq('tenant_id', tenantId),
-        supabase.from('movements').select('*').eq('tenant_id', tenantId),
+        supabase.from('stock_movements').select('*').eq('tenant_id', tenantId),
       ]);
 
       const lines: string[] = [];
@@ -511,6 +505,10 @@ export default function SettingsPage() {
                 </Select>
               </div>
 
+              <div className="grid gap-2 max-w-md">
+                <Label htmlFor="sales-tax">Cash POS sales tax (%)</Label>
+                <Input id="sales-tax" type="number" min="0" max="100" step="0.01" value={salesTax} disabled={!isAdmin} onChange={event => setSalesTax(Number(event.target.value))} />
+              </div>
               {isAdmin && (
                 <>
                   <Separator />

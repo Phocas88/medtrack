@@ -1,54 +1,121 @@
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
-
-const publicPages = new Set([
-  '/', '/demo', '/guide', '/support', '/legal/privacy', '/legal/terms',
-  '/auth/callback', '/auth/reset', '/auth/signup', '/robots.txt', '/sitemap.xml',
-  '/manifest.json', '/sw.js',
-]);
-
-const isUnder = (pathname: string, root: string) =>
-  pathname === root || pathname.startsWith(root + '/');
+import { isPublicPage, isScannerPath } from "@/lib/security";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  if (publicPages.has(pathname) || isUnder(pathname, '/api')) return NextResponse.next();
+  if (
+    isPublicPage(request.nextUrl.pathname) ||
+    request.nextUrl.pathname.startsWith("/api/")
+  )
+    return NextResponse.next({ request });
+  let supabaseResponse = NextResponse.next({ request });
 
-  let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll(cookies) {
-          for (const { name, value } of cookies) request.cookies.set(name, value);
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookies) response.cookies.set(name, value, options);
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value),
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options),
+          );
         },
       },
     },
   );
-  const { data: { user } } = await supabase.auth.getUser();
 
-  function redirect(path: string, returnTo?: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  if (
+    user &&
+    !pathname.startsWith("/auth/") &&
+    !pathname.startsWith("/portal")
+  ) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role,is_active,access_level")
+      .eq("id", user.id)
+      .single();
+    if (profile && !profile.is_active) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(
+        new URL("/auth/login?error=account_disabled", request.url),
+      );
+    }
+    if (
+      (profile?.role === "staff" || profile?.access_level === "scanner_only") &&
+      !isScannerPath(pathname)
+    ) {
+      return NextResponse.redirect(new URL("/scan", request.url));
+    }
+  }
+
+  const isAuthPage = pathname.startsWith("/auth");
+  const isPortalRoute = pathname.startsWith("/portal");
+  const isPortalLogin = pathname === "/portal/login";
+
+  // Portal routes: redirect to portal login if not authenticated
+  if (isPortalRoute) {
+    if (!user && !isPortalLogin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/portal/login";
+      return NextResponse.redirect(url);
+    }
+    if (user && isPortalLogin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/portal";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
+  // Scanner + POS routes: redirect to login with redirect param, but stay in their own UI
+  const isScanRoute = isScannerPath(pathname);
+  const isPosRoute = pathname.startsWith("/pos");
+  if ((isScanRoute || isPosRoute) && !user) {
     const url = request.nextUrl.clone();
-    url.pathname = path;
-    url.search = '';
-    if (returnTo) url.searchParams.set('redirect', returnTo);
-    const redirectResponse = NextResponse.redirect(url);
-    for (const cookie of response.cookies.getAll()) redirectResponse.cookies.set(cookie);
-    return redirectResponse;
+    url.pathname = "/auth/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+  if (isScanRoute || isPosRoute) {
+    return supabaseResponse;
   }
 
-  const portalLogin = pathname === '/portal/login';
-  if (isUnder(pathname, '/portal')) {
-    if (!user && !portalLogin) return redirect('/portal/login');
-    if (user && portalLogin) return redirect('/portal');
-    return response;
+  // API routes handle their own auth
+  const isApiRoute = pathname.startsWith("/api");
+  if (isApiRoute) {
+    return supabaseResponse;
   }
 
-  if (pathname === '/auth/login') return user ? redirect('/dashboard') : response;
-  if (!user) return redirect('/auth/login', pathname);
-  return response;
+  // Demo page is public
+  if (pathname.startsWith("/demo")) {
+    return supabaseResponse;
+  }
+
+  // Admin routes: redirect unauthenticated users to login (except auth pages)
+  if (!user && !isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.searchParams.set("redirect", pathname + request.nextUrl.search);
+    url.pathname = "/auth/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (pathname === "/auth/login" || pathname === "/auth/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  return supabaseResponse;
 }

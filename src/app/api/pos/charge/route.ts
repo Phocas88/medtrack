@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { requireUser, routeError, HttpError } from '@/lib/server-auth';
 
-export function POST() {
-  return NextResponse.json(
-    { error: 'Card payments are unavailable. Select cash or check in the register.' },
-    { status: 503 },
-  );
+export async function POST() {
+  try {
+    await requireUser(undefined, true);
+    throw new HttpError(503, 'Card payments are unavailable until secure card collection is configured. No card has been charged.');
+  } catch (error) { return routeError(error); }
 }

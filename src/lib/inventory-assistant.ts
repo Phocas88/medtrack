@@ -7,9 +7,9 @@ export async function inventorySession() {
   if (!user) return null;
 
   const { data: profile, error } = await db.from('users')
-    .select('tenant_id, role, is_active').eq('id', user.id).maybeSingle();
+    .select('tenant_id, role, is_active, access_level').eq('id', user.id).maybeSingle();
   if (error) throw error;
-  if (!profile?.is_active || !['admin', 'manager'].includes(profile.role)) return null;
+  if (!profile?.is_active || profile.access_level === 'scanner_only' || !['admin', 'manager'].includes(profile.role)) return null;
   return { db, tenant: profile.tenant_id as string, userId: user.id };
 }
 

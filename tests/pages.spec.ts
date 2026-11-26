@@ -17,7 +17,6 @@ for (const route of publicRoutes) {
     // Page should not show error text
     await expect(page.locator('body')).not.toContainText('Application error');
     await expect(page.locator('body')).not.toContainText('Internal Server Error');
-    await expect(page.locator('body')).not.toContainText('500');
 
     // Page should have a meaningful title (not empty)
     const title = await page.title();

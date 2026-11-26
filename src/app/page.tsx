@@ -144,7 +144,7 @@ export default function HomePage() {
         <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
           <h2 className="text-3xl font-bold tracking-tight">Common questions</h2>
           <dl className="mt-7 grid gap-6 md:grid-cols-2">
-            <div><dt className="font-semibold">Can I look around before contacting you?</dt><dd className="mt-2 text-slate-700">Yes. Open the live demo to explore the real dashboard, scanner, register, and customer portal with sample data.</dd></div>
+            <div><dt className="font-semibold">Can I look around before contacting you?</dt><dd className="mt-2 text-slate-700">Yes. Open the live demo for the interactive order desk and role walkthroughs with sample data.</dd></div>
             <div><dt className="font-semibold">Can I evaluate my own workflow?</dt><dd className="mt-2 text-slate-700">Request a walkthrough or pilot and tell us which receiving, inventory, or fulfillment process you want to evaluate.</dd></div>
           </dl>
         </section>

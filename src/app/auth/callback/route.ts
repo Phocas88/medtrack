@@ -1,11 +1,19 @@
+import { safeRedirect } from '@/lib/security';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { safeReturnTo } from '@/lib/public-site';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = safeReturnTo(searchParams.get('next'));
+  const tokenHash = searchParams.get('token_hash');
+  const type = searchParams.get('type');
+  const next = safeRedirect(searchParams.get('next'));
+
+  if (tokenHash && (type === 'signup' || type === 'invite' || type === 'recovery' || type === 'magiclink' || type === 'email')) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (!error) return NextResponse.redirect(`${origin}${next}`);
+  }
 
   if (code) {
     const supabase = await createClient();

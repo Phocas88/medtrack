@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('landing page loads', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Stokora', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
 test('login page loads', async ({ page }) => {
@@ -13,7 +13,7 @@ test('login page loads', async ({ page }) => {
 
 test('signup page loads', async ({ page }) => {
   await page.goto('/auth/signup');
-  await expect(page.getByRole('link', { name: 'Request a pilot' })).toHaveAttribute('href', '/#contact');
+  await expect(page.getByLabel(/company.*organization/i)).toBeVisible();
 });
 
 test('portal login page loads', async ({ page }) => {

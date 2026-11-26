@@ -1,28 +1,28 @@
-import { publicSiteOrigin } from '@/lib/public-site';
-import type { Metadata } from "next"
-import "./globals.css"
-import { cn } from "@/lib/utils"
-import { ThemeProvider } from "@/components/layout/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/layout/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/react";
+
+const inter = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-sans",
+  weight: "100 900",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Stokora WMS | Warehouse Management System",
-  metadataBase: new URL(publicSiteOrigin),
-  description: "Warehouse management for growing distributors, with inventory, receiving, bin locations, and order fulfillment.",
-  openGraph: {
-    title: "Stokora WMS",
-    description: "Warehouse management for growing distributors.",
-    siteName: "Stokora WMS",
-    type: "website",
-    images: [{ url: "/stokora-logo.png", alt: "Stokora WMS logo" }],
-  },
-  twitter: { card: "summary", images: ["/stokora-logo.png"] },
-}
+  description:
+    "Complete inventory management for every industry. Lot tracking, bin management, mobile scanning, compliance, and more. Start free.",
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -30,9 +30,17 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0f172a" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
       </head>
-      <body className={cn("min-h-screen bg-background font-sans antialiased")}>
+      <body
+        className={cn(
+          "min-h-screen bg-background font-sans antialiased",
+          inter.variable,
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -41,8 +49,9 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
+          {process.env.VERCEL === "1" && <Analytics />}
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

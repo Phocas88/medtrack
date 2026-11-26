@@ -1,6 +1,6 @@
 # Stokora WMS — Warehouse Management System
 
-Warehouse management software for small and midsize distributors, with inventory, bin locations, receiving, and order fulfillment tools.
+A full-featured, white-label warehouse management system built for small-to-mid-size distributors across any industry. Multi-tenant, role-based, with lot tracking, FEFO picking, barcode scanning, billing, and integrations.
 
 **Built with:** Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Supabase (Auth + Postgres + RLS)
 
@@ -10,20 +10,20 @@ Warehouse management software for small and midsize distributors, with inventory
 
 ## Features
 
-- **Workspace access** — organization and role-based access. Complete the reviewed tenant-isolation migrations before onboarding customers.
-- **White-label** — tenant name in header, Stokora branding on marketing/login
+- **Multi-tenant architecture** — each client sees only their data, enforced by Row Level Security
+- **White-label** — tenant name in sidebar, Stokora branding on marketing/login
 - **Preset system** — Lite, 3PL, and Full configurations with branching dashboards
 - **Lot & serial tracking** — FEFO picking, expiration alerts, recall traceability
 - **Standalone scanner app** — `/scan` route optimized for handheld devices
-- **POS system** — `/pos` route for manual cash and check records. Card payments are unavailable.
+- **POS system** — `/pos` route for point-of-sale with Stripe payments
 - **Customer portal** — self-service order tracking for end customers
 - **Onboarding wizard** — auto-redirects new users through 5-step setup
 - **IT user management** — admin creates users, assigns roles, resets passwords
-- **Billing** — plan information and support contact. Online checkout and the billing portal are paused.
+- **Billing** — Stripe checkout, subscription management, portal
 - **Integrations** — Shopify, QuickBooks, Zapier, EasyPost shipping
-- **Email notifications** — Resend when configured
+- **Email notifications** — Resend-powered with mock fallback
 - **PDF generation** — invoices, packing slips, purchase orders
-- **Inventory records** — lot tracking, stock movement history, and recall lookup
+- **Compliance** — controlled substances, DSCSA, Prop 65, GS1, recall monitoring
 - **Analytics & reports** — ABC analysis, product matrix, CSV exports
 - **Error monitoring** — Sentry integration
 - **Security** — CSP, HSTS, X-Frame-Options, rate limiting, error boundaries
@@ -43,7 +43,7 @@ npm run dev
 
 ### Database Setup
 
-For a disposable database, run the migrations in order. Assess applied migration history and backups before changing an existing database:
+Run migrations in order via Supabase SQL Editor:
 
 1. `supabase/migrations/00001_initial_schema.sql`
 2. `supabase/migrations/00002_v2_features.sql`
@@ -57,7 +57,8 @@ For a disposable database, run the migrations in order. Assess applied migration
 npx tsx scripts/seed.ts
 ```
 
-Run against an isolated, disposable Supabase project only. Public demo seeding is disabled. The live role picker uses existing shared sample accounts via the private server variable `STOKORA_DEMO_LOGINS`. Set it as a JSON object with the keys `cashier`, `customer`, `associate`, and `manager`, each containing that sample account’s email and password. Rotate previously published sample credentials and keep the new values in Vercel.
+Creates a demo tenant with products, suppliers, customers, lots, and movements.
+Demo login: `demo@stokora.com` / `demo1234`
 
 ---
 
@@ -75,7 +76,8 @@ Optional but recommended for production:
 
 | Variable | Purpose |
 |----------|---------|
-| `WEB3FORMS_ACCESS_KEY` | Server-side form delivery. The current release also accepts the existing `NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY` deployment variable. |
+| `STRIPE_SECRET_KEY` | Payment processing |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook verification |
 | `RESEND_API_KEY` | Transactional email |
 | `NEXT_PUBLIC_SENTRY_DSN` | Error monitoring |
 | `SHOPIFY_API_KEY` | Shopify integration |
@@ -84,7 +86,7 @@ Optional but recommended for production:
 
 ## Deployment
 
-Vercel builds the production branch. Test a preview before release. The public homepage accepts inquiries through Web3Forms and confirms receipt only after the provider accepts the request. Duplicate detection applies within each running server instance. Self-service organization registration, online subscriptions, and card payments require the reviewed production-readiness release and provider configuration.
+Push to GitHub to auto-deploy via Vercel. Add all environment variables in Vercel project settings.
 
 ### Health Check
 

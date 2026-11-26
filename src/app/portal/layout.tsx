@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LogOut, Loader2 } from 'lucide-react';
 import { StokoraLogo } from '@/components/ui/stokora-logo';
 import { PortalContext, type CustomerInfo } from './portal-context';
@@ -16,7 +15,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('shop');
   const isLoginPage = pathname === '/portal/login';
 
   useEffect(() => {
@@ -77,7 +75,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  if (accessDenied || !customer) {
+  if (accessDenied) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white px-4">
         <div className="text-center space-y-4">
@@ -96,8 +94,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <PortalContext.Provider value={{ customer, tenantId: customer.tenant_id, setActiveTab }}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="min-h-screen bg-white">
+    <PortalContext.Provider value={{ customer: customer!, tenantId: customer!.tenant_id }}>
+      <div className="min-h-screen bg-white">
+        {/* Header */}
         <header className="sticky top-0 z-50 border-b bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
@@ -106,7 +105,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground hidden sm:inline">
-                {customer.name}
+                {customer!.name}
               </span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -114,20 +113,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </Button>
             </div>
           </div>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <TabsList aria-label="Customer portal navigation" className="h-auto gap-2 rounded-none bg-transparent p-0">
-              <TabsTrigger value="account" className="min-h-11 rounded-none border-b-2 border-transparent px-2 data-[state=active]:border-primary data-[state=active]:shadow-none">My account</TabsTrigger>
-              <TabsTrigger value="orders" className="min-h-11 rounded-none border-b-2 border-transparent px-2 data-[state=active]:border-primary data-[state=active]:shadow-none">My orders</TabsTrigger>
-              <TabsTrigger value="shop" className="min-h-11 rounded-none border-b-2 border-transparent px-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Shop</TabsTrigger>
-            </TabsList>
-          </div>
         </header>
 
         {/* Content */}
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>
-      </Tabs>
+      </div>
     </PortalContext.Provider>
   );
 }

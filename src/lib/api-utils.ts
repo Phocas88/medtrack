@@ -29,7 +29,7 @@ export async function getAuthenticatedUser() {
     .eq('id', user.id)
     .single();
 
-  return dbUser;
+  return dbUser?.is_active ? dbUser : null;
 }
 
 /**

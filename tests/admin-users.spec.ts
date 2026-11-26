@@ -12,13 +12,13 @@ test.describe('Admin User Management', () => {
       data: { tenant_id: 'fake', email: 'test@test.com', full_name: 'Test' },
     });
     // Should be 403 (Unauthorized) or 500 (missing env) — not 404
-    expect([403, 500]).toContain(response.status());
+    expect([401, 403]).toContain(response.status());
   });
 
   test('admin password reset API rejects unauthenticated', async ({ request }) => {
     const response = await request.post('/api/admin/users/reset-password', {
       data: { email: 'test@test.com' },
     });
-    expect([403, 500]).toContain(response.status());
+    expect([401, 403]).toContain(response.status());
   });
 });

@@ -22,7 +22,7 @@ export function exportToCSV<T extends Record<string, any>>(
     csvData = data;
   }
 
-  const csv = Papa.unparse(csvData);
+  const csv = Papa.unparse(csvData, { escapeFormulae: true });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

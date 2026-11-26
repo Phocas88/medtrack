@@ -16,7 +16,6 @@ export interface CustomerInfo {
 export interface PortalContextType {
   customer: CustomerInfo;
   tenantId: string;
-  setActiveTab: (tab: 'account' | 'orders' | 'shop') => void;
 }
 
 export const PortalContext = createContext<PortalContextType | null>(null);

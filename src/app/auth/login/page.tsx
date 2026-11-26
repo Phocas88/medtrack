@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { safeRedirect } from '@/lib/security';
 import { createClient } from '@/lib/supabase/client';
-import { safeReturnTo } from '@/lib/public-site';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +48,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(safeReturnTo(new URLSearchParams(window.location.search).get('redirect')));
+    const next = new URLSearchParams(window.location.search).get('redirect');
+    router.push(safeRedirect(next));
     router.refresh();
   }
 
@@ -106,9 +107,9 @@ export default function LoginPage() {
               Forgot password?
             </Link>
             <p className="text-center text-sm text-muted-foreground">
-              New to Stokora?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/auth/signup" className="font-medium text-primary hover:underline">
-                Request a pilot
+                Create one
               </Link>
             </p>
           </CardFooter>

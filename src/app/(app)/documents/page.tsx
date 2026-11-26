@@ -58,6 +58,7 @@ export default function DocumentsPage() {
   const [formExpiration, setFormExpiration] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formFileName, setFormFileName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Entity lists for cascading select
@@ -127,6 +128,7 @@ export default function DocumentsPage() {
     setFormExpiration('');
     setFormNotes('');
     setFormFileName('');
+    setFile(null);
   }
 
   async function handleUpload() {
@@ -139,6 +141,15 @@ export default function DocumentsPage() {
     setSaving(true);
     const supabase = createClient();
 
+    let storagePath: string | null = null;
+    if (file) {
+      if (file.size > 10 * 1024 * 1024 || !['application/pdf', 'image/png', 'image/jpeg', 'text/plain', 'text/csv'].includes(file.type)) {
+        toast.error('Choose a PDF, PNG, JPEG, text or CSV file up to 10 MB'); setSaving(false); return;
+      }
+      storagePath = `${tenantId}/${crypto.randomUUID()}/${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const { error: uploadError } = await supabase.storage.from('tenant-documents').upload(storagePath, file, { contentType: file.type, upsert: false });
+      if (uploadError) { toast.error('File upload failed'); setSaving(false); return; }
+    }
     const { error } = await supabase.from('documents').insert({
       tenant_id: tenantId,
       title: formTitle,
@@ -146,7 +157,9 @@ export default function DocumentsPage() {
       entity_type: formEntityType,
       entity_id: formEntityId,
       file_name: formFileName || null,
-      file_url: formFileName ? `/documents/${formFileName}` : null,
+      file_url: storagePath,
+      file_size: file?.size || null,
+      mime_type: file?.type || null,
       expiration_date: formExpiration || null,
       notes: formNotes || null,
       uploaded_by: user.id,
@@ -155,7 +168,8 @@ export default function DocumentsPage() {
     setSaving(false);
 
     if (error) {
-      toast.error('Failed to upload document');
+      if (storagePath) await supabase.storage.from('tenant-documents').remove([storagePath]);
+      toast.error('Failed to save document');
       return;
     }
 
@@ -218,7 +232,7 @@ export default function DocumentsPage() {
       render: (row) =>
         row.file_url ? (
           <Button variant="ghost" size="sm" asChild>
-            <a href={row.file_url} target="_blank" rel="noopener noreferrer">
+            <a href={`/api/documents/download?id=${row.id}`} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
@@ -360,10 +374,11 @@ export default function DocumentsPage() {
                 type="file"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) setFormFileName(file.name);
+                  setFile(file || null);
+                  setFormFileName(file?.name || '');
                 }}
               />
-              <p className="text-xs text-muted-foreground">File metadata will be stored. Actual file storage is handled separately.</p>
+              <p className="text-xs text-muted-foreground">Private tenant storage. PDF, PNG, JPEG, text or CSV up to 10 MB.</p>
             </div>
             <div className="space-y-2">
               <Label>Expiration Date</Label>

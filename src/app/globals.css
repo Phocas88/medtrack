@@ -73,3 +73,47 @@
     text-wrap: balance;
   }
 }
+
+/* Neutral workbench palette, scoped to authenticated and preview workspaces. */
+.workspace-theme {
+  --background: 40 14% 96%;
+  --foreground: 220 15% 16%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 16%;
+  --primary: 222 70% 43%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 40 8% 92%;
+  --muted-foreground: 220 7% 43%;
+  --accent: 220 14% 94%;
+  --accent-foreground: 220 15% 16%;
+  --border: 40 6% 84%;
+  --input: 40 6% 78%;
+  --ring: 222 70% 43%;
+  --radius: 0.25rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+.dark .workspace-theme {
+  --background: 220 12% 10%;
+  --foreground: 40 10% 92%;
+  --card: 220 10% 13%;
+  --card-foreground: 40 10% 92%;
+  --primary: 220 90% 72%;
+  --primary-foreground: 220 20% 10%;
+  --muted: 220 10% 18%;
+  --muted-foreground: 220 8% 65%;
+  --accent: 220 10% 20%;
+  --accent-foreground: 40 10% 92%;
+  --border: 220 8% 26%;
+  --input: 220 8% 30%;
+  --ring: 220 90% 72%;
+}
+.workspace-nav { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.workspace-theme :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-theme *, .workspace-theme *::before, .workspace-theme *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
