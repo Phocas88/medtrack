@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Barcode, Boxes, ClipboardCheck, MapPin, PackageCheck, Truck } from 'lucide-react';
+import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
 import { InquiryForm } from './inquiry-form';
@@ -9,7 +9,7 @@ import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata: Metadata = {
   title: 'Invexiqs WMS | Warehouse management for growing distributors',
-  description: 'Manage inventory, receiving, bin locations, cycle counts, and order fulfillment with Invexiqs WMS.',
+  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the demo or set up your own warehouse.',
   alternates: { canonical: '/' },
 };
 
@@ -22,8 +22,14 @@ const workflows = [
   { icon: Barcode, title: 'Mobile barcode workflows', description: 'Use a mobile device for barcode lookups and warehouse tasks.' },
 ];
 
+const setupSteps = [
+  { icon: Warehouse, title: 'Set up a warehouse', detail: 'Name your workspace and choose a time zone. Invexiqs creates a receiving area and starter bin you can edit.' },
+  { icon: FileSpreadsheet, title: 'Add products and balances', detail: 'Add a SKU or review a CSV import. Bring in opening quantities by SKU, bin, and lot, or start with an empty warehouse.' },
+  { icon: PackageCheck, title: 'Receive and find your first item', detail: 'Record a receipt into a bin, print the lot label, and check that the quantity appears in Bin Management.' },
+];
+
 const primary = 'brand-cta px-5 py-3';
-const secondary = 'inline-flex items-center justify-center rounded-lg border border-brand-control-border bg-brand-white px-5 py-3 font-semibold text-brand-deep-plum hover:bg-brand-lavender';
+const secondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-brand-control-border bg-brand-white px-5 py-3 font-semibold text-brand-deep-plum hover:bg-brand-lavender';
 
 export default function HomePage() {
   return (
@@ -45,29 +51,53 @@ export default function HomePage() {
       </p>
       <main id="main">
         <section className="border-b border-brand-border-gray bg-brand-lavender">
-          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 lg:grid-cols-[1.12fr_1fr] lg:items-center md:py-20 lg:py-24 lg:px-8">
-            <div className="space-y-6">
-              <p className="font-semibold text-brand-royal-plum">{BRAND_TAGLINE}</p>
-              <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight text-brand-royal-plum sm:text-5xl lg:text-6xl">Know what’s in stock and where to find it.</h1>
-              <p className="max-w-xl text-lg leading-relaxed text-brand-muted-gray">Warehouse management software for growing distributors. Manage inventory, receiving, bin locations, and order fulfillment in one workspace.</p>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/demo" className={primary}>Explore live demo <ArrowRight aria-hidden size={18} /></Link>
-                <Link href="/auth/signup" className={secondary}>Create an account</Link>
-                <Link href="#contact" className="inline-flex items-center px-2 py-2 text-sm font-medium text-brand-royal-plum underline underline-offset-4">Request a pilot</Link>
+          <div className="mx-auto grid max-w-7xl items-center gap-9 px-5 py-12 sm:py-16 lg:grid-cols-[.95fr_1.05fr] lg:gap-12 lg:px-8 lg:py-24">
+            <div className="space-y-5">
+              <p className="text-sm font-semibold text-brand-royal-plum">{BRAND_TAGLINE}</p>
+              <h1 className="max-w-xl text-balance text-[2.65rem] font-bold leading-[1.05] tracking-[-0.045em] text-brand-deep-plum sm:text-6xl">Know what’s in stock and where to find it.</h1>
+              <p className="max-w-lg text-lg leading-relaxed text-brand-muted-gray">Invexiqs is warehouse management software for growing distributors. Receive into bins, track lot inventory, and fulfill orders from one workspace.</p>
+              <div className="flex flex-wrap gap-3 pt-1">
+                <Link href="/auth/signup" className={primary}>Create an account <ArrowRight aria-hidden size={18} /></Link>
+                <Link href="/demo" className={secondary}><Play aria-hidden size={16} /> Explore live demo</Link>
               </div>
+              <p className="text-sm text-brand-muted-gray">See the demo without signing in, or <Link className="font-medium text-brand-royal-plum underline underline-offset-4" href="#contact">request a guided pilot</Link>.</p>
             </div>
-            <figure className="overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-xl shadow-brand-deep-plum/10">
-              <Image src="/product/dashboard.webp" width={1280} height={593}
-                sizes="(max-width: 1023px) 95vw, 46vw" priority
+            <figure className="min-w-0 overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-xl shadow-brand-deep-plum/10">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border-gray px-4 py-3 sm:px-5">
+                <span className="flex items-center gap-2 text-sm font-semibold text-brand-deep-plum"><Warehouse size={16} aria-hidden /> Warehouse dashboard</span>
+                <span className="text-xs text-brand-muted-gray">Sample data</span>
+              </div>
+              <Image className="block h-auto w-full" src="/product/dashboard.webp" width={1280} height={593}
+                sizes="(max-width: 1023px) 95vw, 50vw" priority
                 alt="Invexiqs dashboard showing inventory totals and shortcuts for warehouse and fulfillment tasks" />
-              <figcaption className="border-t border-brand-border-gray px-4 py-3 text-sm text-brand-muted-gray">Warehouse dashboard detail with sample data</figcaption>
+              <figcaption className="border-t border-brand-border-gray px-4 py-3 text-sm sm:px-5">
+                <Link className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline-offset-4 hover:underline" href="/demo/workspace">
+                  Open the interactive order desk <ArrowRight aria-hidden size={15} />
+                </Link>
+              </figcaption>
             </figure>
           </div>
         </section>
 
-        <section id="features" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Tools for your daily warehouse work</h2>
-          <p className="mt-3 max-w-2xl text-brand-muted-gray">Give managers and floor teams a shared view of inventory, activity, and fulfillment.</p>
+        <section id="setup" className="mx-auto grid max-w-7xl gap-8 px-5 py-14 lg:grid-cols-[.68fr_1.32fr] lg:gap-12 lg:px-8 lg:py-20">
+          <div>
+            <h2 className="max-w-md text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">From signup to your first receipt</h2>
+            <p className="mt-3 max-w-sm leading-relaxed text-brand-muted-gray">Start with one warehouse. A dashboard checklist helps you pick up where you left off.</p>
+            <Link href="/auth/signup" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">Set up your warehouse <ArrowRight aria-hidden size={16} /></Link>
+          </div>
+          <ol className="divide-y divide-brand-border-gray overflow-hidden rounded-2xl border border-brand-border-gray">
+            {setupSteps.map(({ icon: Icon, title, detail }) => (
+              <li key={title} className="flex gap-4 p-4 sm:p-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-lavender text-brand-royal-plum"><Icon size={20} aria-hidden /></span>
+                <div><h3 className="font-semibold text-brand-deep-plum">{title}</h3><p className="mt-1 text-sm leading-relaxed text-brand-muted-gray">{detail}</p></div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section id="features" className="mx-auto max-w-7xl border-t border-brand-border-gray px-5 py-14 lg:px-8 lg:py-16">
+          <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Run the warehouse from receiving to shipping</h2>
+          <p className="mt-3 max-w-2xl text-brand-muted-gray">See what arrived, where it was put away, and what still needs to ship.</p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {workflows.map(({ icon: Icon, title, description }) => (
               <article key={title} className="rounded-xl border border-brand-border-gray p-5">
@@ -148,7 +178,8 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Common questions</h2>
           <dl className="mt-7 grid gap-6 md:grid-cols-2">
             <div><dt className="font-semibold">Can I look around before contacting you?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Open the live demo for the interactive order desk and role walkthroughs with sample data.</dd></div>
-            <div><dt className="font-semibold">Can I evaluate my own workflow?</dt><dd className="mt-2 text-brand-muted-gray">Request a walkthrough or pilot and tell us which receiving, inventory, or fulfillment process you want to evaluate.</dd></div>
+            <div><dt className="font-semibold">Can I bring over my existing inventory?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Import products by CSV, then add opening balances for active bins. You can preview rows before they are saved.</dd></div>
+            <div><dt className="font-semibold">Can I set up an account on my own?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Create an account and set up a warehouse. If your team needs help with an import or wants a walkthrough, request a guided pilot.</dd></div>
           </dl>
         </section>
       </main>
@@ -157,6 +188,7 @@ export default function HomePage() {
         <nav aria-label="Footer navigation" className="mx-auto flex max-w-7xl flex-wrap gap-x-6 gap-y-3 px-5 py-8 text-sm text-brand-muted-gray lg:px-8">
           {[
             ['Contact', '/#contact'],
+            ['Create an account', '/auth/signup'],
             ['Features', '/#features'],
             ['Live demo', '/demo'],
             ['Pricing', '/#pricing'],

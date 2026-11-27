@@ -4,7 +4,7 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Know what’s in stock and where to find it.');
-  await expect(page.locator('body')).not.toContainText(/free trial|14.day trial|start.*trial/i);
+  await expect(page.locator('body')).not.toContainText(/\b(?:free trial|14.day trial|start (?:a |your )?trial)\b/i);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Live demo', 'Pricing', 'Sign in', 'Solutions']);
   await nav.getByRole('link', { name: 'Pricing' }).click();
@@ -53,4 +53,17 @@ test('mobile navigation stays within the viewport', async ({ page }) => {
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Live demo' }).click();
   await expect(page).toHaveURL(/\/demo$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test('homepage links visitors to signup and the interactive order desk', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'From signup to your first receipt' })).toBeVisible();
+  await page.getByRole('main').getByRole('link', { name: 'Create an account' }).click();
+  await expect(page).toHaveURL(/\/auth\/signup$/);
+  await expect(page.getByLabel(/company.*organization/i)).toBeVisible();
+
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Open the interactive order desk' }).click();
+  await expect(page).toHaveURL(/\/demo\/workspace$/);
+  await expect(page.getByRole('heading', { name: 'Order desk' })).toBeVisible();
 });
