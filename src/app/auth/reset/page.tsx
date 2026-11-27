@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { StokoraLogo } from '@/components/ui/stokora-logo';
+import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
 
 export default function ResetPasswordPage() {
   return (
@@ -99,7 +99,7 @@ function ResetForm() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-3"><StokoraLogo theme="light" size="lg" /></div>
+          <div className="flex justify-center mb-3"><InvexiqsLogo size="lg" className="justify-center" /></div>
 
           {sent ? (
             <>

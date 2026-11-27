@@ -1,175 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Stokora WMS - Application Audit Report v4</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;background:#f8fafc;line-height:1.6}.container{max-width:1100px;margin:0 auto;padding:24px}.header{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:48px 0;margin-bottom:32px}.header .container{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}.header h1{font-size:32px;font-weight:700}.header .sub{color:#94a3b8;margin-top:4px;font-size:16px}.header .date{color:#64748b;font-size:14px;margin-top:2px}.grade{width:110px;height:110px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #22c55e}.grade .g{font-size:40px;font-weight:800;color:#22c55e}.grade .l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8}.card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;margin-bottom:24px}.card h2{font-size:20px;font-weight:700;margin-bottom:16px}.card h3{font-size:16px;font-weight:600;margin:16px 0 8px;color:#334155}.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:32px}.sc{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px;text-align:center}.sc .v{font-size:32px;font-weight:800}.sc .lb{font-size:12px;color:#64748b;margin-top:2px}.sc.gr .v{color:#16a34a}.sc.bl .v{color:#2563eb}.sc.pu .v{color:#7c3aed}.sc.am .v{color:#d97706}.sr{display:flex;align-items:center;gap:12px;margin:8px 0}.sl{width:180px;font-size:14px;font-weight:500;color:#475569}.sbg{flex:1;height:24px;background:#f1f5f9;border-radius:12px;overflow:hidden}.sb{height:100%;border-radius:12px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:12px;font-weight:600;color:#fff}.sb.gn{background:linear-gradient(90deg,#22c55e,#16a34a)}.sb.bu{background:linear-gradient(90deg,#3b82f6,#2563eb)}.sb.am{background:linear-gradient(90deg,#f59e0b,#d97706)}table{width:100%;border-collapse:collapse;margin:12px 0}th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#64748b;padding:8px 12px;border-bottom:2px solid #e2e8f0}td{padding:10px 12px;font-size:14px;border-bottom:1px solid #f1f5f9;color:#334155}tr:hover td{background:#f8fafc}.b{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}.b.gn{background:#dcfce7;color:#166534}.b.bu{background:#dbeafe;color:#1e40af}.b.am{background:#fef3c7;color:#92400e}.cl{list-style:none}.cl li{padding:5px 0;font-size:14px;display:flex;align-items:center;gap:8px}.ic{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}.ic.p{background:#dcfce7;color:#16a34a}.vg{display:grid;grid-template-columns:1fr 1fr;gap:24px}.vc{border-radius:12px;padding:20px}.vc.co{background:#eff6ff;border:1px solid #bfdbfe}.vc.rv{background:#f0fdf4;border:1px solid #bbf7d0}.vc .bn{font-size:32px;font-weight:800}.vc.co .bn{color:#1e40af}.vc.rv .bn{color:#16a34a}.vc .ds{font-size:13px;color:#64748b;margin-top:4px}.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}.fi{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px}.fi .d{width:8px;height:8px;border-radius:50%;flex-shrink:0}.d.c1{background:#22c55e}.d.c2{background:#3b82f6}.d.c3{background:#f59e0b}.d.c4{background:#7c3aed}.d.c5{background:#ec4899}.d.c6{background:#06b6d4}.wg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wi{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:13px;background:#f0fdf4;border:1px solid #bbf7d0}.new{background:#dbeafe;border:1px solid #93c5fd;font-size:11px;font-weight:600;color:#1e40af;padding:1px 6px;border-radius:4px;margin-left:4px}@media(max-width:768px){.sg{grid-template-columns:repeat(2,1fr)}.vg,.wg{grid-template-columns:1fr}.header .container{text-align:center}}@media print{body{background:#fff}.card{break-inside:avoid}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Product documentation | Invexiqs WMS</title>
+  <link rel="icon" href="/branding/invexiqs-icon.svg" type="image/svg+xml">
+  <style>
+    body { margin: 0; background: #F5F0FA; color: #25232A; font: 1rem/1.6 system-ui, sans-serif; }
+    main { max-width: 40rem; margin: 12vh auto; padding: 2rem; }
+    h1, a { color: #5A2D7C; }
+  </style>
 </head>
 <body>
-<div class="header"><div class="container"><div><h1>Stokora WMS &mdash; Application Audit v4</h1><div class="sub">Complete Technical Audit, WMS Compliance &amp; Market Value Analysis</div><div class="date">Generated: May 3, 2026 &bull; Auditor: Claude Opus 4.6</div></div><div class="grade"><div class="g">A+</div><div class="l">Overall</div></div></div></div>
-<div class="container">
-<div class="sg"><div class="sc bl"><div class="v">47,249</div><div class="lb">Lines of Code</div></div><div class="sc gr"><div class="v">69</div><div class="lb">Total Routes</div></div><div class="sc pu"><div class="v">43</div><div class="lb">Database Tables</div></div><div class="sc am"><div class="v">142</div><div class="lb">Source Files</div></div><div class="sc gr"><div class="v">18</div><div class="lb">Test Suites</div></div><div class="sc gr"><div class="v">0</div><div class="lb">TODO/FIXME</div></div><div class="sc"><div class="v">41</div><div class="lb">Dependencies</div></div><div class="sc gr"><div class="v">0</div><div class="lb">Console.log (UI)</div></div></div>
-
-<div class="card"><h2>&#128200; Quality Scores &mdash; Progression Across 4 Audits</h2>
-<table><thead><tr><th>Category</th><th>v1</th><th>v2</th><th>v3</th><th>v4 (Now)</th><th>Change</th></tr></thead><tbody>
-<tr><td>Architecture</td><td>90%</td><td>92%</td><td>94%</td><td><strong>97%</strong></td><td><span class="b gn">+3</span></td></tr>
-<tr><td>Code Quality</td><td>85%</td><td>88%</td><td>90%</td><td><strong>95%</strong></td><td><span class="b gn">+5</span></td></tr>
-<tr><td>Feature Completeness</td><td>92%</td><td>97%</td><td>99%</td><td><strong>100%</strong></td><td><span class="b gn">+1</span></td></tr>
-<tr><td>WMS Compliance</td><td>N/A</td><td>100%</td><td>100%</td><td><strong>100%</strong></td><td><span class="b gn">&#10003;</span></td></tr>
-<tr><td>Deployment Ready</td><td>80%</td><td>88%</td><td>92%</td><td><strong>97%</strong></td><td><span class="b gn">+5</span></td></tr>
-<tr><td>Security</td><td>78%</td><td>85%</td><td>88%</td><td><strong>96%</strong></td><td><span class="b gn">+8</span></td></tr>
-<tr><td>Monetization</td><td>0%</td><td>0%</td><td>90%</td><td><strong>95%</strong></td><td><span class="b gn">+5</span></td></tr>
-<tr><td>Integrations</td><td>0%</td><td>30%</td><td>80%</td><td><strong>92%</strong></td><td><span class="b gn">+12</span></td></tr>
-<tr><td>Test Coverage</td><td>0%</td><td>40%</td><td>55%</td><td><strong>82%</strong></td><td><span class="b gn">+27</span></td></tr>
-</tbody></table>
-<h3>Score Bars</h3>
-<div class="sr"><div class="sl">Architecture</div><div class="sbg"><div class="sb gn" style="width:97%">97%</div></div></div>
-<div class="sr"><div class="sl">Code Quality</div><div class="sbg"><div class="sb gn" style="width:95%">95%</div></div></div>
-<div class="sr"><div class="sl">Feature Completeness</div><div class="sbg"><div class="sb gn" style="width:100%">100%</div></div></div>
-<div class="sr"><div class="sl">WMS Compliance</div><div class="sbg"><div class="sb gn" style="width:100%">100%</div></div></div>
-<div class="sr"><div class="sl">Deployment</div><div class="sbg"><div class="sb gn" style="width:97%">97%</div></div></div>
-<div class="sr"><div class="sl">Security</div><div class="sbg"><div class="sb gn" style="width:96%">96%</div></div></div>
-<div class="sr"><div class="sl">Monetization</div><div class="sbg"><div class="sb gn" style="width:95%">95%</div></div></div>
-<div class="sr"><div class="sl">Integrations</div><div class="sbg"><div class="sb gn" style="width:92%">92%</div></div></div>
-<div class="sr"><div class="sl">Test Coverage</div><div class="sbg"><div class="sb gn" style="width:82%">82%</div></div></div>
-</div>
-
-<div class="card"><h2>&#127381; What&rsquo;s New in v4</h2>
-<table><thead><tr><th>Feature</th><th>Category</th><th>Impact</th></tr></thead><tbody>
-<tr><td><strong>Standalone Scanner App</strong> &mdash; Separate /scan route for handheld devices, no desktop chrome</td><td>Architecture</td><td><span class="b gn">+3 routes</span></td></tr>
-<tr><td><strong>IT User Management</strong> &mdash; Admin creates users, assigns roles, resets passwords, full audit trail</td><td>Feature</td><td><span class="b gn">+3 API routes</span></td></tr>
-<tr><td><strong>Security Headers</strong> &mdash; CSP, HSTS, X-Frame-Options, Permissions-Policy, referrer-policy</td><td>Security</td><td><span class="b gn">+8% security</span></td></tr>
-<tr><td><strong>Error Boundaries</strong> &mdash; App-level + global error boundary, loading states, 404 page</td><td>Architecture</td><td><span class="b gn">+3% arch</span></td></tr>
-<tr><td><strong>18 Test Suites</strong> &mdash; 710 LOC (was 388), protected routes, security headers, API security, SEO, perf</td><td>Testing</td><td><span class="b gn">+27% tests</span></td></tr>
-<tr><td><strong>API Utilities</strong> &mdash; Shared auth helper, input sanitization, email validation</td><td>Code Quality</td><td><span class="b gn">+5% quality</span></td></tr>
-</tbody></table></div>
-
-<div class="card"><h2>&#127970; WMS Standard Compliance &mdash; 20/20 (100%)</h2><div class="wg">
-<div class="wi">&#10003; FEFO/FIFO Picking</div><div class="wi">&#10003; Lot &amp; Serial Traceability</div>
-<div class="wi">&#10003; Receiving &amp; Put-Away</div><div class="wi">&#10003; Cycle Counting + Variance</div>
-<div class="wi">&#10003; Bin/Zone Management</div><div class="wi">&#10003; Multi-Location Hierarchy</div>
-<div class="wi">&#10003; Returns / RMA</div><div class="wi">&#10003; Quarantine / QA Release</div>
-<div class="wi">&#10003; Mobile Barcode Scanning</div><div class="wi">&#10003; Immutable Audit Trail</div>
-<div class="wi">&#10003; Wave / Batch Picking</div><div class="wi">&#10003; Cross-Docking</div>
-<div class="wi">&#10003; Dock Scheduling</div><div class="wi">&#10003; Labor Tracking</div>
-<div class="wi">&#10003; Slotting Optimization</div><div class="wi">&#10003; ABC Analysis</div>
-<div class="wi">&#10003; GS1 Barcode Standards</div><div class="wi">&#10003; UOM Conversions</div>
-<div class="wi">&#10003; Multi-Part Products</div><div class="wi">&#10003; Min/Max Replenishment</div>
-</div></div>
-
-<div class="card"><h2>&#128220; Regulatory Compliance &mdash; 10/10</h2><div class="wg">
-<div class="wi">&#10003; California Prop 65</div><div class="wi">&#10003; FDA Recall Auto-Monitor</div>
-<div class="wi">&#10003; CPSC Recall Integration</div><div class="wi">&#10003; DSCSA Transaction History</div>
-<div class="wi">&#10003; DEA Controlled Substances</div><div class="wi">&#10003; ARCOS Reporting</div>
-<div class="wi">&#10003; GS1 Barcode Validation</div><div class="wi">&#10003; Compliance Report Gen</div>
-<div class="wi">&#10003; Cold Chain / Temp Monitor</div><div class="wi">&#10003; Document Mgmt (COA/SDS)</div>
-</div></div>
-
-<div class="card"><h2>&#128176; Market Value Analysis</h2>
-<div class="vg">
-<div class="vc co"><div class="bn">$0/mo</div><div class="ds">Current Operating Cost</div><p style="font-size:13px;color:#475569;margin-top:12px">Vercel + Supabase free tiers. $45/mo at scale. Break-even: 1 customer.</p></div>
-<div class="vc rv"><div class="bn">$350,000+</div><div class="ds">Development Replacement Value</div><p style="font-size:13px;color:#475569;margin-top:12px">47,249 LOC, 43 tables, 69 routes, 18 test suites. Agency quote: $450K-$900K.</p></div>
-</div>
-<h3>Revenue Projections</h3>
-<table><thead><tr><th>Stage</th><th>Customers</th><th>Avg Plan</th><th>MRR</th><th>ARR</th><th>Margin</th></tr></thead><tbody>
-<tr><td>Launch</td><td>5</td><td>$99</td><td>$495</td><td>$5,940</td><td>100%</td></tr>
-<tr><td>Traction</td><td>25</td><td>$129</td><td>$3,225</td><td>$38,700</td><td>99%</td></tr>
-<tr><td>Growth</td><td>100</td><td>$149</td><td>$14,900</td><td>$178,800</td><td>99%</td></tr>
-<tr><td>Scale</td><td>500</td><td>$179</td><td>$89,500</td><td><strong>$1,074,000</strong></td><td>99%</td></tr>
-</tbody></table>
-<h3>Competitive Positioning</h3>
-<table><thead><tr><th>Competitor</th><th>$/mo</th><th>WMS</th><th>Compliance</th><th>Portal</th><th>Scanner</th><th>IT Admin</th><th>Billing</th></tr></thead><tbody>
-<tr><td>Fishbowl</td><td>$329+</td><td>70%</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10007;</td><td>&#10003;</td></tr>
-<tr><td>inFlow</td><td>$110+</td><td>50%</td><td>&#10007;</td><td>&#10007;</td><td>Partial</td><td>&#10007;</td><td>&#10003;</td></tr>
-<tr><td>Cin7</td><td>$349+</td><td>65%</td><td>Partial</td><td>Partial</td><td>&#10003;</td><td>Partial</td><td>&#10003;</td></tr>
-<tr><td>NetSuite</td><td>$999+</td><td>85%</td><td>Partial</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
-<tr><td>SAP EWM</td><td>$1,500+</td><td>95%</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td><td>&#10003;</td></tr>
-<tr style="background:#f0fdf4"><td><strong>Stokora WMS</strong></td><td><strong>$49-199</strong></td><td><strong>100%</strong></td><td><strong>&#10003;</strong></td><td><strong>&#10003;</strong></td><td><strong>&#10003;</strong></td><td><strong>&#10003;</strong></td><td><strong>&#10003;</strong></td></tr>
-</tbody></table></div>
-
-<div class="card"><h2>&#9989; Complete Feature Inventory &mdash; 69 Routes</h2>
-<h3 style="color:#16a34a">Core Inventory (12)</h3><div class="fg">
-<div class="fi"><span class="d c1"></span>Dashboard &amp; Analytics</div><div class="fi"><span class="d c1"></span>Product Catalog</div><div class="fi"><span class="d c1"></span>Lot &amp; Serial Tracking</div><div class="fi"><span class="d c1"></span>Product Movement Matrix</div><div class="fi"><span class="d c1"></span>Stock Movements</div><div class="fi"><span class="d c1"></span>UOM Conversions</div><div class="fi"><span class="d c1"></span>Multi-Part Products</div><div class="fi"><span class="d c1"></span>Import/Export + Templates</div><div class="fi"><span class="d c1"></span>UPC/GTIN per UOM</div><div class="fi"><span class="d c1"></span>Reports &amp; CSV</div><div class="fi"><span class="d c1"></span>Custom Fields</div><div class="fi"><span class="d c1"></span>ABC Analysis</div></div>
-<h3 style="color:#2563eb">Warehouse Operations (21)</h3><div class="fg">
-<div class="fi"><span class="d c2"></span>Purchase Orders</div><div class="fi"><span class="d c2"></span>Receiving &amp; Put-Away</div><div class="fi"><span class="d c2"></span>Sales &amp; Shipping</div><div class="fi"><span class="d c2"></span>Wave Picking</div><div class="fi"><span class="d c2"></span>Cross-Docking</div><div class="fi"><span class="d c2"></span>Dock Scheduling</div><div class="fi"><span class="d c2"></span>Returns / RMA</div><div class="fi"><span class="d c2"></span>Location Hierarchy</div><div class="fi"><span class="d c2"></span>Bin Management</div><div class="fi"><span class="d c2"></span>Desktop Scanner</div><div class="fi"><span class="d c2"></span>Standalone Handheld Scanner<span class="new">NEW</span></div><div class="fi"><span class="d c2"></span>Cycle Counts + Variance</div><div class="fi"><span class="d c2"></span>Quarantine / QA</div><div class="fi"><span class="d c2"></span>Kitting &amp; BOM</div><div class="fi"><span class="d c2"></span>Transfers</div><div class="fi"><span class="d c2"></span>Reorder + Auto-PO</div><div class="fi"><span class="d c2"></span>Consignment</div><div class="fi"><span class="d c2"></span>Expiration Mgmt</div><div class="fi"><span class="d c2"></span>Labor Tracking</div><div class="fi"><span class="d c2"></span>Slotting</div><div class="fi"><span class="d c2"></span>Min/Max Replenish</div></div>
-<h3 style="color:#d97706">Compliance (11)</h3><div class="fg">
-<div class="fi"><span class="d c3"></span>Prop 65</div><div class="fi"><span class="d c3"></span>FDA/CPSC Recalls</div><div class="fi"><span class="d c3"></span>DSCSA</div><div class="fi"><span class="d c3"></span>DEA / Controlled</div><div class="fi"><span class="d c3"></span>GS1 Barcodes</div><div class="fi"><span class="d c3"></span>Compliance Reports</div><div class="fi"><span class="d c3"></span>Audit Trail</div><div class="fi"><span class="d c3"></span>Temp Monitor</div><div class="fi"><span class="d c3"></span>Doc Mgmt</div><div class="fi"><span class="d c3"></span>Recall Lookup</div><div class="fi"><span class="d c3"></span>Warning Labels</div></div>
-<h3 style="color:#7c3aed">Customer &amp; Portal (7)</h3><div class="fg">
-<div class="fi"><span class="d c4"></span>Customer Portal + Login</div><div class="fi"><span class="d c4"></span>Portal Invites</div><div class="fi"><span class="d c4"></span>Portal Management</div><div class="fi"><span class="d c4"></span>Pricing Tiers</div><div class="fi"><span class="d c4"></span>Customers &amp; Suppliers</div><div class="fi"><span class="d c4"></span>Quick Order / Cart</div><div class="fi"><span class="d c4"></span>Order History</div></div>
-<h3 style="color:#06b6d4">IT Administration (3)</h3><div class="fg">
-<div class="fi"><span class="d c6"></span>User Management + RBAC<span class="new">NEW</span></div><div class="fi"><span class="d c6"></span>User Create API (IT provisioning)<span class="new">NEW</span></div><div class="fi"><span class="d c6"></span>Password Reset API<span class="new">NEW</span></div></div>
-<h3 style="color:#ec4899">Platform &amp; Business (15)</h3><div class="fg">
-<div class="fi"><span class="d c5"></span>Stripe Billing</div><div class="fi"><span class="d c5"></span>QuickBooks</div><div class="fi"><span class="d c5"></span>Zapier (5000+ apps)</div><div class="fi"><span class="d c5"></span>Onboarding Wizard</div><div class="fi"><span class="d c5"></span>Landing Page</div><div class="fi"><span class="d c5"></span>White-Label</div><div class="fi"><span class="d c5"></span>Feature Toggles</div><div class="fi"><span class="d c5"></span>4 PDF Documents</div><div class="fi"><span class="d c5"></span>Notifications + Email</div><div class="fi"><span class="d c5"></span>Settings (6-tab)</div><div class="fi"><span class="d c5"></span>Sentry Monitoring</div><div class="fi"><span class="d c5"></span>Rate Limiting</div><div class="fi"><span class="d c5"></span>PWA Scanner</div><div class="fi"><span class="d c5"></span>E2E Tests (18 suites)</div><div class="fi"><span class="d c5"></span>Error Boundaries<span class="new">NEW</span></div></div>
-</div>
-
-<div class="card"><h2>&#128736; Infrastructure</h2><ul class="cl">
-<li><span class="ic p">&#10003;</span><strong>Sentry</strong> &mdash; Error monitoring (client + server + edge)</li>
-<li><span class="ic p">&#10003;</span><strong>Rate Limiting</strong> &mdash; 30 req/min per IP, all API routes</li>
-<li><span class="ic p">&#10003;</span><strong>Playwright</strong> &mdash; 18 test suites, 710 LOC across security, API, routes, a11y, perf, SEO</li>
-<li><span class="ic p">&#10003;</span><strong>PWA</strong> &mdash; Scanner installable as mobile app</li>
-<li><span class="ic p">&#10003;</span><strong>Resend</strong> &mdash; Real HTML emails when configured</li>
-<li><span class="ic p">&#10003;</span><strong>Stripe</strong> &mdash; Checkout, webhooks, customer portal</li>
-<li><span class="ic p">&#10003;</span><strong>Zapier</strong> &mdash; Trigger + action APIs</li>
-<li><span class="ic p">&#10003;</span><strong>RLS</strong> &mdash; Row-level security on all 43 tables</li>
-<li><span class="ic p">&#10003;</span><strong>RBAC</strong> &mdash; Admin / Manager / Staff with IT provisioning</li>
-<li><span class="ic p">&#10003;</span><strong>CSP + Headers</strong> &mdash; Content-Security-Policy, HSTS, X-Frame-Options, Permissions-Policy</li>
-<li><span class="ic p">&#10003;</span><strong>Error Handling</strong> &mdash; App error boundary, global error boundary, 404 page, loading states</li>
-<li><span class="ic p">&#10003;</span><strong>API Security</strong> &mdash; Auth middleware, input sanitization, email validation</li>
-<li><span class="ic p">&#10003;</span><strong>Constants</strong> &mdash; Centralized, no hardcoded strings</li>
-<li><span class="ic p">&#10003;</span><strong>Clean</strong> &mdash; Zero TODO, zero console.log in UI</li>
-</ul></div>
-
-<div class="card"><h2>&#128274; Security Audit</h2>
-<table><thead><tr><th>Control</th><th>Status</th><th>Details</th></tr></thead><tbody>
-<tr><td>Content Security Policy</td><td><span class="b gn">&#10003;</span></td><td>Strict CSP with Stripe, Supabase, Sentry allow-list</td></tr>
-<tr><td>HSTS</td><td><span class="b gn">&#10003;</span></td><td>max-age=63072000, includeSubDomains, preload</td></tr>
-<tr><td>X-Frame-Options</td><td><span class="b gn">&#10003;</span></td><td>DENY &mdash; prevents clickjacking</td></tr>
-<tr><td>X-Content-Type-Options</td><td><span class="b gn">&#10003;</span></td><td>nosniff</td></tr>
-<tr><td>Referrer-Policy</td><td><span class="b gn">&#10003;</span></td><td>strict-origin-when-cross-origin</td></tr>
-<tr><td>Permissions-Policy</td><td><span class="b gn">&#10003;</span></td><td>Camera self, mic/geo/cohort denied</td></tr>
-<tr><td>Row-Level Security</td><td><span class="b gn">&#10003;</span></td><td>All 43 tables, tenant isolation</td></tr>
-<tr><td>Auth on All Routes</td><td><span class="b gn">&#10003;</span></td><td>Middleware redirects, API auth checks</td></tr>
-<tr><td>Input Sanitization</td><td><span class="b gn">&#10003;</span></td><td>Null byte stripping, length limits, email validation</td></tr>
-<tr><td>Rate Limiting</td><td><span class="b gn">&#10003;</span></td><td>30 req/min per IP on all API routes</td></tr>
-</tbody></table></div>
-
-<div class="card"><h2>&#128202; Test Coverage Matrix</h2>
-<table><thead><tr><th>Suite</th><th>Tests</th><th>Category</th></tr></thead><tbody>
-<tr><td>auth.spec.ts</td><td>5</td><td>Authentication flows</td></tr>
-<tr><td>landing.spec.ts</td><td>6</td><td>Marketing page</td></tr>
-<tr><td>pages.spec.ts</td><td>4</td><td>Public page rendering</td></tr>
-<tr><td>portal.spec.ts</td><td>5</td><td>Customer portal</td></tr>
-<tr><td>navigation.spec.ts</td><td>2</td><td>Route navigation</td></tr>
-<tr><td>responsive.spec.ts</td><td>3</td><td>Mobile layouts</td></tr>
-<tr><td>accessibility.spec.ts</td><td>3</td><td>WCAG compliance</td></tr>
-<tr><td>pdf.spec.ts</td><td>4</td><td>Document generation</td></tr>
-<tr><td>api.spec.ts</td><td>2</td><td>API endpoints</td></tr>
-<tr><td>protected-routes.spec.ts</td><td>38</td><td>Auth guard on all 38 protected routes</td></tr>
-<tr><td>security-headers.spec.ts</td><td>4</td><td>CSP, HSTS, X-Frame, Permissions</td></tr>
-<tr><td>api-security.spec.ts</td><td>6</td><td>API auth &amp; input validation</td></tr>
-<tr><td>scanner.spec.ts</td><td>3</td><td>Standalone scanner auth</td></tr>
-<tr><td>admin-users.spec.ts</td><td>3</td><td>IT admin user management</td></tr>
-<tr><td>error-handling.spec.ts</td><td>4</td><td>404s, bad routes, malformed requests</td></tr>
-<tr><td>seo.spec.ts</td><td>5</td><td>Meta tags, PWA manifest, viewport</td></tr>
-<tr><td>performance.spec.ts</td><td>5</td><td>Load times, JS errors</td></tr>
-<tr><td>integration-endpoints.spec.ts</td><td>4</td><td>Zapier, Stripe, email endpoints</td></tr>
-<tr style="font-weight:600"><td>Total</td><td>106</td><td>18 suites, 710 LOC</td></tr>
-</tbody></table></div>
-
-<div class="card" style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-color:#bbf7d0">
-<h2>&#127942; Conclusion</h2>
-<p style="font-size:16px;line-height:1.8;color:#334155"><strong>Stokora WMS is a production-ready, enterprise-grade warehouse management SaaS</strong> scoring an <strong>A+</strong> overall. With 69 routes, 47,249 lines of code, 100% WMS compliance, and 96% security score, it exceeds systems costing 10-15x more. The standalone handheld scanner, IT user provisioning, and comprehensive security headers close the remaining gaps from v3.</p>
-<p style="font-size:16px;line-height:1.8;color:#334155;margin-top:12px"><strong>Key differentiators:</strong> Full regulatory compliance, standalone scanner for warehouse associates (separate from manager desktop), IT-managed user provisioning with audit trails, customer ordering portal, Stripe billing, Zapier integration, and white-label multi-tenancy &mdash; all under $200/month.</p>
-<div style="margin-top:20px;padding:16px;background:#fff;border-radius:8px;border:1px solid #d1fae5;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;text-align:center">
-<div><strong style="font-size:24px;color:#16a34a">$350K+</strong><br><small style="color:#64748b">Dev Value</small></div>
-<div><strong style="font-size:24px;color:#2563eb">69</strong><br><small style="color:#64748b">Routes</small></div>
-<div><strong style="font-size:24px;color:#7c3aed">100%</strong><br><small style="color:#64748b">WMS Compliant</small></div>
-<div><strong style="font-size:24px;color:#ec4899">$1M+ ARR</strong><br><small style="color:#64748b">Potential</small></div>
-</div></div>
-</div>
-<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Stokora WMS Audit Report v4 &bull; May 3, 2026 &bull; Confidential</div>
+  <main>
+    <p>Invexiqs WMS</p>
+    <h1>Product documentation</h1>
+    <p>The historical audit snapshot described an earlier version of the application.</p>
+    <ul>
+      <li><a href="/guide">Read the current warehouse workflow guide</a></li>
+      <li><a href="/demo">Explore the live demo</a></li>
+      <li><a href="/support">Contact support</a></li>
+    </ul>
+  </main>
 </body>
 </html>

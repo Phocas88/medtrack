@@ -134,7 +134,7 @@ export function LiteDashboard() {
           <CardContent className="pt-8 pb-6 space-y-4">
             <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground" />
             <h2 className="text-xl font-bold">Connect Your Shopify Store</h2>
-            <p className="text-sm text-muted-foreground">Sync products, orders, and inventory to get started with Stokora.</p>
+            <p className="text-sm text-muted-foreground">Sync products, orders, and inventory to get started with Invexiqs.</p>
             <Button onClick={() => router.push('/integrations/shopify')}>
               Connect Shopify <ArrowRight className="h-4 w-4 ml-2" />
             </Button>

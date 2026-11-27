@@ -1,12 +1,12 @@
 import RoleWalkthroughs from "./role-walkthroughs";
 import Link from "next/link";
-import { StokoraNavigationLogo } from "@/components/ui/stokora-logo";
+import { InvexiqsNavigationLogo } from "@/components/ui/invexiqs-logo";
 export default function DemoPage() {
   return (
     <div className="workspace-theme min-h-screen">
       <header className="flex items-center justify-between border-b bg-card px-6 py-3">
-        <Link href="/" aria-label="Stokora home">
-          <StokoraNavigationLogo />
+        <Link href="/" aria-label="Invexiqs home">
+          <InvexiqsNavigationLogo />
         </Link>
         <Link href="/auth/login" className="text-sm">
           Sign in
@@ -17,8 +17,8 @@ export default function DemoPage() {
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Product preview
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-            See Stokora in action
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-heading">
+            See Invexiqs in action
           </h1>
           <p className="mt-4 leading-relaxed text-muted-foreground">
             Explore the order-desk layout with sample orders. Search, filter and
@@ -27,7 +27,7 @@ export default function DemoPage() {
         </div>
         <Link
           href="/demo/workspace"
-          className="inline-block bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+          className="brand-cta px-5 py-3 text-sm"
         >
           Open interactive preview →
         </Link>

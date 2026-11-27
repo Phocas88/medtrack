@@ -44,7 +44,7 @@ export function InventoryPublishing() {
     if (
       enabled &&
       !window.confirm(
-        "Publish total available inventory from all Stokora locations to this Shopify location? Stokora will be the inventory source; manual Shopify quantity edits will be overwritten.",
+        "Publish total available inventory from all Invexiqs locations to this Shopify location? Invexiqs will be the inventory source; manual Shopify quantity edits will be overwritten.",
       )
     )
       return;
@@ -93,9 +93,9 @@ export function InventoryPublishing() {
       </div>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Import products first. Each product can publish total available stock
-        across all Stokora locations to one Shopify location. Open confirmed
+        across all Invexiqs locations to one Shopify location. Open confirmed
         orders are deducted from availability; held and expired stock is
-        excluded. Stokora becomes the quantity source for enabled mappings.
+        excluded. Invexiqs becomes the quantity source for enabled mappings.
       </p>
       {error && (
         <p role="alert" className="text-sm">

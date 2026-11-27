@@ -1,5 +1,5 @@
 # Copy to shopify.app.toml and set client_id/application_url for your Partner app.
-name = "Stokora"
+name = "Invexiqs"
 application_url = "https://stokora.vercel.app/shopify"
 embedded = true
 [access_scopes]

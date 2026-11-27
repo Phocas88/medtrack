@@ -16,7 +16,7 @@ export const unavailableWorkflows: Record<
   "/controlled-substances": {
     title: "Controlled-substance reconciliation",
     message:
-      "Regulated reconciliation is not available. Do not rely on Stokora as a controlled-substance compliance system.",
+      "Regulated reconciliation is not available. Do not rely on Invexiqs as a controlled-substance compliance system.",
   },
   "/custom-fields": {
     title: "Custom fields",

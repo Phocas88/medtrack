@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata = {
-  title: 'Warehouse workflow guide | Stokora WMS',
-  description: 'Find the Stokora screens for products, bins, receiving, picking, stock counts, and reporting.',
+  title: 'Warehouse workflow guide | Invexiqs WMS',
+  description: 'Find the Invexiqs screens for products, bins, receiving, picking, stock counts, and reporting.',
   alternates: { canonical: '/guide' },
 };
 

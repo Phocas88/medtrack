@@ -1,5 +1,5 @@
 /**
- * Stokora WMS Seed Script
+ * Invexiqs WMS Seed Script
  *
  * Seeds the database with sample inventory data for demos.
  * Requires SUPABASE_SERVICE_ROLE_KEY in environment.
@@ -30,7 +30,7 @@ if (!supabaseUrl || !serviceRoleKey) {
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 async function seed() {
-  console.log('Seeding Stokora WMS database...\n');
+  console.log('Seeding Invexiqs WMS database...\n');
 
   // ── Create demo auth user ──
   const demoEmail = 'demo@stokora.com';

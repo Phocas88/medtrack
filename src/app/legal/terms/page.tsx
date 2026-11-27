@@ -1,19 +1,20 @@
 import Link from 'next/link';
+import { publicSupportAddress } from '@/lib/public-site';
 
-export const metadata = { title: 'Terms of Service | Stokora WMS', description: 'Review the terms for using Stokora WMS.', alternates: { canonical: '/legal/terms' } };
+export const metadata = { title: 'Terms of Service | Invexiqs WMS', description: 'Review the terms for using Invexiqs WMS.', alternates: { canonical: '/legal/terms' } };
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <Link href="/" className="text-sm text-primary hover:underline">&larr; Back to Stokora WMS</Link>
-        <h1 className="text-3xl font-bold mt-6 mb-2">Terms of Service</h1>
+        <Link href="/" className="text-sm text-primary hover:underline">&larr; Back to Invexiqs WMS</Link>
+        <h1 className="text-3xl font-bold text-heading mt-6 mb-2">Terms of Service</h1>
         <p className="text-sm text-muted-foreground mb-8">Last updated: May 2026</p>
 
         <div className="prose prose-slate max-w-none space-y-6 text-sm leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold">1. Service Description</h2>
-            <p>Stokora WMS is a cloud-based warehouse management system providing inventory tracking, order management, point of sale, shipping integration, and related business tools (&quot;the Service&quot;).</p>
+            <p>Invexiqs WMS is a cloud-based warehouse management system providing inventory tracking, order management, point of sale, shipping integration, and related business tools (&quot;the Service&quot;).</p>
           </section>
 
           <section>
@@ -39,7 +40,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold">4. Data Ownership</h2>
-            <p><strong>You own your data.</strong> All products, orders, customers, inventory records, and other business data you enter into Stokora belongs to you. We claim no intellectual property rights over your content.</p>
+            <p><strong>You own your data.</strong> All products, orders, customers, inventory records, and other business data you enter into Invexiqs belongs to you. We claim no intellectual property rights over your content.</p>
             <p>You may export your data at any time via the Data Export feature in Settings.</p>
           </section>
 
@@ -62,7 +63,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold">7. Limitation of Liability</h2>
-            <p>To the maximum extent permitted by law, Stokora WMS and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly. Our total liability for any claim arising from the Service shall not exceed the amount you paid us in the 12 months preceding the claim.</p>
+            <p>To the maximum extent permitted by law, Invexiqs WMS and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly. Our total liability for any claim arising from the Service shall not exceed the amount you paid us in the 12 months preceding the claim.</p>
           </section>
 
           <section>
@@ -87,7 +88,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold">11. Contact</h2>
-            <p>Questions about these terms: <strong>support@stokora.com</strong></p>
+            <p>Questions about these terms: {publicSupportAddress ? <a href={`mailto:${publicSupportAddress}`} className="text-primary underline">Email support</a> : <Link href="/support" className="text-primary underline">Visit support</Link>}</p>
           </section>
         </div>
       </div>

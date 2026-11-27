@@ -117,7 +117,7 @@ export async function GET(request: Request) {
       if (error || !created.user)
         throw new HttpError(
           409,
-          "Sign in to your existing Stokora account, then install this store again",
+          "Sign in to your existing Invexiqs account, then install this store again",
         );
       const { data: profile, error: profileError } = await db
         .from("users")

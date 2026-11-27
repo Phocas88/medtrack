@@ -145,9 +145,9 @@ function KPICard({ icon: Icon, title, value, subtitle, alert, rows }: {
 }
 
 const trendSeries = [
-  { key: 'received', label: 'Units received', color: 'bg-blue-600' },
-  { key: 'shipped', label: 'Units shipped', color: 'bg-emerald-600' },
-  { key: 'orders', label: 'Orders placed', color: 'bg-violet-600' },
+  { key: 'received', label: 'Units received', color: 'bg-chart-1' },
+  { key: 'shipped', label: 'Units shipped', color: 'bg-chart-2' },
+  { key: 'orders', label: 'Orders placed', color: 'bg-chart-3' },
 ] as const;
 
 function TrendCharts({ months }: { months: Month[] }) {

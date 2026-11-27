@@ -1,9 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { BRAND_COLOR, BRAND_ICON_PATH, BRAND_TAGLINE, PRODUCT_FULL_NAME, PRODUCT_NAME } from "@/lib/brand";
+import { publicSiteOrigin } from "@/lib/public-site";
 import { Analytics } from "@vercel/analytics/react";
 
 const inter = localFont({
@@ -13,11 +15,25 @@ const inter = localFont({
   display: "swap",
 });
 
+const description = "Manage receiving, inventory, bin locations, barcode scanning, and order fulfillment in one warehouse workspace.";
+
 export const metadata: Metadata = {
-  title: "Stokora WMS | Warehouse Management System",
-  description:
-    "Complete inventory management for every industry. Lot tracking, bin management, mobile scanning, compliance, and more. Start free.",
+  metadataBase: new URL(publicSiteOrigin),
+  applicationName: PRODUCT_FULL_NAME,
+  title: PRODUCT_NAME,
+  description,
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: BRAND_ICON_PATH, type: "image/svg+xml" }],
+    apple: [{ url: "/branding/invexiqs-apple.png", sizes: "180x180" }],
+  },
+  openGraph: { type: "website", siteName: PRODUCT_NAME, title: PRODUCT_NAME, description },
+  twitter: { card: "summary_large_image", title: PRODUCT_NAME, description },
+  appleWebApp: { capable: true, title: PRODUCT_NAME, statusBarStyle: "default" },
+  other: { "mobile-web-app-capable": "yes", slogan: BRAND_TAGLINE },
 };
+
+export const viewport: Viewport = { themeColor: BRAND_COLOR };
 
 export default function RootLayout({
   children,
@@ -26,15 +42,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0f172a" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
-      </head>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",

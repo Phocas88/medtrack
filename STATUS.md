@@ -1,4 +1,4 @@
-# Stokora implementation status
+# Invexiqs implementation status
 
 > This is the baseline audit of commit `14a352c`. Implementation has since started on `codex/stokora-commercial-hardening-20261115`; see [COMMERCIAL_READINESS.md](COMMERCIAL_READINESS.md) for changes, remaining gaps and rollout gates. The baseline ratings below are historical, not the current branch status.
 

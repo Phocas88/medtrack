@@ -1,3 +1,5 @@
+import { BRAND_COLOR, BRAND_PALETTE, PRODUCT_NAME } from '@/lib/brand';
+
 // PDF generation utilities using browser print API
 // No external libraries required
 
@@ -63,7 +65,7 @@ const baseStyles = `
   .company-name {
     font-size: 24px;
     font-weight: 700;
-    color: #111827;
+    color: ${BRAND_COLOR};
   }
   .company-address {
     font-size: 12px;
@@ -95,13 +97,13 @@ const baseStyles = `
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #9ca3af;
+    color: ${BRAND_PALETTE.mutedGray};
     margin-bottom: 6px;
   }
   .address-name {
     font-size: 15px;
     font-weight: 600;
-    color: #111827;
+    color: ${BRAND_COLOR};
   }
   .address-detail {
     font-size: 13px;
@@ -156,14 +158,14 @@ const baseStyles = `
     padding-top: 10px;
     font-size: 16px;
     font-weight: 700;
-    color: #111827;
+    color: ${BRAND_COLOR};
   }
   .footer {
     text-align: center;
     padding-top: 24px;
     border-top: 1px solid #e5e7eb;
     font-size: 13px;
-    color: #9ca3af;
+    color: ${BRAND_PALETTE.mutedGray};
   }
   .checkbox {
     display: inline-block;
@@ -193,7 +195,8 @@ function openPrintWindow(html: string): void {
     return;
   }
   printWindow.document.open();
-  printWindow.document.write(html);
+  const footer = `<footer class="print-platform" style="margin-top:24px;border-top:1px solid ${BRAND_PALETTE.borderGray};padding-top:8px;color:${BRAND_COLOR};font-size:11px">${PRODUCT_NAME}</footer>`;
+  printWindow.document.write(html.replace('</body>', footer + '</body>'));
   printWindow.document.close();
   // Wait for content to render before triggering print
   printWindow.onload = () => {
@@ -451,12 +454,12 @@ export function generatePurchaseOrderPDF(data: PurchaseOrderData): void {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: #9ca3af;
+      color: ${BRAND_PALETTE.mutedGray};
       margin-bottom: 2px;
     }
     .info-item span {
       font-size: 13px;
-      color: #111827;
+      color: ${BRAND_COLOR};
       font-weight: 500;
     }
     .notes-section {
@@ -691,7 +694,7 @@ export function generateReceivingDocumentPDF(data: ReceivingDocumentData): void 
     }
     .info-item span {
       font-size: 13px;
-      color: #111827;
+      color: ${BRAND_COLOR};
       font-weight: 500;
     }
     .highlight-box {
@@ -964,7 +967,7 @@ export function generateWorkOrderInvoicePDF(data: WorkOrderInvoiceData): void {
 
   ${data.notes ? `<div style="margin-top:16px;padding:10px;background:#f9fafb;border-radius:6px;font-size:13px;color:#4b5563"><strong>Notes:</strong> ${escapeHtml(data.notes)}</div>` : ''}
 
-  <div class="footer">Thank you for your business! &mdash; Powered by Stokora WMS</div>
+  <div class="footer">Thank you for your business!</div>
 </body>
 </html>`;
 

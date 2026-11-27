@@ -21,7 +21,7 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
 
 test('demo roles are available and marketing makes no compliance guarantee', async ({ page }) => {
   await page.goto('/demo');
-  await expect(page.getByRole('heading', { name: 'See Stokora in action' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'See Invexiqs in action' })).toBeVisible();
   await expect(page.locator('[aria-label="Demo roles"] button')).toHaveCount(4);
   await expect(page.getByRole('button', { name: /Management Desktop/ })).toBeEnabled();
   await expect(page.locator('body')).not.toContainText(/100%.*compliant|free trial/i);

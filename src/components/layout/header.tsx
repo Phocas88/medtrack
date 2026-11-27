@@ -95,7 +95,7 @@ function getPageTitle(pathname: string): string {
   for (const [route, title] of Object.entries(pageTitles)) {
     if (pathname.startsWith(route + "/")) return title;
   }
-  return "Stokora WMS";
+  return "Invexiqs WMS";
 }
 
 interface HeaderProps {
@@ -164,7 +164,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Page title */}
-      <h1 className="text-sm font-semibold tracking-tight truncate min-w-0 flex-1">
+      <h1 className="text-sm font-semibold tracking-tight text-heading truncate min-w-0 flex-1">
         {title}
       </h1>
 

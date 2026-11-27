@@ -1,3 +1,4 @@
+import { BRAND_NAME, PRODUCT_NAME } from "@/lib/brand";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit } from "@/lib/distributed-rate-limit";
@@ -50,8 +51,8 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         access_key: accessKey,
-        subject: `New Stokora Inquiry from ${name}${company ? ` (${company})` : ""}`,
-        from_name: "Stokora Demo Site",
+        subject: `New ${BRAND_NAME} Inquiry from ${name}${company ? ` (${company})` : ""}`,
+        from_name: PRODUCT_NAME,
         replyto: email,
         name,
         email,

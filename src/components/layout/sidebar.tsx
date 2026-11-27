@@ -65,7 +65,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { StokoraNavigationLogo } from "@/components/ui/stokora-logo";
+import { InvexiqsNavigationLogo } from "@/components/ui/invexiqs-logo";
 import { isSectionVisible } from "@/lib/presets";
 import {
   Collapsible,
@@ -371,9 +371,9 @@ function SidebarContent() {
   return (
     <div className="workspace-nav flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-20 shrink-0 items-center border-b border-white/10 px-5">
-        <Link href="/dashboard" aria-label="Stokora dashboard">
-          <StokoraNavigationLogo />
+      <div className="flex h-16 shrink-0 items-center border-b border-border px-5">
+        <Link href="/dashboard" aria-label="Invexiqs dashboard">
+          <InvexiqsNavigationLogo />
         </Link>
       </div>
 
@@ -476,10 +476,10 @@ export function WorkspaceNavigation() {
     <div className="hidden shrink-0 items-center gap-5 border-b bg-card px-5 md:flex">
       <Link
         href="/dashboard"
-        aria-label="Stokora dashboard"
+        aria-label="Invexiqs dashboard"
         className="shrink-0"
       >
-        <StokoraNavigationLogo />
+        <InvexiqsNavigationLogo />
       </Link>
       <nav
         aria-label="Main navigation"

@@ -46,7 +46,10 @@ export function isPublicPage(path: string): boolean {
       "/shopify",
       "/support",
       "/guide",
+      "/audit-report.html",
       "/manifest.json",
+      "/manifest.webmanifest",
+      "/opengraph-image",
       "/robots.txt",
       "/sitemap.xml",
     ].includes(path) || path.startsWith("/legal/")

@@ -1,19 +1,20 @@
 import Link from 'next/link';
+import { publicPrivacyAddress } from '@/lib/public-site';
 
-export const metadata = { title: 'Privacy Policy | Stokora WMS', description: 'Read how Stokora handles account, warehouse, and inquiry information.', alternates: { canonical: '/legal/privacy' } };
+export const metadata = { title: 'Privacy Policy | Invexiqs WMS', description: 'Read how Invexiqs handles account, warehouse, and inquiry information.', alternates: { canonical: '/legal/privacy' } };
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <Link href="/" className="text-sm text-primary hover:underline">&larr; Back to Stokora WMS</Link>
-        <h1 className="text-3xl font-bold mt-6 mb-2">Privacy Policy</h1>
+        <Link href="/" className="text-sm text-primary hover:underline">&larr; Back to Invexiqs WMS</Link>
+        <h1 className="text-3xl font-bold text-heading mt-6 mb-2">Privacy Policy</h1>
         <p className="text-sm text-muted-foreground mb-8">Last updated: May 2026</p>
 
         <div className="prose prose-slate max-w-none space-y-6 text-sm leading-relaxed">
           <section>
             <h2 className="text-lg font-semibold">1. Information We Collect</h2>
-            <p>Stokora WMS collects the following categories of information:</p>
+            <p>Invexiqs WMS collects the following categories of information:</p>
             <ul className="list-disc pl-6 space-y-1">
               <li><strong>Inquiry Information:</strong> Contact and business details submitted through the inquiry form</li>
               <li><strong>Account Information:</strong> Name, email address, company name, password (hashed)</li>
@@ -61,7 +62,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Portability:</strong> Export your data as CSV files via Settings</li>
               <li><strong>Opt-out:</strong> California residents may opt out of data selling (we do not sell data)</li>
             </ul>
-            <p>To exercise these rights, email <strong>privacy@stokora.com</strong></p>
+            <p>To exercise these rights, use the <a href="#privacy-contact" className="text-primary underline">privacy contact</a> below.</p>
           </section>
 
           <section>
@@ -86,10 +87,10 @@ export default function PrivacyPolicyPage() {
             <p>We use essential cookies for authentication (Supabase session tokens). We do not use advertising or third-party tracking cookies.</p>
           </section>
 
-          <section>
+          <section id="privacy-contact">
             <h2 className="text-lg font-semibold">8. Contact</h2>
             <p>For privacy-related questions or data requests:</p>
-            <p>Email: <strong>privacy@stokora.com</strong></p>
+            <p>{publicPrivacyAddress ? <a href={`mailto:${publicPrivacyAddress}`} className="text-primary underline">Email the privacy team</a> : <Link href="/#contact" className="text-primary underline">Contact us about privacy</Link>}</p>
           </section>
         </div>
       </div>

@@ -1,4 +1,4 @@
-# Stokora WMS — Client Setup & User Guide
+# Invexiqs WMS — Client Setup & User Guide
 
 ---
 
@@ -29,9 +29,9 @@
 - **Scanner devices:** Any device with a modern browser (iOS/Android tablets, handheld scanners with browsers)
 - **Internet:** Stable connection required (cloud-based system)
 
-### Accessing Stokora WMS
+### Accessing Invexiqs WMS
 
-1. Navigate to your Stokora WMS URL (provided by your administrator)
+1. Navigate to your Invexiqs WMS URL (provided by your administrator)
 2. Enter your email and password
 3. Click **Sign In**
 
@@ -215,7 +215,7 @@ The scanner app is a separate, mobile-optimized interface for warehouse floor wo
 - **Offline-friendly** — queues scans when connection drops
 
 To set up a dedicated scanner device:
-1. Open your Stokora URL + `/scan` in the device browser
+1. Open your Invexiqs URL + `/scan` in the device browser
 2. Log in with a Staff account
 3. Add to home screen for app-like experience
 
@@ -293,14 +293,14 @@ Give your customers self-service access:
 
 ### Zapier
 
-- Connect Stokora to 5,000+ apps
+- Connect Invexiqs to 5,000+ apps
 - Trigger automations on new orders, low stock alerts, and more
 - Available triggers and actions documented at **Sidebar > Integrations > Zapier**
 
 ### EasyPost Shipping
 
 - Get real-time shipping rates from multiple carriers
-- Print shipping labels directly from Stokora
+- Print shipping labels directly from Invexiqs
 - Automatic tracking number updates
 
 ---
@@ -366,7 +366,7 @@ All reports export to CSV with one click.
 
 ## 13. Compliance
 
-For regulated industries, Stokora includes compliance modules:
+For regulated industries, Invexiqs includes compliance modules:
 
 ### Controlled Substances
 
@@ -423,4 +423,4 @@ For regulated industries, Stokora includes compliance modules:
 
 ---
 
-*Stokora WMS — Warehouse management made simple.*
+*Invexiqs WMS. Intelligence in Every Movement.*

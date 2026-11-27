@@ -32,7 +32,7 @@ export default function LinkShopifyIdentity() {
         Link Shopify to your warehouse account
       </h1>
       <p>
-        This lets your Shopify identity use your existing Stokora permissions.
+        This lets your Shopify identity use your existing Invexiqs permissions.
         The store must already be connected to the same warehouse.
       </p>
       {error && <p role="alert">{error}</p>}

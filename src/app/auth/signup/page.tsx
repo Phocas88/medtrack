@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { StokoraLogo } from '@/components/ui/stokora-logo';
+import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
 
 const signupSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -81,10 +81,10 @@ export default function SignupPage() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
               <CheckCircle2 className="h-6 w-6" />
             </div>
-            <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
+            <CardTitle className="text-2xl font-bold text-heading">Check Your Email</CardTitle>
             <CardDescription>
               We sent a confirmation link to your email address. Click the link to
-              activate your account and get started with Stokora WMS.
+              activate your account and get started with Invexiqs WMS.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -101,8 +101,8 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-3"><StokoraLogo theme="light" size="lg" /></div>
-          <CardTitle className="text-2xl font-bold">Create your Stokora account</CardTitle>
+          <div className="flex justify-center mb-3"><InvexiqsLogo size="lg" className="justify-center" /></div>
+          <CardTitle className="text-2xl font-bold text-heading">Create your Invexiqs account</CardTitle>
           <CardDescription>
             Start managing your warehouse today.
           </CardDescription>

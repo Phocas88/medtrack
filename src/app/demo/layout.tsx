@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
-  title: 'Live product demo | Stokora WMS',
-  description: 'Explore the Stokora warehouse dashboard, mobile scanner, register, and customer portal with sample data.',
+  title: 'Live product demo | Invexiqs WMS',
+  description: 'Explore the Invexiqs warehouse dashboard, mobile scanner, register, and customer portal with sample data.',
   alternates: { canonical: '/demo' },
 };
 

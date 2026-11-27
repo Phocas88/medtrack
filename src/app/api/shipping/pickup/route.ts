@@ -6,7 +6,7 @@ export async function POST() {
     return NextResponse.json(
       {
         error:
-          "Pickup booking is not available in Stokora. Schedule pickups in your EasyPost account; label purchase and tracking remain available here.",
+          "Pickup booking is not available in Invexiqs. Schedule pickups in your EasyPost account; label purchase and tracking remain available here.",
       },
       { status: 501 },
     );

@@ -11,6 +11,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          "royal-plum": "hsl(var(--brand-royal-plum) / <alpha-value>)",
+          "coral": "hsl(var(--brand-coral) / <alpha-value>)",
+          "lilac": "hsl(var(--brand-lilac) / <alpha-value>)",
+          "warm-cream": "hsl(var(--brand-warm-cream) / <alpha-value>)",
+          "white": "hsl(var(--brand-white) / <alpha-value>)",
+          "deep-plum": "hsl(var(--brand-deep-plum) / <alpha-value>)",
+          "charcoal": "hsl(var(--brand-charcoal) / <alpha-value>)",
+          "muted-gray": "hsl(var(--brand-muted-gray) / <alpha-value>)",
+          "lavender": "hsl(var(--brand-lavender) / <alpha-value>)",
+          "border-gray": "hsl(var(--brand-border-gray) / <alpha-value>)",
+          "coral-text": "hsl(var(--brand-coral-text) / <alpha-value>)",
+          "control-border": "hsl(var(--brand-control-border) / <alpha-value>)",
+          "success": "hsl(var(--brand-success) / <alpha-value>)",
+          "warning": "hsl(var(--brand-warning) / <alpha-value>)",
+          "error": "hsl(var(--brand-error) / <alpha-value>)",
+          "info": "hsl(var(--brand-info) / <alpha-value>)",
+        },
+        heading: "hsl(var(--heading) / <alpha-value>)",
+        chart: {
+          1: "hsl(var(--chart-1) / <alpha-value>)",
+          2: "hsl(var(--chart-2) / <alpha-value>)",
+          3: "hsl(var(--chart-3) / <alpha-value>)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

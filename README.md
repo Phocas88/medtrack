@@ -1,4 +1,4 @@
-# Stokora WMS — Warehouse Management System
+# Invexiqs WMS — Warehouse Management System
 
 A full-featured, white-label warehouse management system built for small-to-mid-size distributors across any industry. Multi-tenant, role-based, with lot tracking, FEFO picking, barcode scanning, billing, and integrations.
 
@@ -11,7 +11,7 @@ A full-featured, white-label warehouse management system built for small-to-mid-
 ## Features
 
 - **Multi-tenant architecture** — each client sees only their data, enforced by Row Level Security
-- **White-label** — tenant name in sidebar, Stokora branding on marketing/login
+- **White-label** — tenant name in sidebar, Invexiqs branding on marketing/login
 - **Preset system** — Lite, 3PL, and Full configurations with branching dashboards
 - **Lot & serial tracking** — FEFO picking, expiration alerts, recall traceability
 - **Standalone scanner app** — `/scan` route optimized for handheld devices
@@ -58,7 +58,7 @@ npx tsx scripts/seed.ts
 ```
 
 Creates a demo tenant with products, suppliers, customers, lots, and movements.
-Demo login: `demo@stokora.com` / `demo1234`
+Open the [interactive demo](https://stokora.vercel.app/demo) to explore the warehouse with sample data.
 
 ---
 

@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (identityError) throw identityError;
     if (!identity)
-      throw new HttpError(403, "Link your Stokora account to continue");
+      throw new HttpError(403, "Link your Invexiqs account to continue");
     const [
       { data: profile, error: profileError },
       { data: connection, error: connectionError },

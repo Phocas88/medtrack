@@ -261,7 +261,7 @@ export default function ShopifyIntegrationPage() {
                 <li>
                   Click &quot;Develop apps&quot; → &quot;Create an app&quot;
                 </li>
-                <li>Name it &quot;Stokora WMS&quot;</li>
+                <li>Name it &quot;Invexiqs WMS&quot;</li>
                 <li>
                   Configure Admin API scopes:{" "}
                   <code className="bg-background px-1 rounded">

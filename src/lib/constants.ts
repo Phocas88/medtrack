@@ -1,6 +1,5 @@
 // App branding
-export const APP_NAME = 'Stokora WMS';
-export const APP_FALLBACK_NAME = 'Stokora WMS';
+export { PRODUCT_NAME as APP_NAME, PRODUCT_NAME as APP_FALLBACK_NAME } from './brand';
 
 // localStorage keys
 export const STORAGE_KEYS = {

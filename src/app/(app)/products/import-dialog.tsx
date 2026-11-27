@@ -162,7 +162,7 @@ export function ImportDialog({ open, onOpenChange, onImported }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'stokora_product_import_template.csv';
+    a.download = 'invexiqs_product_import_template.csv';
     a.click();
   };
 

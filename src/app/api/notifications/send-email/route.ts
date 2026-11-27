@@ -1,3 +1,4 @@
+import { BRAND_COLOR, PRODUCT_NAME } from "@/lib/brand";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
@@ -147,13 +148,13 @@ export async function POST(request: Request) {
           try {
             const result = await resend.emails.send(
               {
-                from: fromAddress,
+                from: `${PRODUCT_NAME} <${fromAddress}>`,
                 to: recipientEmail,
                 subject: notification.title,
                 html: `<div style="font-family: sans-serif; padding: 20px;">
-      <h2>${escapeHtml(notification.title)}</h2>
+      <h2 style="color:${BRAND_COLOR}">${escapeHtml(notification.title)}</h2>
       <p>${escapeHtml(notification.message)}</p>
-      <p style="color: #666; font-size: 12px;">This is an automated notification from your inventory management system.</p>
+      <p style="color: #666; font-size: 12px;">This is an automated notification from ${PRODUCT_NAME}.</p>
     </div>`,
               },
               {

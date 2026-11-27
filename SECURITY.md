@@ -2,9 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Stokora WMS, please report it responsibly:
+If you discover a security vulnerability in Invexiqs WMS, please report it responsibly:
 
-**Email:** security@stokora.com
+Report through the [support page](https://stokora.vercel.app/support).
 
 Please include:
 - Description of the vulnerability
@@ -15,7 +15,7 @@ Please include:
 ## Scope
 
 This policy covers:
-- The Stokora WMS web application (stokora.vercel.app)
+- The Invexiqs WMS web application (stokora.vercel.app)
 - All API endpoints
 - Authentication and authorization flows
 - Data storage and encryption

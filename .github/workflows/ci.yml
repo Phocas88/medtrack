@@ -1,4 +1,4 @@
-name: Stokora checks
+name: Invexiqs checks
 on:
   pull_request:
   push:

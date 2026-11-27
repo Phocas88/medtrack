@@ -1,4 +1,4 @@
-# Stokora rollout and recovery
+# Invexiqs rollout and recovery
 
 No production migration or provider write has been executed by the implementation work. A passing build does not establish commercial readiness. Use the remaining gates in `COMMERCIAL_READINESS.md`.
 
@@ -11,7 +11,7 @@ No production migration or provider write has been executed by the implementatio
 5. Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` and the browser suite. Run `npm run test:staging` with the dedicated staging environment configuration described in the readiness report. The runner refuses the project referenced by the current public production deployment. The hosted runner creates test users, tenants, stock, orders and a document, then cleans them up. It never prints credentials or provider error payloads.
 6. Exercise real test-mode Stripe checkout/duplicate clicks/plan changes/cancellation/failed payment; Supabase confirmation/invitation/recovery; Shopify install/link/import/publish/fulfillment/uninstall/privacy; Intuit authorization/refresh/revocation/invoice export; tenant-owned EasyPost connection, webhook registration, purchase timeout/recovery/tracker events; and Resend delivery/retry.
 7. Confirm cron frequency support. `vercel.json` schedules integrations every five minutes and notifications daily. Hobby plans may reject the integration schedule; use a supported plan or an authenticated external scheduler. Never remove cron authorization to make scheduling work.
-8. Review provider mappings, currencies and taxes. QuickBooks export supports unpaid local warehouse-order USD invoices and does not record customer payments or post COGS journals. Shopify publishing replaces one location's available quantity with total Stokora availability less open commitments.
+8. Review provider mappings, currencies and taxes. QuickBooks export supports unpaid local warehouse-order USD invoices and does not record customer payments or post COGS journals. Shopify publishing replaces one location's available quantity with total Invexiqs availability less open commitments.
 9. Verify actual Sentry alert delivery and an independent uptime monitor, then promote a reviewed deployment. Do not enable incomplete modules as part of the release.
 
 ## Alert checks

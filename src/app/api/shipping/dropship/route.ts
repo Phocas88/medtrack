@@ -1,3 +1,4 @@
+import { publicSiteOrigin } from '@/lib/public-site';
 import { requireUser, routeError } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
 
       // Send PO to vendor
       await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL ? "https://stokora.vercel.app" : "http://localhost:3000"}/api/po/send`,
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL ? publicSiteOrigin : "http://localhost:3000"}/api/po/send`,
         {
           method: "POST",
           headers: {

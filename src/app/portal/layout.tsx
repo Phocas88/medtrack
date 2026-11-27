@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
-import { StokoraLogo } from '@/components/ui/stokora-logo';
+import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
 import { PortalContext, type CustomerInfo } from './portal-context';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -79,7 +79,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return (
       <div className="flex min-h-screen items-center justify-center bg-white px-4">
         <div className="text-center space-y-4">
-          <div className="flex justify-center"><StokoraLogo theme="light" size="lg" /></div>
+          <div className="flex justify-center"><InvexiqsLogo theme="light" size="lg" /></div>
 
           <h1 className="text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground max-w-md">
@@ -100,7 +100,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <header className="sticky top-0 z-50 border-b bg-white">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
-              <StokoraLogo theme="light" size="sm" />
+              <InvexiqsLogo theme="light" size="sm" />
               <span className="text-xs text-muted-foreground">Customer Portal</span>
             </div>
             <div className="flex items-center gap-4">

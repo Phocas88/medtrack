@@ -365,7 +365,7 @@ export default function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `stokora-export-${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `invexiqs-export-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -737,7 +737,7 @@ export default function SettingsPage() {
                   <Plug className="h-5 w-5" /> Integrations
                 </CardTitle>
                 <CardDescription>
-                  Connect Stokora with your favorite tools and services.
+                  Connect Invexiqs with your favorite tools and services.
                 </CardDescription>
               </CardHeader>
             </Card>

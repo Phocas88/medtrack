@@ -6,7 +6,7 @@ import { verifyShopifyLaunch } from "@/lib/shopify-webhooks";
 import { shopDomain } from "@/lib/security";
 import { createServiceClient } from "@/lib/supabase/service";
 export const metadata: Metadata = {
-  title: "Stokora · Shopify",
+  title: "Invexiqs · Shopify",
   other: { "shopify-api-key": process.env.SHOPIFY_API_KEY || "" },
 };
 export default async function ShopifyEmbeddedPage({

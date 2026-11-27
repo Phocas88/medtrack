@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@/lib/brand";
 import { escapeHtml } from "@/lib/html";
 import { requireUser, routeError } from "@/lib/server-auth";
 import { NextResponse } from "next/server";
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
         <p>Thank you,<br>${escapeHtml(authUser.full_name)}<br>${escapeHtml(tenantName)}</p>
 
         <hr style="margin:30px 0;border:none;border-top:1px solid #eee">
-        <p style="font-size:12px;color:#999">Sent via Stokora WMS</p>
+        <p style="font-size:12px;color:#999">Sent via ${PRODUCT_NAME}</p>
       </div>
     `;
 

@@ -636,7 +636,7 @@ export default function ScannerAppPage() {
     return (
       <div className="flex flex-col h-full">
         {/* Task header */}
-        <div className="bg-slate-900 text-white px-3 py-2 shrink-0">
+        <div className="bg-brand-deep-plum text-brand-white px-3 py-2 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <Badge

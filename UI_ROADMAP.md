@@ -1,4 +1,4 @@
-# Stokora workspace UI
+# Invexiqs workspace UI
 
 ## Current direction: operations workbench
 

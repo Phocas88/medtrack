@@ -96,7 +96,7 @@ export function EmbeddedWorkspace() {
     void load();
   }, [load]);
   return (
-    <s-page heading="Stokora warehouse orders">
+    <s-page heading="Invexiqs warehouse orders">
       <div style={{ display: "grid", gap: 16 }}>
         {error && (
           <s-banner tone="critical">
@@ -106,7 +106,7 @@ export function EmbeddedWorkspace() {
         {needsLink && (
           <s-banner heading="Link your warehouse account">
             <p>
-              Sign in to Stokora and approve this Shopify identity. Your
+              Sign in to Invexiqs and approve this Shopify identity. Your
               warehouse role determines access.
             </p>
             {path && (
@@ -119,7 +119,7 @@ export function EmbeddedWorkspace() {
                   textDecoration: "underline",
                 }}
               >
-                Link Stokora account
+                Link Invexiqs account
               </a>
             )}
           </s-banner>

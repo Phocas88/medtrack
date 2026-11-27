@@ -10,7 +10,7 @@ const fields = [
   { name: 'warehouseSize', label: 'Approximate warehouse size', required: false },
 ] as const;
 
-const input = 'w-full rounded-md border border-slate-400 bg-white px-3 py-2 text-slate-950';
+const input = 'w-full rounded-md border border-brand-control-border bg-brand-white px-3 py-2 text-brand-charcoal focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
 
 export function InquiryForm() {
   const [busy, setBusy] = useState(false);
@@ -40,7 +40,7 @@ export function InquiryForm() {
     }
   }
 
-  if (accepted) return <p role="status" className="rounded-lg bg-emerald-50 p-5 text-emerald-950">Your inquiry was received. Thank you for contacting Stokora.</p>;
+  if (accepted) return <p role="status" className="rounded-lg bg-emerald-50 p-5 text-emerald-950">Your inquiry was received. Thank you for contacting Invexiqs.</p>;
 
   return (
     <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2 sm:p-7">
@@ -64,7 +64,7 @@ export function InquiryForm() {
       </label>
       <input type="text" name="website" hidden tabIndex={-1} autoComplete="off" />
       {error && <p role="alert" className="text-sm text-red-800 sm:col-span-2">{error}</p>}
-      <button disabled={busy} className="rounded-lg bg-emerald-800 px-5 py-3 font-semibold text-white hover:bg-emerald-900 disabled:opacity-60 sm:col-span-2">
+      <button disabled={busy} className="brand-cta px-5 py-3 disabled:opacity-60 sm:col-span-2">
         {busy ? 'Submitting…' : 'Send inquiry'}
       </button>
     </form>
