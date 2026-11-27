@@ -1,4 +1,4 @@
-import { annualMonthlyEquivalent, launchPricing } from '@/lib/public-pricing';
+import { FeatureComparison } from './plans/feature-comparison';
 import { PublicFooter } from '@/components/layout/public-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -177,21 +177,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="pricing" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-          <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Launch pricing</h2>
-          <p className="mt-3 text-brand-muted-gray">Starter includes one warehouse and up to five team members. Compare Growth and Scale for larger operations.</p>
-          <div className="mt-6 grid max-w-2xl gap-4 sm:grid-cols-2">
-            <article className="rounded-xl border border-brand-border-gray p-5">
-              <h3 className="font-semibold">Starter monthly</h3>
-              <p className="mt-2"><strong className="text-3xl text-brand-royal-plum">{'$'}{launchPricing.monthly}</strong> / month</p>
-            </article>
-            <article className="rounded-xl border border-brand-border-gray bg-brand-lavender p-5">
-              <h3 className="font-semibold">Starter annual</h3>
-              <p className="mt-2"><strong className="text-3xl text-brand-royal-plum">{'$'}{annualMonthlyEquivalent}</strong> / month equivalent</p>
-              <p className="mt-1 text-sm">{'$'}{launchPricing.annual} billed annually</p>
-            </article>
-          </div>
-          <Link href="/plans" className="mt-5 inline-block font-semibold text-brand-royal-plum underline">Compare pricing and features</Link>
+        <section id="pricing" aria-labelledby="pricing-title" className="mx-auto max-w-7xl space-y-5 px-5 py-16 lg:px-8">
+          <h2 id="pricing-title" className="text-3xl font-bold tracking-tight text-brand-royal-plum">Compare pricing and features</h2>
+          <p className="text-brand-muted-gray">Proposed launch pricing in USD per organization. Compare what’s included in Starter, Growth, and Scale.</p>
+          <FeatureComparison />
         </section>
 
         <section id="contact" className="border-y border-brand-border-gray bg-brand-lavender">

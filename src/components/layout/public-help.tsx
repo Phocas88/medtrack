@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { helpTopics } from '@/lib/public-help';
 
 export function PublicHelp() {
@@ -23,7 +23,7 @@ export function PublicHelp() {
             className="rounded-md border px-3 py-2 text-sm hover:bg-muted">{item.label}</button>)}
         </div>
         <div aria-live="polite" className="space-y-2 text-sm">
-          {answer && <><p>{answer.answer}</p><Link className="font-semibold underline" href={answer.href}>{answer.link}</Link></>}
+          {answer && <><p>{answer.answer}</p><DialogClose asChild><Link className="font-semibold underline" href={answer.href}>{answer.link}</Link></DialogClose></>}
           {status === 'unknown' && <p>Try a help topic above or <Link className="underline" href="/support">contact support</Link>.</p>}
           {status === 'error' && <p>AI help is unavailable right now. You can still choose a topic above.</p>}
         </div>

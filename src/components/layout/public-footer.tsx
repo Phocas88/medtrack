@@ -3,7 +3,7 @@ import { PublicHelp } from './public-help';
 
 const groups = [
   ['Product', [['Warehouse features', '/#features'], ['Warehouse AI', '/#warehouse-ai'], ['Who it’s for', '/#solutions']]],
-  ['Get started', [['Compare plans', '/plans'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
+  ['Get started', [['Compare plans', '/#pricing'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
   ['Resources', [['Launch integrations', '/integrations-directory'], ['Warehouse guide', '/guide'], ['Support', '/support']]],
   ['Free tools', [['Barcode and bin labels', '/tools#barcode'], ['Reorder-point calculator', '/tools#reorder'], ['CSV import templates', '/tools#templates']]],
 ] as const;

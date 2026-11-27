@@ -15,8 +15,9 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
   await expect(page).toHaveURL(/#pricing$/);
   const pricing = page.locator('#pricing');
   await expect(pricing).toContainText('$89');
+  await expect(pricing.getByRole('heading', { name: 'Compare pricing and features' })).toBeVisible();
+  await pricing.getByRole('radio', { name: 'Annual', exact: true }).check();
   await expect(pricing).toContainText('$948 billed annually');
-  await expect(pricing.getByRole('link', { name: 'Compare pricing and features' })).toHaveAttribute('href', '/plans');
   await page.getByRole('banner').getByRole('link', { name: 'Request a pilot' }).click();
   await expect(page).toHaveURL(/#contact$/);
   await expect(page.getByLabel('Work email')).toBeVisible();
@@ -163,6 +164,8 @@ test('public resources and help work before signup', async ({ page }) => {
   await chat.getByRole('textbox', { name: 'Your question' }).fill('Can I pay yearly?');
   await chat.getByRole('button', { name: 'Ask', exact: true }).click();
   await chat.getByRole('link', { name: 'Compare pricing and features' }).click();
+  await expect(page).toHaveURL(/\/#pricing$/);
+  await expect(chat).toBeHidden();
   await expect(page.getByRole('columnheader', { name: /Growth/ })).toBeVisible();
   await page.getByRole('radio', { name: 'Annual', exact: true }).check();
   await expect(page.getByText(/\$948 billed annually/)).toBeVisible();
