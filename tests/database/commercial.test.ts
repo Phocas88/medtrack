@@ -723,3 +723,32 @@ describe('public prelaunch registration', () => {
     expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'none'}]);
   });
 });
+
+describe('cutover and purchase planning', () => {
+  it('imports contacts once, forecasts eligible stock, and saves complete drafts atomically', async () => {
+    const importId='99999999-0000-4000-8000-000000000010';
+    const draftId='99999999-0000-4000-8000-000000000011';
+    const rows=JSON.stringify([{name:'Cutover Supplier',email:'cutover@example.test'}]);
+    await login(manager);
+    const importSql="select import_setup_contacts($1,'suppliers',$2) total";
+    expect((await db.query(importSql,[importId,rows])).rows).toEqual([{total:1}]);
+    expect((await db.query(importSql,[importId,rows])).rows).toEqual([{total:1}]);
+    await expect(db.query(importSql,[importId,JSON.stringify([{name:'Different Supplier'}])])).rejects.toThrow('already been used');
+    const supplierId=(await db.query<{id:string}>("select id from suppliers where name='Cutover Supplier'")).rows[0].id;
+    const p=(await db.query<{id:string}>("insert into products(tenant_id,sku,name,supplier_id,lead_time_days,cost) values($1,'PLAN-1','Planning item',$2,7,2) returning id",[tenant,supplierId])).rows[0].id;
+    const open=(await db.query<{id:string}>("insert into sales_orders(tenant_id,order_number,customer_id,status) values($1,'PLAN-SO',$2,'confirmed') returning id",[tenant,customer])).rows[0].id;
+    await db.query("insert into sales_order_lines(tenant_id,order_id,product_id,quantity_ordered,quantity_shipped) values($1,$2,$3,9,2)",[tenant,open,p]);
+    const po=(await db.query<{id:string}>("insert into purchase_orders(tenant_id,po_number,supplier_id,status,expected_date) values($1,'PLAN-IN',$2,'sent',current_date+3) returning id",[tenant,supplierId])).rows[0].id;
+    await db.query("insert into po_lines(tenant_id,po_id,product_id,quantity_ordered,quantity_received) values($1,$2,$3,5,1)",[tenant,po,p]);
+    expect((await db.query('select eligible_stock,open_demand,due_inbound,lead_days from purchase_projection() where product_id=$1',[p])).rows)
+      .toEqual([{eligible_stock:0,open_demand:7,due_inbound:4,lead_days:7}]);
+    const payload=JSON.stringify([{product_id:p,quantity:10}]);
+    const draftSql='select create_projected_draft_pos($1,$2) total';
+    expect((await db.query(draftSql,[draftId,payload])).rows).toEqual([{total:1}]);
+    expect((await db.query(draftSql,[draftId,payload])).rows).toEqual([{total:1}]);
+    expect((await db.query("select quantity_ordered from po_lines inner join purchase_orders on po_lines.po_id=purchase_orders.id where product_id=$1 and purchase_orders.status='draft'",[p])).rows)
+      .toEqual([{quantity_ordered:10}]);
+    await login(other);
+    expect((await db.query('select product_id from purchase_projection() where product_id=$1',[p])).rows).toEqual([]);
+  });
+});

@@ -17,6 +17,8 @@ const testLabel = {
 };
 
 const templates = {
+  customers: 'name,contact_name,email,phone,address\nSample Buyer,Jane Doe,jane@example.test,,\n',
+  suppliers: 'name,contact_name,email,phone,address\nSample Supplier,Alex Doe,alex@example.test,,\n',
   products: 'sku,name,lot_tracked\nBOX-100,Shipping box,false\n',
   opening: 'sku,bin,quantity,lot,expiration\nBOX-100,STARTER,25,,\n',
 };
@@ -99,7 +101,10 @@ function SetupImport({ tenantId }: { tenantId: string }) {
     setBusy(true);
     setError('');
     try {
-      const { data, error: failure } = await createClient().rpc('import_setup_inventory', {
+      const db = createClient();
+      const { data, error: failure } = kind === 'customers' || kind === 'suppliers'
+        ? await db.rpc('import_setup_contacts', { p_request: request.current, p_rows: preview.rows, p_kind: kind })
+        : await db.rpc('import_setup_inventory', {
         p_request: request.current, p_location: kind === 'opening' ? warehouse : null,
         p_rows: preview.rows, p_kind: kind,
       });
@@ -140,6 +145,8 @@ function SetupImport({ tenantId }: { tenantId: string }) {
           }}>
             <option value="products">Product catalog</option>
             <option value="opening">Opening balances</option>
+            <option value="customers">Customers</option>
+            <option value="suppliers">Suppliers</option>
           </select>
         </label>
         {kind === 'opening' && (
@@ -154,7 +161,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
         )}
         <p className="text-sm text-muted-foreground">{kind === 'opening'
           ? 'Import your products first. Use an active bin code and one row per SKU and lot. Lot-tracked items need a lot number. For serialized items, use Receiving.'
-          : 'Use a unique SKU and a product name for each row. The optional lot_tracked column accepts true or false.'}</p>
+          : kind === 'products' ? 'Use a unique SKU and a product name for each row. The optional lot_tracked column accepts true or false.' : 'Use a unique company name. Contact name, email, phone, and address are optional.'}</p>
         <a className="text-sm text-primary underline" download={`invexiqs-${kind}.csv`}
           href={`data:text/csv;charset=utf-8,${encodeURIComponent(templates[kind])}`}>Download sample CSV</a>
         <label className="block text-sm">Upload CSV<Input key={kind} type="file" accept=".csv,text/csv" onChange={async e => {
@@ -196,7 +203,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
           <div className="space-y-2" aria-label="Import preview">
             <p className="text-sm">{preview.rows.length} rows in preview</p>
             <ul className="max-h-48 overflow-auto text-sm">{preview.rows.map((row, i) => (
-              <li key={i} className="break-words">{row.sku || 'Missing SKU'} · {row.name ?? `${row.quantity} in ${row.bin}`}{row.lot ? ` · Lot ${row.lot}` : ''}</li>
+              <li key={i} className="break-words">{row.sku ? `${row.sku} · ` : ''}{row.name ?? `${row.quantity} in ${row.bin}`}{row.lot ? ` · Lot ${row.lot}` : ''}</li>
             ))}</ul>
             {!!preview.errors.length && <ul role="alert" className="max-h-48 overflow-auto text-sm text-destructive">
               {preview.errors.map((message, i) => <li key={i}>{message}</li>)}</ul>}

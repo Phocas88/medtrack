@@ -1,8 +1,12 @@
 import Papa from 'papaparse';
 
-export type SetupImportKind = 'products' | 'opening';
+export type SetupImportKind = 'products' | 'opening' | 'customers' | 'suppliers';
 export type SetupRow = {
   sku: string;
+  contact_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
   name?: string;
   lot_tracked?: boolean;
   bin?: string;
@@ -11,7 +15,11 @@ export type SetupRow = {
   expiration?: string;
 };
 
+const contactColumns = { required: ['name'], optional: ['contact_name', 'email', 'phone', 'address'] };
+
 export const setupColumns = {
+  customers: contactColumns,
+  suppliers: contactColumns,
   products: { required: ['sku', 'name'], optional: ['lot_tracked'] },
   opening: { required: ['sku', 'bin', 'quantity'], optional: ['lot', 'expiration'] },
 };
@@ -48,6 +56,16 @@ export function parseSetupCsv(text: string, kind: SetupImportKind, mapping: Reco
       return [field, typeof value === 'string' ? value.trim() : undefined];
     }));
     const row = index + 2;
+    if (kind === 'customers' || kind === 'suppliers') {
+      const name = values.name ?? '';
+      const key = name.toLowerCase();
+      if (!name || name.length > 200) errors.push(`Row ${row}: enter a name of up to 200 characters.`);
+      if (seen.has(key)) errors.push(`Row ${row}: duplicate name.`);
+      seen.add(key);
+      if (values.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email) || values.email.length > 254)) errors.push(`Row ${row}: enter a valid email address.`);
+      if ((values.contact_name?.length ?? 0) > 200 || (values.phone?.length ?? 0) > 50 || (values.address?.length ?? 0) > 600) errors.push(`Row ${row}: contact details are too long.`);
+      return { sku: '', name, contact_name: values.contact_name, email: values.email, phone: values.phone, address: values.address };
+    }
     const sku = values.sku ?? '';
     if (!sku || sku.length > 100) errors.push(`Row ${row}: enter a SKU of up to 100 characters.`);
     const key = JSON.stringify([sku, kind === 'opening' ? values.lot || 'OPENING' : '']);

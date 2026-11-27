@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { allRows } from '@/lib/all-rows';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { PageHeader } from '@/components/ui/page-header';
@@ -10,16 +11,21 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
-import { AlertTriangle, ShoppingCart, Package, TrendingDown, Zap } from 'lucide-react';
+import { AlertTriangle, ShoppingCart, Package, TrendingDown } from 'lucide-react';
 import { formatNumber, formatCurrency } from '@/lib/format';
 import { exportToCSV } from '@/lib/csv';
 import { toast } from 'sonner';
 import type { Product, Supplier } from '@/types/database';
 
+type Projection = { product_id: string; eligible_stock: number; open_demand: number; due_inbound: number; daily_sales: number; lead_days: number };
+
 interface ReorderItem {
   product: Product;
   supplier: Supplier | null;
   currentStock: number;
+  openDemand: number;
+  inbound: number;
+  projectedStock: number;
   reorderPoint: number;
   suggestedQty: number;
   leadTimeDays: number;
@@ -28,84 +34,61 @@ interface ReorderItem {
 }
 
 export default function ReorderPage() {
-  const { user, tenantId } = useAuth();
+  const { tenantId } = useAuth();
   const [items, setItems] = useState<ReorderItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [planningError, setPlanningError] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const draft = useRef<{ id: string; fingerprint: string }>(undefined);
 
   const loadData = useCallback(async () => {
     if (!tenantId) return;
     const supabase = createClient();
 
-    // Get all active products
-    const { data: products } = await supabase
-      .from('products')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('is_archived', false);
-
-    if (!products) { setLoading(false); return; }
-
-    // Get suppliers
-    const { data: suppliers } = await supabase
-      .from('suppliers')
-      .select('*')
-      .eq('tenant_id', tenantId);
-
-    const supplierMap = new Map((suppliers || []).map((s) => [s.id, s]));
-
-    // Get active lots for stock calculation
-    const { data: lots } = await supabase
-      .from('lots')
-      .select('product_id, quantity_on_hand')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active');
-
-    const stockMap = new Map<string, number>();
-    (lots || []).forEach((l) => {
-      stockMap.set(l.product_id, (stockMap.get(l.product_id) || 0) + l.quantity_on_hand);
-    });
-
-    // Get recent outbound movements for velocity (last 90 days)
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-    const { data: movements } = await supabase
-      .from('stock_movements')
-      .select('product_id, quantity')
-      .eq('tenant_id', tenantId)
-      .eq('movement_type', 'ship')
-      .gte('created_at', ninetyDaysAgo.toISOString());
-
-    const velocityMap = new Map<string, number>();
-    (movements || []).forEach((m) => {
-      const absQty = Math.abs(m.quantity);
-      velocityMap.set(m.product_id, (velocityMap.get(m.product_id) || 0) + absQty);
-    });
+    const inputs = await Promise.all([
+      allRows<Product>((from, to) => supabase.from('products').select('*')
+        .eq('tenant_id', tenantId).eq('is_archived', false).order('id').range(from, to)),
+      allRows<Supplier>((from, to) => supabase.from('suppliers').select('*')
+        .eq('tenant_id', tenantId).eq('is_archived', false).order('id').range(from, to)),
+      allRows<Projection>((from, to) => supabase.rpc('purchase_projection').order('product_id').range(from, to)),
+    ]).catch(() => null);
+    if (!inputs) { setItems([]); setPlanningError(true); setLoading(false); return; }
+    setPlanningError(false);
+    const [products, suppliers, projections] = inputs;
+    const supplierMap = new Map(suppliers.map(supplier => [supplier.id, supplier]));
+    const projection = new Map(projections.map(row => [row.product_id, row]));
 
     // Build reorder items
     const reorderItems: ReorderItem[] = [];
 
     for (const product of products) {
-      const currentStock = stockMap.get(product.id) || 0;
-      const reorderPoint = product.reorder_point ?? product.low_stock_threshold;
-
-      if (currentStock > reorderPoint) continue;
-
-      const suggestedQty = product.reorder_quantity
-        || (product.par_level_max ? Math.max(0, product.par_level_max - currentStock) : reorderPoint * 2);
-
-      const totalShipped = velocityMap.get(product.id) || 0;
-      const dailyVelocity = totalShipped / 90;
-      const daysOfSupply = dailyVelocity > 0 ? Math.round(currentStock / dailyVelocity) : null;
+      const position = projection.get(product.id);
+      if (!position) continue;
+      const currentStock = Number(position.eligible_stock);
+      const openDemand = Number(position.open_demand);
+      const inbound = Number(position.due_inbound);
+      const leadTimeDays = Number(position.lead_days);
+      const dailyVelocity = Number(position.daily_sales);
+      // Open demand and historical run-rate can refer to the same sales. Use the higher figure.
+      const horizonDemand = Math.max(openDemand, Math.ceil(dailyVelocity * leadTimeDays));
+      const projectedStock = currentStock + inbound - horizonDemand;
+      const reorderPoint = product.reorder_point ?? product.low_stock_threshold ?? 0;
+      if (projectedStock > reorderPoint) continue;
+      const target = Math.max(reorderPoint, product.par_level_max ?? 0);
+      const suggestedQty = Math.max(product.reorder_quantity || 0, target - projectedStock);
+      if (suggestedQty <= 0) continue;
+      const daysOfSupply = dailyVelocity > 0 ? Math.floor(currentStock / dailyVelocity) : null;
 
       reorderItems.push({
         product,
         supplier: product.supplier_id ? supplierMap.get(product.supplier_id) || null : null,
         currentStock,
+        openDemand,
+        inbound,
+        projectedStock,
         reorderPoint,
         suggestedQty,
-        leadTimeDays: product.lead_time_days || 0,
+        leadTimeDays,
         daysOfSupply,
         selected: false,
       });
@@ -118,7 +101,7 @@ export default function ReorderPage() {
       }
       if (a.daysOfSupply !== null) return -1;
       if (b.daysOfSupply !== null) return 1;
-      return (a.currentStock / a.reorderPoint) - (b.currentStock / b.reorderPoint);
+      return a.projectedStock - b.projectedStock;
     });
 
     setItems(reorderItems);
@@ -141,157 +124,27 @@ export default function ReorderPage() {
   }
 
   async function generatePOs() {
-    if (!tenantId || !user) return;
-    const selected = items.filter((i) => i.selected);
-    if (selected.length === 0) {
-      toast.error('Select at least one item');
-      return;
-    }
-
+    if (!tenantId || generating) return;
+    const rows = items.filter(item => item.selected).map(item => ({ product_id: item.product.id, quantity: item.suggestedQty }));
+    if (!rows.length) return;
+    const fingerprint = JSON.stringify(rows);
+    if (draft.current?.fingerprint !== fingerprint) draft.current = { id: crypto.randomUUID(), fingerprint };
     setGenerating(true);
-    const supabase = createClient();
-
-    // Group by supplier
-    const bySupplier = new Map<string, ReorderItem[]>();
-    const noSupplier: ReorderItem[] = [];
-
-    for (const item of selected) {
-      if (item.supplier) {
-        const existing = bySupplier.get(item.supplier.id) || [];
-        existing.push(item);
-        bySupplier.set(item.supplier.id, existing);
-      } else {
-        noSupplier.push(item);
-      }
-    }
-
-    if (noSupplier.length > 0) {
-      toast.error(`${noSupplier.length} item(s) have no supplier assigned. Assign suppliers first.`);
-      setGenerating(false);
-      return;
-    }
-
-    let created = 0;
-    for (const [supplierId, supplierItems] of Array.from(bySupplier.entries())) {
-      const poNumber = `PO-${Date.now()}-${created + 1}`;
-      const totalAmount = supplierItems.reduce(
-        (sum, item) => sum + item.suggestedQty * item.product.cost,
-        0
-      );
-
-      const { data: po, error } = await supabase
-        .from('purchase_orders')
-        .insert({
-          tenant_id: tenantId,
-          po_number: poNumber,
-          supplier_id: supplierId,
-          status: 'draft',
-          order_date: new Date().toISOString().split('T')[0],
-          total_amount: totalAmount,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (error || !po) {
-        toast.error(`Failed to create PO for supplier`);
-        continue;
-      }
-
-      // Add lines
-      await supabase.from('po_lines').insert(
-        supplierItems.map((item) => ({
-          tenant_id: tenantId,
-          po_id: po.id,
-          product_id: item.product.id,
-          quantity_ordered: item.suggestedQty,
-          quantity_received: 0,
-          unit_cost: item.product.cost,
-        }))
-      );
-
-      created++;
-    }
-
-    toast.success(`Created ${created} draft purchase order(s)`);
-    setGenerating(false);
-    // Deselect all
-    setItems((prev) => prev.map((item) => ({ ...item, selected: false })));
-  }
-
-  // Auto-generate POs for ALL items and send to vendors
-  async function autoGenerateAndSend() {
-    if (!tenantId || !user || items.length === 0) return;
-    setGenerating(true);
-
-    // Select all items
-    const allItems = items.filter((i) => i.supplier);
-    if (allItems.length === 0) {
-      toast.error('No items with assigned suppliers');
-      setGenerating(false);
-      return;
-    }
-
-    const supabase = createClient();
-
-    // Group by supplier
-    const bySupplier = new Map<string, ReorderItem[]>();
-    for (const item of allItems) {
-      const sid = item.supplier!.id;
-      const existing = bySupplier.get(sid) || [];
-      existing.push(item);
-      bySupplier.set(sid, existing);
-    }
-
-    let created = 0;
-    let sent = 0;
-
-    for (const [supplierId, supplierItems] of Array.from(bySupplier.entries())) {
-      const poNumber = `PO-AUTO-${Date.now().toString(36).toUpperCase()}-${created + 1}`;
-      const totalAmount = supplierItems.reduce((sum, item) => sum + item.suggestedQty * item.product.cost, 0);
-
-      const { data: po, error } = await supabase
-        .from('purchase_orders')
-        .insert({
-          tenant_id: tenantId,
-          po_number: poNumber,
-          supplier_id: supplierId,
-          status: 'draft',
-          order_date: new Date().toISOString().split('T')[0],
-          expected_date: new Date(Date.now() + (supplierItems[0].leadTimeDays || 7) * 86400000).toISOString().split('T')[0],
-          total_amount: totalAmount,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (error || !po) continue;
-
-      await supabase.from('po_lines').insert(
-        supplierItems.map((item) => ({
-          tenant_id: tenantId,
-          po_id: po.id,
-          product_id: item.product.id,
-          quantity_ordered: item.suggestedQty,
-          quantity_received: 0,
-          unit_cost: item.product.cost,
-        }))
-      );
-
-      created++;
-
-      // Send to vendor
-      const sendRes = await fetch('/api/po/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ po_id: po.id }),
+    try {
+      const { data, error } = await createClient().rpc('create_projected_draft_pos', {
+        p_request: draft.current.id, p_rows: rows,
       });
-      if (sendRes.ok) sent++;
+      if (error) toast.error(error.message);
+      else {
+        toast.success(`Created ${data} draft purchase order(s). Review and send them in Purchase Orders.`);
+        draft.current = undefined;
+        setItems(previous => previous.map(item => ({ ...item, selected: false })));
+      }
+    } catch {
+      toast.error('Unable to confirm draft creation. Retry the same selection.');
+    } finally {
+      setGenerating(false);
     }
-
-    toast.success(`Created ${created} POs, sent ${sent} to vendors`);
-    setGenerating(false);
-    setItems((prev) => prev.map((item) => ({ ...item, selected: false })));
   }
 
   const selectedCount = items.filter((i) => i.selected).length;
@@ -338,6 +191,9 @@ export default function ReorderPage() {
       sortable: true,
       render: (row) => formatNumber(row.reorderPoint),
     },
+    { key: 'openDemand', label: 'Open demand', render: row => formatNumber(row.openDemand) },
+    { key: 'inbound', label: 'Due within lead time', render: row => formatNumber(row.inbound) },
+    { key: 'projectedStock', label: 'Projected stock', render: row => formatNumber(row.projectedStock) },
     {
       key: 'suggestedQty',
       label: 'Suggested Qty',
@@ -381,20 +237,14 @@ export default function ReorderPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {planningError && <p role="alert" className="text-destructive">Purchasing projections are unavailable. Refresh to try again.</p>}
+      <p className="text-sm text-muted-foreground">Projected stock uses eligible inventory plus sent or partially received POs due within lead time, less the higher of open order demand or recent shipping demand over that window.</p>
       <PageHeader
         title="Reorder Management"
         description="Products below reorder point that need restocking"
         actions={
           <div className="flex gap-2 flex-wrap">
-            <Button
-              variant="default"
-              onClick={autoGenerateAndSend}
-              disabled={items.length === 0 || generating}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Zap className="mr-2 h-4 w-4" />
-              {generating ? 'Processing...' : `Auto-Order All (${items.length})`}
-            </Button>
+
             <Button
               variant="outline"
               onClick={() =>

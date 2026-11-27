@@ -44,6 +44,15 @@ This branch is **not approved for production launch**. It contains a substantial
 - Setup imports support reusable CSV column mappings in the current browser. Setup also includes a sample lot label and a scanner check that do not post stock movements.
 - Warehouse follow-ups now surface existing shift priorities and link to expiring stock, pick-bin replenishment, and integration activity. Shared, tote-verified wave execution remains unavailable.
 
+## Competitive warehouse workflows
+
+- **Packing and shipping:** the local carton-label migration is included on this development branch. Confirm EasyPost rates, purchase recovery, reprint, and per-carton tracking in the provider sandbox before applying it to production. Carrier voids and Shopify partial fulfillment with tracking reconciliation remain open.
+- **Cutover:** setup imports now support customers and suppliers with CSV mapping and preview. The database rejects duplicate contact names and records replay-safe import results. Open-order imports and warehouse reconciliation remain open.
+- **Batch picking:** the browser-local wave screen remains disabled until there is shared allocation, tote verification, and a short-pick recovery path.
+- **Traceability:** Recall Lookup shows the supplier, receipt movements, and customer shipments for the selected lot record. It asks for a narrower search when a lot number is ambiguous. Pallet identities, cross-location lot lineage, and transaction-level unit conversion remain open.
+- **Purchasing:** Reorder Management projects demand through lead time using eligible stock, open order demand, recent shipping activity, and sent or partially received POs due in the window. Reviewed selections save complete draft POs by supplier in one transaction.
+- **AI exceptions:** an order shortage answer links to replenishment review or a prefilled order follow-up. Managers can edit, assign, and save the follow-up. Automated action proposals for replenishment and supplier outreach remain open.
+
 ## Release gates still open
 
 This is **not** a declaration that every requested feature is finished:

@@ -138,7 +138,13 @@ export default function InventoryAssistantPage() {
               </ul>
             ) : <p className="text-sm">No unshipped units were found on the order lines.</p>}
             <p className="text-sm text-muted-foreground">Eligible lot stock is a snapshot. Review bin availability and complete picking checks in Shipping.</p>
-            <Link className="inline-block text-sm underline" href={answer.order.href}>Open order in Shipping</Link>
+            <div className="flex flex-wrap gap-4">
+              <Link className="text-sm underline" href={answer.order.href}>Open order in Shipping</Link>
+              {answer.order.lines.some(line => line.shortage > 0) && <>
+                <Link className="text-sm underline" href="/replenishment">Review replenishment</Link>
+                <Link className="text-sm underline" href={`/warehouse-followups?order=${answer.order.id}&draft=shortage`}>Review a draft shortage follow-up</Link>
+              </>}
+            </div>
           </div>
         )}
         {answer?.evidence !== undefined && (

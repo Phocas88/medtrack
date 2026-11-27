@@ -105,6 +105,10 @@ export default function WarehouseFollowupsPage() {
       const id = params.get(param);
       if (id && /^[0-9a-f-]{36}$/i.test(id)) {
         setSource({ id, type });
+        if (type === 'sales_order' && params.get('draft') === 'shortage') {
+          setTitle('Review order stock shortage');
+          setNote('Confirm eligible stock and reservations for this order. Check incoming receipts or pick-bin replenishment before releasing the order.');
+        }
         setKind(type === 'sales_order' ? 'customer' : type === 'purchase_order' ? 'supplier' : 'transfer');
         break;
       }

@@ -41,11 +41,16 @@ interface LotInfo {
   quantity_on_hand: number;
   status: string;
   expiration_date: string | null;
+  supplier_name: string | null;
 }
 
 export default function RecallPage() {
   const { user, tenantId } = useAuth();
   const [lotNumber, setLotNumber] = useState('');
+  const [sku, setSku] = useState('');
+  const [warehouse, setWarehouse] = useState('');
+  const [error, setError] = useState('');
+  const [receipts, setReceipts] = useState<{ id: string; reference_number: string | null; created_at: string; quantity: number }[]>([]);
   const [results, setResults] = useState<RecallResult[]>([]);
   const [lotInfo, setLotInfo] = useState<LotInfo | null>(null);
   const [searching, setSearching] = useState(false);
@@ -55,18 +60,18 @@ export default function RecallPage() {
     if (!lotNumber.trim() || !tenantId) return;
     setSearching(true);
     setSearched(true);
+    setError(''); setLotInfo(null); setResults([]); setReceipts([]);
     const supabase = createClient();
 
-    // Find the lot
-    const { data: lots } = await supabase
-      .from('lots')
-      .select('*, product:products(name, sku)')
-      .eq('tenant_id', tenantId)
-      .eq('lot_number', lotNumber.trim());
-
-    if (!lots || lots.length === 0) {
-      setLotInfo(null);
-      setResults([]);
+    let lookup = supabase.from('lots')
+      .select('*, product:products!inner(name, sku), supplier:suppliers(name)')
+      .eq('tenant_id', tenantId).eq('lot_number', lotNumber.trim());
+    if (sku.trim()) lookup = lookup.eq('product.sku', sku.trim());
+    if (warehouse.trim()) lookup = lookup.eq('location', warehouse.trim());
+    const { data: lots, error: lookupError } = await lookup.limit(2);
+    if (lookupError || !lots?.length || lots.length > 1) {
+      if (lookupError) setError('Unable to load this lot. Try again.');
+      else if (lots && lots.length > 1) setError('Multiple lots match. Enter the exact SKU and warehouse name to narrow your search.');
       setSearching(false);
       return;
     }
@@ -81,21 +86,26 @@ export default function RecallPage() {
       quantity_on_hand: lot.quantity_on_hand,
       status: lot.status,
       expiration_date: lot.expiration_date,
+      supplier_name: (lot.supplier as {name: string} | null)?.name ?? null,
     });
 
-    // Find all shipment lines for this lot
-    const { data: shipmentLines } = await supabase
-      .from('shipment_lines')
-      .select(`
+    const [outbound, inbound] = await Promise.all([
+      supabase.from('shipment_lines').select(`
         quantity,
-        shipment:shipments(
-          id,
-          shipped_at,
-          order:sales_orders(order_number),
-          customer:customers(name, email, phone, ship_to_address)
-        )
-      `)
-      .eq('lot_id', lot.id);
+        shipment:shipments(id,shipped_at,order:sales_orders(order_number),customer:customers(name,email,phone,ship_to_address))
+      `).eq('tenant_id', tenantId).eq('lot_id', lot.id).order('id').limit(1000),
+      supabase.from('stock_movements').select('id,reference_number,created_at,quantity')
+        .eq('tenant_id', tenantId).eq('lot_id', lot.id).eq('movement_type','receive').order('created_at').limit(1000),
+    ]);
+    if (outbound.error || inbound.error) {
+      setError('The complete trace could not be loaded. Try again before relying on these results.');
+      setLotInfo(null);
+      setSearching(false);
+      return;
+    }
+    if (outbound.data.length === 1000 || inbound.data.length === 1000) setError('This lot has at least 1,000 receipt or shipment records. The results shown may be incomplete.');
+    setReceipts(inbound.data);
+    const shipmentLines = outbound.data;
 
     const recallResults: RecallResult[] = (shipmentLines || []).map((sl) => {
       const shipment = sl.shipment as unknown as {
@@ -169,12 +179,12 @@ export default function RecallPage() {
     <div className="space-y-6">
       <PageHeader
         title="Recall Lookup"
-        description="Trace which customers received units from a specific lot"
+        description="Review supplier receipts and customer shipments for a specific lot"
       />
 
       <Card>
         <CardContent className="p-6">
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 max-w-md space-y-2">
               <Label>Lot Number</Label>
               <Input
@@ -184,6 +194,12 @@ export default function RecallPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
+            <label className="block text-sm">Exact SKU (optional)
+              <Input value={sku} onChange={event => setSku(event.target.value)} />
+            </label>
+            <label className="block text-sm">Warehouse name (optional)
+              <Input value={warehouse} onChange={event => setWarehouse(event.target.value)} />
+            </label>
             <Button onClick={handleSearch} disabled={searching}>
               <Search className="h-4 w-4 mr-2" /> {searching ? 'Searching...' : 'Search'}
             </Button>
@@ -191,6 +207,7 @@ export default function RecallPage() {
         </CardContent>
       </Card>
 
+      {error && <p role="alert" className="text-destructive">{error}</p>}
       {searched && lotInfo && (
         <Card>
           <CardHeader>
@@ -209,6 +226,7 @@ export default function RecallPage() {
               <div><span className="text-muted-foreground">Product:</span> {lotInfo.product_name}</div>
               <div><span className="text-muted-foreground">SKU:</span> {lotInfo.product_sku}</div>
               <div><span className="text-muted-foreground">Lot #:</span> {lotInfo.lot_number}</div>
+              <div><span className="text-muted-foreground">Supplier:</span> {lotInfo.supplier_name ?? "—"}</div>
               <div><span className="text-muted-foreground">Remaining Qty:</span> {lotInfo.quantity_on_hand}</div>
               <div><span className="text-muted-foreground">Expiration:</span> {formatDate(lotInfo.expiration_date)}</div>
             </div>
@@ -223,6 +241,15 @@ export default function RecallPage() {
           </CardContent>
         </Card>
       )}
+
+      {lotInfo && <Card>
+        <CardHeader><CardTitle>Inbound receipts</CardTitle></CardHeader>
+        <CardContent>
+          {receipts.length ? <ul className="space-y-2 text-sm">{receipts.map(receipt =>
+            <li key={receipt.id}>{receipt.reference_number || 'Warehouse receipt'} · {formatDateTime(receipt.created_at)} · {receipt.quantity} units</li>)}</ul>
+            : <p className="text-sm text-muted-foreground">No receipt movement is linked to this lot.</p>}
+        </CardContent>
+      </Card>}
 
       {searched && results.length > 0 && (
         <Card>
