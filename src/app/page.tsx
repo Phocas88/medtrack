@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Truck, Warehouse } from 'lucide-react';
+import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Sparkles, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
 import { InquiryForm } from './inquiry-form';
@@ -9,7 +9,7 @@ import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata: Metadata = {
   title: 'Invexiqs WMS | Warehouse management for growing distributors',
-  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the demo or set up your own warehouse.',
+  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the warehouse AI assistant, see planned integrations, or set up your own warehouse.',
   alternates: { canonical: '/' },
 };
 
@@ -109,6 +109,42 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="warehouse-ai" className="border-t border-brand-border-gray bg-brand-warm-cream">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-2 lg:px-8 lg:py-16">
+            <div>
+              <Sparkles aria-hidden className="mb-4 text-brand-royal-plum" />
+              <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Ask your warehouse AI assistant</h2>
+              <p className="mt-3 max-w-md leading-relaxed text-brand-muted-gray">Managers can ask about stock, bin locations, lot expirations, and orders that are stuck. The assistant uses warehouse records to answer questions. Inventory and order changes stay with your team.</p>
+            </div>
+            <ul aria-label="Example questions for the AI assistant" className="divide-y divide-brand-border-gray rounded-xl border border-brand-border-gray bg-brand-white">
+              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Inventory</span>Which bin holds SKU 1042?</li>
+              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Internal operations</span>Which lots are expiring soon?</li>
+              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Outbound</span>What’s holding up order SO-123?</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="integrations" className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-16">
+          <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Integrations planned for June 2027</h2>
+          <p className="mt-3 max-w-2xl text-brand-muted-gray">The launch roadmap covers ecommerce, shipping, accounting, point of sale, and workflow automation. Setup availability varies during the pilot.</p>
+          <ul className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ['Shopify', 'Bring ecommerce orders into the warehouse and send shipment tracking back.'],
+              ['WooCommerce', 'Connect online store orders to warehouse fulfillment.'],
+              ['EasyPost', 'Create carrier labels and track shipments.'],
+              ['QuickBooks Online', 'Export eligible shipped orders as invoices.'],
+              ['Square', 'Bring retail sales into your inventory workflow.'],
+              ['Zapier', 'Use Webhooks by Zapier to connect warehouse events to workflows in other apps.'],
+            ].map(([name, detail]) => (
+              <li key={name} className="rounded-xl border border-brand-border-gray p-5">
+                <h3 className="text-lg font-semibold text-brand-deep-plum">{name}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-brand-muted-gray">{detail}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm text-brand-muted-gray">Setting up inventory today? Use CSV files from Excel or Google Sheets to import products and opening balances.</p>
+        </section>
+
         <section aria-labelledby="product-tour" className="border-y border-brand-border-gray bg-brand-lavender">
           <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
             <h2 id="product-tour" className="text-3xl font-bold tracking-tight text-brand-royal-plum">Inside Invexiqs</h2>
@@ -190,6 +226,8 @@ export default function HomePage() {
             ['Contact', '/#contact'],
             ['Create an account', '/auth/signup'],
             ['Features', '/#features'],
+            ['Warehouse AI', '/#warehouse-ai'],
+            ['Integrations', '/#integrations'],
             ['Live demo', '/demo'],
             ['Pricing', '/#pricing'],
             ['Privacy Policy', '/legal/privacy'],

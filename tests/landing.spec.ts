@@ -6,7 +6,7 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Know what’s in stock and where to find it.');
   await expect(page.locator('body')).not.toContainText(/\b(?:free trial|14.day trial|start (?:a |your )?trial)\b/i);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Live demo', 'Pricing', 'Sign in', 'Solutions']);
+  await expect(nav.getByRole('link')).toHaveText(['Features', 'Warehouse AI', 'Integrations', 'Live demo', 'Pricing', 'Sign in']);
   await nav.getByRole('link', { name: 'Pricing' }).click();
   await expect(page).toHaveURL(/#pricing$/);
   const pricing = page.locator('#pricing');
@@ -14,7 +14,7 @@ test('anonymous buyers can view the complete page and reach the pilot form', asy
     await expect(pricing.getByRole('heading', { name: heading })).toBeVisible();
   }
   await expect(pricing).toContainText('Rates will be announced closer to launch.');
-  await nav.getByRole('link', { name: 'Contact' }).click();
+  await page.getByRole('banner').getByRole('link', { name: 'Request a pilot' }).click();
   await expect(page).toHaveURL(/#contact$/);
   await expect(page.getByLabel('Work email')).toBeVisible();
 });
@@ -50,7 +50,25 @@ test('contact reports provider failure and acknowledges only accepted submission
 test('mobile navigation stays within the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 820 });
   await page.goto('/');
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Live demo' }).click();
+  const menu = page.getByRole('button', { name: 'Menu', exact: true });
+  const nav = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden();
+  await expect(nav).toBeHidden();
+  await menu.click();
+  await nav.getByRole('link', { name: 'Warehouse AI' }).click();
+  await expect(page).toHaveURL(/#warehouse-ai$/);
+  await expect(nav).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Ask your warehouse AI assistant' })).toBeInViewport();
+  await menu.click();
+  await nav.getByRole('link', { name: 'Integrations' }).click();
+  await expect(page).toHaveURL(/#integrations$/);
+  await expect(page.getByRole('heading', { name: 'Integrations planned for June 2027' })).toBeInViewport();
+  await menu.click();
+  await page.keyboard.press('Escape');
+  await expect(nav).toBeHidden();
+  await expect(menu).toBeFocused();
+  await menu.click();
+  await nav.getByRole('link', { name: 'Live demo' }).click();
   await expect(page).toHaveURL(/\/demo$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
