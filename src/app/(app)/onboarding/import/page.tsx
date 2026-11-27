@@ -17,6 +17,8 @@ const testLabel = {
 };
 
 const templates = {
+  sales_orders: 'order_number,party,sku,quantity,unit_amount\nSO-102,Sample Buyer,BOX-100,5,7.50\n',
+  purchase_orders: 'order_number,party,sku,quantity,unit_amount\nPO-102,Sample Supplier,BOX-100,20,3.25\n',
   customers: 'name,contact_name,email,phone,address\nSample Buyer,Jane Doe,jane@example.test,,\n',
   suppliers: 'name,contact_name,email,phone,address\nSample Supplier,Alex Doe,alex@example.test,,\n',
   products: 'sku,name,lot_tracked\nBOX-100,Shipping box,false\n',
@@ -35,6 +37,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
   const [scannerResult, setScannerResult] = useState('');
   const [printError, setPrintError] = useState('');
   const [kind, setKind] = useState<SetupImportKind>('products');
+  const orderImport = kind === 'sales_orders' || kind === 'purchase_orders';
   const [csv, setCsv] = useState('');
   const [mappings, setMappings] = useState<Partial<Record<SetupImportKind, Record<string, string>>>>({});
   const [preview, setPreview] = useState<ReturnType<typeof parseSetupCsv>>();
@@ -102,7 +105,9 @@ function SetupImport({ tenantId }: { tenantId: string }) {
     setError('');
     try {
       const db = createClient();
-      const { data, error: failure } = kind === 'customers' || kind === 'suppliers'
+      const { data, error: failure } = orderImport
+        ? await db.rpc('import_cutover_order_drafts', { p_request: request.current, p_rows: preview.rows, p_kind: kind })
+        : kind === 'customers' || kind === 'suppliers'
         ? await db.rpc('import_setup_contacts', { p_request: request.current, p_rows: preview.rows, p_kind: kind })
         : await db.rpc('import_setup_inventory', {
         p_request: request.current, p_location: kind === 'opening' ? warehouse : null,
@@ -147,6 +152,8 @@ function SetupImport({ tenantId }: { tenantId: string }) {
             <option value="opening">Opening balances</option>
             <option value="customers">Customers</option>
             <option value="suppliers">Suppliers</option>
+            <option value="sales_orders">Open sales order drafts</option>
+            <option value="purchase_orders">Open purchase order drafts</option>
           </select>
         </label>
         {kind === 'opening' && (
@@ -159,7 +166,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
             </select>
           </label>
         )}
-        <p className="text-sm text-muted-foreground">{kind === 'opening'
+        <p className="text-sm text-muted-foreground">{orderImport ? 'Import products and contacts first. Enter only remaining quantities. Each order imports as a draft for review, without posting stock or sending a document.' : kind === 'opening'
           ? 'Import your products first. Use an active bin code and one row per SKU and lot. Lot-tracked items need a lot number. For serialized items, use Receiving.'
           : kind === 'products' ? 'Use a unique SKU and a product name for each row. The optional lot_tracked column accepts true or false.' : 'Use a unique company name. Contact name, email, phone, and address are optional.'}</p>
         <a className="text-sm text-primary underline" download={`invexiqs-${kind}.csv`}
@@ -203,7 +210,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
           <div className="space-y-2" aria-label="Import preview">
             <p className="text-sm">{preview.rows.length} rows in preview</p>
             <ul className="max-h-48 overflow-auto text-sm">{preview.rows.map((row, i) => (
-              <li key={i} className="break-words">{row.sku ? `${row.sku} · ` : ''}{row.name ?? `${row.quantity} in ${row.bin}`}{row.lot ? ` · Lot ${row.lot}` : ''}</li>
+              <li key={i} className="break-words">{row.order_number ? `${row.order_number} · ${row.party} · ${row.sku} · ${row.quantity} units at ${row.unit_amount}` : `${row.sku ? `${row.sku} · ` : ''}${row.name ?? `${row.quantity} in ${row.bin}`}`}{row.lot ? ` · Lot ${row.lot}` : ''}</li>
             ))}</ul>
             {!!preview.errors.length && <ul role="alert" className="max-h-48 overflow-auto text-sm text-destructive">
               {preview.errors.map((message, i) => <li key={i}>{message}</li>)}</ul>}
@@ -212,7 +219,7 @@ function SetupImport({ tenantId }: { tenantId: string }) {
           </div>
         )}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        {imported !== undefined && <p role="status" className="text-sm">{imported} rows imported.</p>}
+        {imported !== undefined && <p role="status" className="text-sm">{imported} {orderImport ? 'draft orders created' : 'rows imported'}.</p>}
       </fieldset>
     </div>
   );

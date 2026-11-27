@@ -752,3 +752,48 @@ describe('cutover and purchase planning', () => {
     expect((await db.query('select product_id from purchase_projection() where product_id=$1',[p])).rows).toEqual([]);
   });
 });
+
+describe('carton void, cutover drafts, and pack receiving', () => {
+  it('requests a refund once and releases the carton only after carrier confirmation', async () => {
+    await owner();
+    const quote = (await db.query<{shipment_id:string;carton_id:string}>(
+      "select shipment_id,carton_id from shipping_quotes where shipment_id='shp_carton1'")).rows[0];
+    const rpc = "select claim_carton_void($1,$2,$3) result";
+    const first = (await db.query<{result:{submit:boolean;token:string}}>(rpc,[tenant,quote.shipment_id,true])).rows[0].result;
+    expect(first.submit).toBe(true);
+    expect((await db.query(rpc,[tenant,quote.shipment_id,true])).rows).toEqual([{result:{status:'busy'}}]);
+    await db.query("select finish_carton_void($1,$2,$3,'submitted')",[tenant,quote.shipment_id,first.token]);
+    expect((await db.query("select tracking_number from shipment_cartons where id=$1",[quote.carton_id])).rows).toEqual([{tracking_number:'CARTON-1'}]);
+    const retry = (await db.query<{result:{submit:boolean;token:string}}>(rpc,[tenant,quote.shipment_id,true])).rows[0].result;
+    expect(retry.submit).toBe(false);
+    await db.query("select finish_carton_void($1,$2,$3,'refunded')",[tenant,quote.shipment_id,retry.token]);
+    expect((await db.query("select purchase_state from shipping_quotes where shipment_id=$1",[quote.shipment_id])).rows).toEqual([{purchase_state:'voided'}]);
+    expect((await db.query("select tracking_number from shipment_cartons where id=$1",[quote.carton_id])).rows).toEqual([{tracking_number:''}]);
+  });
+
+  it('imports remaining open quantities as replay-safe drafts without posting inventory', async () => {
+    const request = '99999999-0000-4000-8000-000000000020';
+    const rows = JSON.stringify([{order_number:'CUTOVER-SO-1',party:'Buyer',sku:'SKU-1',quantity:7,unit_amount:'4.2500'}]);
+    await login(manager);
+    const sql = "select import_cutover_order_drafts($1,'sales_orders',$2) total";
+    expect((await db.query(sql,[request,rows])).rows).toEqual([{total:1}]);
+    expect((await db.query(sql,[request,rows])).rows).toEqual([{total:1}]);
+    expect((await db.query(`select o.status,l.quantity_ordered,l.quantity_shipped from sales_orders o
+      join sales_order_lines l on o.id=l.order_id where o.order_number='CUTOVER-SO-1'`)).rows)
+      .toEqual([{status:'draft',quantity_ordered:7,quantity_shipped:0}]);
+  });
+
+  it('validates the displayed pack factor and receives whole stock units', async () => {
+    await owner();
+    const conversion = (await db.query<{id:string}>(`insert into product_uom_conversions(tenant_id,product_id,uom_name,conversion_factor)
+      values($1,$2,'test-case',12) returning id`,[tenant,product])).rows[0].id;
+    await login(manager);
+    const request = '99999999-0000-4000-8000-000000000021';
+    const receipt = JSON.stringify({product_id:product,lot_number:'PACK-RECEIPT',quantity:2,cost_at_receipt:1});
+    const sql = 'select receive_pack_units($1,$2,null,$3,$4)';
+    await expect(db.query(sql,[request,receipt,conversion,10])).rejects.toThrow('receiving unit has changed');
+    await db.query(sql,[request,receipt,conversion,12]);
+    await db.query(sql,[request,receipt,conversion,12]);
+    expect((await db.query("select quantity_on_hand from lots where lot_number='PACK-RECEIPT'")).rows).toEqual([{quantity_on_hand:24}]);
+  });
+});

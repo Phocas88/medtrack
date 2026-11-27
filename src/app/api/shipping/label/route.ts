@@ -12,10 +12,10 @@ export async function GET(request: Request) {
     const carton = z.string().uuid().nullable().parse(new URL(request.url).searchParams.get("carton_id"));
     const query = createServiceClient()
       .from("shipping_quotes")
-      .select("shipment_id,rate_id,purchase_state,purchased")
+      .select("shipment_id,rate_id,purchase_state,purchased,void_state")
       .eq("tenant_id", user.tenant_id)
       .eq("order_id", order)
-      .neq("purchase_state", "quoted");
+      .in("purchase_state", ["buying", "uncertain", "purchased"]);
     const { data, error } = await (carton ? query.eq("carton_id", carton) : query.is("carton_id", null))
       .order("created_at", { ascending: false })
       .limit(1)

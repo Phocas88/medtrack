@@ -45,6 +45,8 @@ export default function ReceivePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bins, setBins] = useState<{ id: string; bin_code: string; warehouse: string }[]>([]);
+  const [pack, setPack] = useState('');
+  const [packData, setPackData] = useState<{ product: string; units: { id: string; uom_name: string; conversion_factor: number }[] }>();
   const [bin, setBin] = useState('');
   const [saving, setSaving] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
@@ -114,6 +116,21 @@ export default function ReceivePage() {
     }
   }, [selectedProductId, products]);
 
+  useEffect(() => {
+    setPack("");
+    if (!tenantId || !selectedProductId) return;
+    const controller = new AbortController();
+    void createClient().from("product_uom_conversions").select("id,uom_name,conversion_factor")
+      .eq("tenant_id",tenantId).eq("product_id",selectedProductId).eq("is_orderable",true)
+      .order("uom_name").abortSignal(controller.signal).then(({ data }) => {
+        if (!controller.signal.aborted) setPackData({ product: selectedProductId, units: data ?? [] });
+      });
+    return () => controller.abort();
+  }, [selectedProductId, tenantId]);
+
+  const packOptions = packData?.product === selectedProductId ? packData.units : [];
+  const selectedPack = packOptions.find(row => row.id === pack);
+
   async function onSubmit(data: FormData) {
     if (!tenantId || !user) return;
     setSaving(true);
@@ -125,8 +142,10 @@ export default function ReceivePage() {
       supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
       serial_numbers: (data.serial_numbers || "").split("\n").map(value => value.trim()).filter(Boolean),
     };
-    const { error } = bin
-      ? await supabase.rpc("receive_inventory_to_bin", { p_request_id: requestId, p_receipt: receipt, p_bin: bin })
+    const { error } = selectedPack
+      ? await supabase.rpc("receive_pack_units", { p_request: requestId, p_receipt: receipt, p_bin: bin || null,
+        p_conversion: selectedPack.id, p_expected_factor: selectedPack.conversion_factor })
+      : bin ? await supabase.rpc("receive_inventory_to_bin", { p_request_id: requestId, p_receipt: receipt, p_bin: bin })
       : await supabase.rpc("receive_inventory", { p_request_id: requestId, p_receipt: receipt });
     if (error) {
       toast.error(error.message);
@@ -143,7 +162,8 @@ export default function ReceivePage() {
       location: bins.find(item => item.id === bin)?.bin_code || data.location || null,
     });
 
-    toast.success(`Received ${data.quantity} units of ${product?.name}`);
+    toast.success(`Received ${data.quantity * (selectedPack?.conversion_factor ?? 1)} stock units of ${product?.name}`);
+    setPack("");
     form.reset();
     setSaving(false);
   }
@@ -228,7 +248,7 @@ export default function ReceivePage() {
                 <Label>Product *</Label>
                 <Select
                   value={form.watch("product_id")}
-                  onValueChange={(v) => form.setValue("product_id", v)}
+                  onValueChange={(v) => { setPack(""); form.setValue("product_id", v); }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select product" />
@@ -267,8 +287,16 @@ export default function ReceivePage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Quantity *</Label>
-                <Input type="number" {...form.register("quantity")} />
+                <Label htmlFor="receipt-quantity">Quantity *</Label>
+                <Input id="receipt-quantity" type="number" {...form.register("quantity")} />
+                {packOptions.length > 0 && <label className="block text-sm">Receiving unit
+                  <select value={selectedPack?.id ?? ""} onChange={event => setPack(event.target.value)}
+                    className="mt-1 block w-full rounded border border-input bg-background p-2">
+                    <option value="">Stock unit</option>
+                    {packOptions.map(unit => <option key={unit.id} value={unit.id}>{unit.uom_name} · {unit.conversion_factor} stock units</option>)}
+                  </select>
+                </label>}
+                {selectedPack && <p className="text-xs text-muted-foreground">{Number(form.watch("quantity")) * selectedPack.conversion_factor || 0} stock units will be posted. Enter cost per stock unit.</p>}
                 {form.formState.errors.quantity && (
                   <p className="text-xs text-destructive">
                     {form.formState.errors.quantity.message}

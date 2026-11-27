@@ -204,3 +204,13 @@ export async function registerShippingWebhook(
 export async function validateShippingAccount(key: string): Promise<void> {
   await get("/carrier_accounts", key);
 }
+
+export async function cartonRefundStatus(shipmentId: string, submit: boolean, key: string) {
+  const path = `/shipments/${shipmentId}`;
+  const current = await get(path, key);
+  if (current.id !== shipmentId) throw new Error("Unexpected carrier shipment");
+  if (current.refund_status || !submit) return current.refund_status ?? "checking";
+  const response = await post(`${path}/refund`, {}, key);
+  if (response.id !== shipmentId) throw new Error("Unexpected carrier shipment");
+  return response.refund_status ?? "checking";
+}

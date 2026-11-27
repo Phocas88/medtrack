@@ -1,8 +1,11 @@
 import Papa from 'papaparse';
 
-export type SetupImportKind = 'products' | 'opening' | 'customers' | 'suppliers';
+export type SetupImportKind = 'products' | 'opening' | 'customers' | 'suppliers' | 'sales_orders' | 'purchase_orders';
 export type SetupRow = {
   sku: string;
+  order_number?: string;
+  party?: string;
+  unit_amount?: string;
   contact_name?: string;
   email?: string;
   phone?: string;
@@ -17,7 +20,11 @@ export type SetupRow = {
 
 const contactColumns = { required: ['name'], optional: ['contact_name', 'email', 'phone', 'address'] };
 
+const orderColumns = { required: ['order_number','party','sku','quantity','unit_amount'], optional: [] };
+
 export const setupColumns = {
+  sales_orders: orderColumns,
+  purchase_orders: orderColumns,
   customers: contactColumns,
   suppliers: contactColumns,
   products: { required: ['sku', 'name'], optional: ['lot_tracked'] },
@@ -65,6 +72,21 @@ export function parseSetupCsv(text: string, kind: SetupImportKind, mapping: Reco
       if (values.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email) || values.email.length > 254)) errors.push(`Row ${row}: enter a valid email address.`);
       if ((values.contact_name?.length ?? 0) > 200 || (values.phone?.length ?? 0) > 50 || (values.address?.length ?? 0) > 600) errors.push(`Row ${row}: contact details are too long.`);
       return { sku: '', name, contact_name: values.contact_name, email: values.email, phone: values.phone, address: values.address };
+    }
+    if (kind === 'sales_orders' || kind === 'purchase_orders') {
+      const sku = values.sku ?? '';
+      const reference = values.order_number ?? '';
+      const party = values.party ?? '';
+      const amount = values.unit_amount ?? '';
+      const quantity = Number(values.quantity);
+      if (!reference || reference.length > 100 || /^shopify-/i.test(reference)) errors.push(`Row ${row}: enter a local order reference, up to 100 characters.`);
+      if (!party || party.length > 200) errors.push(`Row ${row}: enter an existing ${kind === 'sales_orders' ? 'customer' : 'supplier'} name.`);
+      if (!sku || sku.length > 100 || !/^\d+$/.test(values.quantity ?? '') || quantity < 1 || quantity > 1000000) errors.push(`Row ${row}: enter a SKU and a remaining whole quantity from 1 to 1,000,000.`);
+      if (!/^\d{1,8}(\.\d{1,4})?$/.test(amount)) errors.push(`Row ${row}: enter a nonnegative unit amount with up to four decimal places.`);
+      const key = JSON.stringify([reference.toLowerCase(), sku]);
+      if (seen.has(key)) errors.push(`Row ${row}: duplicate SKU on this order.`);
+      seen.add(key);
+      return { sku, order_number: reference, party, quantity, unit_amount: amount };
     }
     const sku = values.sku ?? '';
     if (!sku || sku.length > 100) errors.push(`Row ${row}: enter a SKU of up to 100 characters.`);

@@ -20,6 +20,7 @@ type Quote = {
   rate_id: string | null;
   purchase_state: string;
   purchased: ShipmentResult | null;
+  void_state?: "checking" | "submitted" | "refunded" | "rejected" | "not_applicable" | null;
 };
 function labelUrl(value: string) {
   try {
@@ -166,6 +167,31 @@ export function ShippingLabel({
       setBusy(false);
     }
   }
+  async function checkVoid(submit: boolean) {
+    if (!result || busy) return;
+    if (submit && !window.confirm("Request a carrier refund for this unused carton label? This does not reverse the stock shipment.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      const data = await jsonPost("/api/shipping/void", { shipment_id: result.id, submit });
+      if (data.status === "refunded") {
+        setResult(null);
+        setQuote(null);
+        setShipment("");
+        setRates([]);
+        toast.success("Carrier refund confirmed. You can request a replacement label.");
+        onPurchased();
+      } else {
+        setQuote(previous => ({
+          shipment_id: result.id, rate_id: result.rate.id, purchase_state: "purchased",
+          purchased: result, ...previous, void_state: data.status,
+        }));
+      }
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Could not check the void.");
+    } finally { setBusy(false); }
+  }
+
   const fields = (
     address: ShippingAddress,
     setAddress: (value: ShippingAddress) => void,
@@ -212,7 +238,8 @@ export function ShippingLabel({
       )}
     </fieldset>
   );
-  const url = result ? labelUrl(result.label_url) : null;
+  const voidPending = quote?.void_state === "checking" || quote?.void_state === "submitted";
+  const url = result && !voidPending ? labelUrl(result.label_url) : null;
   return (
     <>
       <button
@@ -243,7 +270,9 @@ export function ShippingLabel({
                 {result.rate.carrier} {result.rate.service} ·{" "}
                 {result.tracking_code}
               </p>
-              {url ? (
+              {voidPending ? (
+                <p role="status" className="text-sm">Carrier confirmation is pending. Reprints and replacement postage are paused for this carton.</p>
+              ) : url ? (
                 <a
                   href={url}
                   target="_blank"
@@ -257,6 +286,14 @@ export function ShippingLabel({
                   Label URL unavailable. Recover it through your EasyPost
                   account.
                 </p>
+              )}
+              {cartonId && (
+                quote?.void_state === "rejected" || quote?.void_state === "not_applicable"
+                  ? <p role="status" className="text-sm">The carrier did not approve this refund.</p>
+                  : <button type="button" disabled={busy} onClick={() => void checkVoid(!voidPending)}
+                      className="rounded border px-3 py-2 text-sm">
+                      {voidPending ? "Check refund status" : "Void unused carton label"}
+                    </button>
               )}
             </div>
           ) : quote?.rate_id ? (
