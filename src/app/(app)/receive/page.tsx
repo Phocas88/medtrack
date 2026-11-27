@@ -1,6 +1,5 @@
 "use client";
 
-import { escapeHtml } from "@/lib/html";
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -23,11 +22,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { PackagePlus, Printer, ScanBarcode } from "lucide-react";
-import {
-  generateBarcodeSVG,
-  buildLotLabelContent,
-  printLabel,
-} from "@/lib/barcode";
+import { printLotLabel } from "@/lib/barcode";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import type { Product, Supplier } from "@/types/database";
 
@@ -147,25 +142,14 @@ export default function ReceivePage() {
 
   function handlePrintLastLabel() {
     if (!lastReceived) return;
-    const barcodeContent = buildLotLabelContent({
+    const opened = printLotLabel({
       productName: lastReceived.productName,
       sku: lastReceived.sku,
       lotNumber: lastReceived.lotNumber,
       expirationDate: lastReceived.expDate,
       location: lastReceived.location,
     });
-    const barcodeSvg = generateBarcodeSVG(barcodeContent);
-    const html = `
-      <div class="label">
-        <div class="product-name">${escapeHtml(lastReceived.productName)}</div>
-        <div class="detail">SKU: ${escapeHtml(lastReceived.sku)}</div>
-        <div class="detail">LOT: ${escapeHtml(lastReceived.lotNumber)}</div>
-        ${lastReceived.expDate ? `<div class="detail">EXP: ${escapeHtml(lastReceived.expDate)}</div>` : ""}
-        ${lastReceived.location ? `<div class="detail">BIN: ${escapeHtml(lastReceived.location)}</div>` : ""}
-        <div class="barcode">${barcodeSvg}</div>
-      </div>
-    `;
-    printLabel(html);
+    if (!opened) toast.error("Allow pop-ups to print the item label.");
   }
 
   function handleBarcodeScan(value: string) {

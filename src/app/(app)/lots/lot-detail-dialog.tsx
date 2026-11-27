@@ -1,6 +1,5 @@
 "use client";
 
-import { escapeHtml } from "@/lib/html";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -29,11 +28,7 @@ import {
   formatCurrency,
   movementTypeLabel,
 } from "@/lib/format";
-import {
-  generateBarcodeSVG,
-  buildLotLabelContent,
-  printLabel,
-} from "@/lib/barcode";
+import { printLotLabel } from "@/lib/barcode";
 import { toast } from "sonner";
 import { Printer, AlertTriangle } from "lucide-react";
 import type { Lot, StockMovement, SerialNumber } from "@/types/database";
@@ -82,25 +77,14 @@ export function LotDetailDialog({ open, onOpenChange, lot, onUpdated }: Props) {
 
   function handlePrintLabel() {
     if (!lot || !product) return;
-    const barcodeContent = buildLotLabelContent({
+    const opened = printLotLabel({
       productName: product.name,
       sku: product.sku,
       lotNumber: lot.lot_number,
       expirationDate: lot.expiration_date,
       location: lot.location,
     });
-    const barcodeSvg = generateBarcodeSVG(barcodeContent);
-    const html = `
-      <div class="label">
-        <div class="product-name">${escapeHtml(product.name)}</div>
-        <div class="detail">SKU: ${escapeHtml(product.sku)}</div>
-        <div class="detail">LOT: ${escapeHtml(lot.lot_number)}</div>
-        ${lot.expiration_date ? `<div class="detail">EXP: ${escapeHtml(lot.expiration_date)}</div>` : ""}
-        ${lot.location ? `<div class="detail">BIN: ${escapeHtml(lot.location)}</div>` : ""}
-        <div class="barcode">${barcodeSvg}</div>
-      </div>
-    `;
-    printLabel(html);
+    if (!opened) toast.error("Allow pop-ups to print the item label.");
   }
 
   async function handleRecall() {
