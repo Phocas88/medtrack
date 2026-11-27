@@ -44,6 +44,8 @@ export default function ReceivePage() {
   const { user, tenantId } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [bins, setBins] = useState<{ id: string; bin_code: string; warehouse: string }[]>([]);
+  const [bin, setBin] = useState('');
   const [saving, setSaving] = useState(false);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [lastReceived, setLastReceived] = useState<{
@@ -82,6 +84,15 @@ export default function ReceivePage() {
       .order("name")
       .then(({ data }) => setProducts(data || []));
 
+    void Promise.all([
+      supabase.from("bins").select("id,bin_code,location_id").eq("tenant_id", tenantId).eq("is_active", true).order("bin_code"),
+      supabase.from("locations").select("id,name").eq("tenant_id", tenantId).eq("is_active", true),
+    ]).then(([binResult, locations]) => {
+      const names = new Map((locations.data || []).map(location => [location.id, location.name]));
+      setBins((binResult.data || []).filter(row => names.has(row.location_id))
+        .map(row => ({ id: row.id, bin_code: row.bin_code, warehouse: names.get(row.location_id) ?? "" })));
+    });
+
     supabase
       .from("suppliers")
       .select("*")
@@ -109,17 +120,14 @@ export default function ReceivePage() {
     const supabase = createClient();
     const product = products.find((p) => p.id === data.product_id);
 
-    const { error } = await supabase.rpc("receive_inventory", {
-      p_request_id: requestId,
-      p_receipt: {
-        ...data,
-        supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
-        serial_numbers: (data.serial_numbers || "")
-          .split("\n")
-          .map((value) => value.trim())
-          .filter(Boolean),
-      },
-    });
+    const receipt = {
+      ...data,
+      supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
+      serial_numbers: (data.serial_numbers || "").split("\n").map(value => value.trim()).filter(Boolean),
+    };
+    const { error } = bin
+      ? await supabase.rpc("receive_inventory_to_bin", { p_request_id: requestId, p_receipt: receipt, p_bin: bin })
+      : await supabase.rpc("receive_inventory", { p_request_id: requestId, p_receipt: receipt });
     if (error) {
       toast.error(error.message);
       setSaving(false);
@@ -132,7 +140,7 @@ export default function ReceivePage() {
       lotNumber: data.lot_number,
       sku: product?.sku || "",
       expDate: data.expiration_date || null,
-      location: data.location || null,
+      location: bins.find(item => item.id === bin)?.bin_code || data.location || null,
     });
 
     toast.success(`Received ${data.quantity} units of ${product?.name}`);
@@ -298,11 +306,14 @@ export default function ReceivePage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Location / Bin</Label>
-                <Input
-                  {...form.register("location")}
-                  placeholder="e.g., A1-03"
-                />
+                <Label htmlFor="receiving-bin">Receive into bin</Label>
+                <select id="receiving-bin" value={bin} onChange={event => setBin(event.target.value)}
+                  className="block w-full rounded border border-input bg-background p-2 text-sm">
+                  <option value="">No bin assignment</option>
+                  {bins.map(item => <option key={item.id} value={item.id}>{item.warehouse} · {item.bin_code}</option>)}
+                </select>
+                {!bin && <Label htmlFor="receiving-location">Location note</Label>}
+                {!bin && <Input id="receiving-location" {...form.register("location")} placeholder="e.g., Receiving dock" />}
               </div>
             </div>
 

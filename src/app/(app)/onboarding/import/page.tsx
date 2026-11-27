@@ -1,0 +1,142 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/components/providers/auth-provider';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { parseSetupCsv, type SetupImportKind } from '@/lib/setup-csv';
+import { createClient } from '@/lib/supabase/client';
+
+const templates = {
+  products: 'sku,name,lot_tracked\nBOX-100,Shipping box,false\n',
+  opening: 'sku,bin,quantity,lot,expiration\nBOX-100,STARTER,25,,\n',
+};
+
+export default function SetupImportPage() {
+  const { tenantId, role, loading } = useAuth();
+  if (loading) return <p role="status">Loading import…</p>;
+  if (!tenantId || (role !== 'admin' && role !== 'manager')) return <p>Warehouse manager access is required.</p>;
+  return <SetupImport key={tenantId} tenantId={tenantId} />;
+}
+
+function SetupImport({ tenantId }: { tenantId: string }) {
+  const [kind, setKind] = useState<SetupImportKind>('products');
+  const [csv, setCsv] = useState('');
+  const [preview, setPreview] = useState<ReturnType<typeof parseSetupCsv>>();
+  const [warehouses, setWarehouses] = useState<{id: string; name: string}[]>([]);
+  const [warehouse, setWarehouse] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [imported, setImported] = useState<number>();
+  const request = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('kind') === 'opening') setKind('opening');
+    const controller = new AbortController();
+    void createClient().from('locations').select('id,name').eq('tenant_id', tenantId).eq('is_active', true)
+      .order('name').abortSignal(controller.signal).then(({ data, error }) => {
+        if (controller.signal.aborted) return;
+        if (error) setError(error.message);
+        else { setWarehouses(data ?? []); setWarehouse(data?.[0]?.id ?? ''); }
+      });
+    return () => controller.abort();
+  }, [tenantId]);
+
+  function updateCsv(value: string) {
+    setCsv(value); setPreview(undefined); setImported(undefined); setError('');
+    request.current = undefined;
+  }
+
+  async function review() {
+    setBusy(true);
+    setError('');
+    try {
+      const result = parseSetupCsv(csv, kind);
+      if (!result.errors.length && kind === 'products') {
+        const { data, error: failure } = await createClient().from('products').select('sku')
+          .eq('tenant_id', tenantId).in('sku', result.rows.map(row => row.sku));
+        if (failure) throw failure;
+        for (const row of data ?? []) result.errors.push(`SKU ${row.sku} already exists.`);
+      }
+      setPreview(result);
+      request.current ??= crypto.randomUUID();
+    } catch { setError('Could not check the CSV against your product catalog. Try again.'); }
+    finally { setBusy(false); }
+  }
+
+  async function save() {
+    if (!preview?.rows.length || preview.errors.length || !request.current || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const { data, error: failure } = await createClient().rpc('import_setup_inventory', {
+        p_request: request.current, p_location: kind === 'opening' ? warehouse : null,
+        p_rows: preview.rows, p_kind: kind,
+      });
+      if (failure) { setError(failure.message); return; }
+      setImported(data);
+    } catch { setError('Could not confirm whether the import completed. Retry this preview before changing the CSV.'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-4">
+      <PageHeader title="Import warehouse setup data" />
+      <Link href="/dashboard" className="text-sm text-primary underline">Back to setup checklist</Link>
+      <fieldset disabled={busy} className="space-y-4 rounded-lg border bg-card p-4">
+        <label className="block text-sm">What are you importing?
+          <select className="ml-2 rounded border bg-background p-2" value={kind} onChange={event => {
+            setKind(event.target.value as SetupImportKind); updateCsv('');
+          }}>
+            <option value="products">Product catalog</option>
+            <option value="opening">Opening balances</option>
+          </select>
+        </label>
+        {kind === 'opening' && (
+          <label className="block text-sm">Warehouse
+            <select className="ml-2 rounded border bg-background p-2" value={warehouse} onChange={e => {
+              setWarehouse(e.target.value); setImported(undefined); request.current = crypto.randomUUID();
+            }}>
+              <option value="">Select a warehouse</option>
+              {warehouses.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+        )}
+        <p className="text-sm text-muted-foreground">{kind === 'opening'
+          ? 'Import your products first. Use an active bin code and one row per SKU and lot. Lot-tracked items need a lot number. For serialized items, use Receiving.'
+          : 'Use a unique SKU and a product name for each row. The optional lot_tracked column accepts true or false.'}</p>
+        <a className="text-sm text-primary underline" download={`invexiqs-${kind}.csv`}
+          href={`data:text/csv;charset=utf-8,${encodeURIComponent(templates[kind])}`}>Download sample CSV</a>
+        <label className="block text-sm">Upload CSV<Input key={kind} type="file" accept=".csv,text/csv" onChange={async e => {
+          const file = e.target.files?.[0];
+          if (file && file.size > 1024 * 1024) { updateCsv(''); setError('Choose a CSV smaller than 1 MB.'); return; }
+          if (file) {
+            try { updateCsv(await file.text()); }
+            catch { updateCsv(''); setError('Could not read this CSV.'); }
+          }
+        }} /></label>
+        <label className="block text-sm">CSV contents
+          <textarea className="mt-1 min-h-36 w-full rounded border border-input bg-background p-2 font-mono text-sm"
+            value={csv} maxLength={1048576} onChange={e => updateCsv(e.target.value)} />
+        </label>
+        <Button type="button" variant="outline" disabled={!csv.trim()} onClick={() => void review()}>Preview CSV</Button>
+        {preview && (
+          <div className="space-y-2" aria-label="Import preview">
+            <p className="text-sm">{preview.rows.length} rows in preview</p>
+            <ul className="max-h-48 overflow-auto text-sm">{preview.rows.map((row, i) => (
+              <li key={i} className="break-words">{row.sku || 'Missing SKU'} · {row.name ?? `${row.quantity} in ${row.bin}`}{row.lot ? ` · Lot ${row.lot}` : ''}</li>
+            ))}</ul>
+            {!!preview.errors.length && <ul role="alert" className="max-h-48 overflow-auto text-sm text-destructive">
+              {preview.errors.map((message, i) => <li key={i}>{message}</li>)}</ul>}
+            <Button type="button" disabled={!!preview.errors.length || imported !== undefined || (kind === 'opening' && !warehouse)}
+              onClick={() => void save()}>Import {preview.rows.length} rows</Button>
+          </div>
+        )}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {imported !== undefined && <p role="status" className="text-sm">{imported} rows imported.</p>}
+      </fieldset>
+    </div>
+  );
+}

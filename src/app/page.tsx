@@ -52,7 +52,8 @@ export default function HomePage() {
               <p className="max-w-xl text-lg leading-relaxed text-brand-muted-gray">Warehouse management software for growing distributors. Manage inventory, receiving, bin locations, and order fulfillment in one workspace.</p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/demo" className={primary}>Explore live demo <ArrowRight aria-hidden size={18} /></Link>
-                <Link href="#contact" className={secondary}>Request a pilot</Link>
+                <Link href="/auth/signup" className={secondary}>Create an account</Link>
+                <Link href="#contact" className="inline-flex items-center px-2 py-2 text-sm font-medium text-brand-royal-plum underline underline-offset-4">Request a pilot</Link>
               </div>
             </div>
             <figure className="overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-xl shadow-brand-deep-plum/10">

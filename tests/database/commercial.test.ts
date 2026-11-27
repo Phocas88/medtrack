@@ -594,3 +594,41 @@ describe('warehouse execution workflows', () => {
     expect((await db.query('select id from warehouse_followups where id=$1',[followup])).rows).toEqual([]);
   });
 });
+
+describe('self-serve warehouse setup', () => {
+  it('sets up a new tenant once, rolls back bad imports, and posts bin stock once on receipt retry', async () => {
+    const ownerId = '90000000-0000-4000-8000-000000000001';
+    await owner();
+    await db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3::jsonb)', [
+      ownerId, 'setup@example.test', JSON.stringify({ company_name: 'Setup fixture', full_name: 'Setup admin' }),
+    ]);
+    await login(ownerId);
+    const setup = 'select setup_first_warehouse($1,$2,$3) as id';
+    const warehouse = (await db.query<{ id: string }>(setup, ['Setup fixture','Main warehouse','America/New_York'])).rows[0].id;
+    expect((await db.query(setup, ['Setup fixture','Main warehouse','America/New_York'])).rows).toEqual([{ id: warehouse }]);
+    const bins = (await db.query<{ id: string; bin_code: string }>('select id,bin_code from bins where location_id=$1 order by bin_code',[warehouse])).rows;
+    expect(bins.map(bin => bin.bin_code)).toEqual(['RECEIVING', 'STARTER']);
+    const importer = 'select import_setup_inventory($1,$2,$3::jsonb,$4) as count';
+    const request = '90000000-0000-4000-8000-000000000002';
+    const products = JSON.stringify([{ sku:'BOX-100',name:'Shipping box',lot_tracked:true }]);
+    await db.query(importer,[request,null,products,'products']);
+    const [{id: skuId}] = (await db.query<{id:string}>("select id from products where sku='BOX-100'")).rows;
+    const openingId = '90000000-0000-4000-8000-000000000003';
+    const opening = { sku:'BOX-100',bin:'STARTER',quantity:25,lot:'COUNT-1' };
+    await expect(db.query(importer,[openingId,warehouse,JSON.stringify([opening,{...opening,bin:'DOES-NOT-EXIST'}]),'opening'])).rejects.toThrow('needs an active bin');
+    expect((await db.query("select id from lots where lot_number='COUNT-1'")).rows).toEqual([]);
+    const openingArgs = [openingId,warehouse,JSON.stringify([opening]),'opening'];
+    await db.query(importer,openingArgs);
+    await db.query(importer,openingArgs);
+    const receiving = 'select receive_inventory_to_bin($1,$2::jsonb,$3)';
+    const receipt = ['90000000-0000-4000-8000-000000000004',JSON.stringify({
+      product_id:skuId,quantity:3,lot_number:'FIRST-RECEIPT',
+    }),bins[0].id];
+    await db.query(receiving, receipt);
+    await db.query(receiving, receipt);
+    expect((await db.query('select quantity from bin_inventory where product_id=$1 order by quantity',[skuId])).rows)
+      .toEqual([{quantity:3},{quantity:25}]);
+    await login(other);
+    await expect(db.query(receiving,['90000000-0000-4000-8000-000000000005',receipt[1],bins[0].id])).rejects.toThrow('active receiving bin');
+  });
+});
