@@ -76,6 +76,20 @@ test('mobile navigation stays within the viewport', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+test('visitors can follow stock through the warehouse on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/');
+  const stages = page.getByRole('group', { name: 'Warehouse workflow stages' });
+  await expect(stages.getByRole('button', { name: 'Receive' })).toHaveAttribute('aria-pressed', 'true');
+  await stages.getByRole('button', { name: 'Store' }).click();
+  await expect(page.getByText('Bin A-03-02')).toBeVisible();
+  await stages.getByRole('button', { name: 'Pick' }).click();
+  await expect(page.getByText('8 picked')).toBeVisible();
+  await stages.getByRole('button', { name: 'Ship' }).click();
+  await expect(page.getByText('16 left in stock')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
 test('homepage links visitors to signup and the interactive order desk', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'From signup to your first receipt' })).toBeVisible();

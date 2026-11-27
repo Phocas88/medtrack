@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Sparkles, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
+import { WarehouseStory } from './warehouse-story';
 import { InquiryForm } from './inquiry-form';
 import { PublicHeader } from '@/components/layout/public-header';
 
@@ -52,51 +53,24 @@ export default function HomePage() {
         Invexiqs launches <time dateTime="2027-06">June 2027</time>
       </p>
       <main id="main">
-        <section className="border-b border-brand-border-gray bg-brand-lavender">
-          <div className="mx-auto grid max-w-7xl items-center gap-9 px-5 py-12 sm:py-16 lg:grid-cols-[.95fr_1.05fr] lg:gap-12 lg:px-8 lg:py-24">
+        <section className="border-b border-brand-border-gray bg-brand-deep-plum text-white [&_a:focus-visible]:outline-white">
+          <div className="mx-auto grid max-w-7xl items-center gap-7 px-5 py-9 sm:py-14 lg:grid-cols-[.95fr_1.05fr] lg:gap-12 lg:px-8 lg:py-20">
             <div className="space-y-5">
-              <p className="text-sm font-semibold text-brand-royal-plum">{BRAND_TAGLINE}</p>
-              <h1 className="max-w-xl text-balance text-[2.65rem] font-bold leading-[1.05] tracking-[-0.045em] text-brand-deep-plum sm:text-6xl">Know what’s in stock and where to find it.</h1>
-              <p className="max-w-lg text-lg leading-relaxed text-brand-muted-gray">Invexiqs is warehouse management software for growing distributors. Receive into bins, track lot inventory, and fulfill orders from one workspace.</p>
-              <div className="flex flex-wrap gap-3 pt-1">
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-brand-lilac">
+                <span aria-hidden className="h-px w-6 bg-brand-coral" />{BRAND_TAGLINE}
+              </p>
+              <h1 className="max-w-xl text-balance text-[clamp(2.2rem,5.25vw,4.5rem)] font-bold leading-[1.02] tracking-[-0.055em]">Know what’s in stock <span className="text-brand-lilac">and where to find it.</span></h1>
+              <p className="max-w-lg text-base leading-relaxed text-brand-lavender sm:text-lg">From the receiving dock to the last carton out, Invexiqs keeps your team on the same record of what arrived, where it went, and what’s ready to ship.</p>
+              <div className="grid gap-3 min-[450px]:flex min-[450px]:flex-wrap">
                 <Link href="/auth/signup" className={primary}>Create a prelaunch account <ArrowRight aria-hidden size={18} /></Link>
                 <Link href="/demo" className={secondary}><Play aria-hidden size={16} /> Explore live demo</Link>
               </div>
-              <p className="text-sm text-brand-muted-gray">Warehouse access opens at launch in June 2027. We’ll post the exact date closer to launch.</p>
-              <p className="text-sm text-brand-muted-gray">See the demo without signing in, or <Link className="font-medium text-brand-royal-plum underline underline-offset-4" href="#contact">request a guided pilot</Link>.</p>
+              <p className="text-sm text-brand-lavender">Try the demo without signing in, or <Link className="font-semibold text-white underline underline-offset-4" href="#contact">request a guided pilot</Link>.</p>
             </div>
-            <figure className="min-w-0 overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-xl shadow-brand-deep-plum/10">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border-gray px-4 py-3 sm:px-5">
-                <span className="flex items-center gap-2 text-sm font-semibold text-brand-deep-plum"><Warehouse size={16} aria-hidden /> Warehouse dashboard</span>
-                <span className="text-xs text-brand-muted-gray">Sample data</span>
-              </div>
-              <Image className="block h-auto w-full" src="/product/dashboard.webp" width={1280} height={593}
-                sizes="(max-width: 1023px) 95vw, 50vw" priority
-                alt="Invexiqs dashboard showing inventory totals and shortcuts for warehouse and fulfillment tasks" />
-              <figcaption className="border-t border-brand-border-gray px-4 py-3 text-sm sm:px-5">
-                <Link className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline-offset-4 hover:underline" href="/demo/workspace">
-                  Open the interactive order desk <ArrowRight aria-hidden size={15} />
-                </Link>
-              </figcaption>
-            </figure>
+            <WarehouseStory />
           </div>
         </section>
 
-        <section id="setup" className="mx-auto grid max-w-7xl gap-8 px-5 py-14 lg:grid-cols-[.68fr_1.32fr] lg:gap-12 lg:px-8 lg:py-20">
-          <div>
-            <h2 className="max-w-md text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">From signup to your first receipt</h2>
-            <p className="mt-3 max-w-sm leading-relaxed text-brand-muted-gray">Start with one warehouse. A dashboard checklist helps you pick up where you left off.</p>
-            <Link href="/auth/signup" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">Register for launch <ArrowRight aria-hidden size={16} /></Link>
-          </div>
-          <ol className="divide-y divide-brand-border-gray overflow-hidden rounded-2xl border border-brand-border-gray">
-            {setupSteps.map(({ icon: Icon, title, detail }) => (
-              <li key={title} className="flex gap-4 p-4 sm:p-5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-lavender text-brand-royal-plum"><Icon size={20} aria-hidden /></span>
-                <div><h3 className="font-semibold text-brand-deep-plum">{title}</h3><p className="mt-1 text-sm leading-relaxed text-brand-muted-gray">{detail}</p></div>
-              </li>
-            ))}
-          </ol>
-        </section>
 
         <section id="features" className="mx-auto max-w-7xl border-t border-brand-border-gray px-5 py-14 lg:px-8 lg:py-16">
           <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Run the warehouse from receiving to shipping</h2>
@@ -149,40 +123,60 @@ export default function HomePage() {
         </section>
 
         <section aria-labelledby="product-tour" className="border-y border-brand-border-gray bg-brand-lavender">
-          <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
-            <h2 id="product-tour" className="text-3xl font-bold tracking-tight text-brand-royal-plum">Inside Invexiqs</h2>
-            <p className="mt-3 text-brand-muted-gray">Workflow details from a sample warehouse.</p>
-            <div className="mt-8 grid items-start gap-5 lg:grid-cols-[1fr_1fr_0.58fr]">
-              <figure className="overflow-hidden rounded-xl border border-brand-border-gray bg-brand-white">
-                <Image src="/product/inventory.webp" width={1280} height={423} sizes="(max-width: 1023px) 95vw, 36vw"
-                  alt="Product catalog showing SKUs, stock on hand, and a low-stock indicator" />
-                <figcaption className="border-t border-brand-border-gray p-4 text-sm font-semibold">Product catalog and stock on hand</figcaption>
+          <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20">
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 id="product-tour" className="text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">See the warehouse from both sides</h2>
+                <p className="mt-2 text-brand-muted-gray">The manager’s dashboard and the operator’s scanner, shown with sample data.</p>
+              </div>
+              <Link className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4" href="/demo/workspace">
+                Open the interactive order desk <ArrowRight aria-hidden size={15} />
+              </Link>
+            </div>
+            <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+              <figure className="min-w-0 overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-sm">
+                <Image className="block w-full" src="/product/dashboard.webp" width={1280} height={593} sizes="(max-width: 639px) 95vw, 72vw"
+                  alt="Invexiqs dashboard showing inventory totals and warehouse tasks" />
+                <figcaption className="border-t border-brand-border-gray p-3 text-sm font-semibold">Warehouse dashboard</figcaption>
               </figure>
-              <figure className="overflow-hidden rounded-xl border border-brand-border-gray bg-brand-white">
-                <Image src="/product/bins.webp" width={1280} height={673} sizes="(max-width: 1023px) 95vw, 36vw"
-                  alt="Bin management showing pick bins, reserve bins, and receiving staging" />
-                <figcaption className="border-t border-brand-border-gray p-4 text-sm font-semibold">Bin management</figcaption>
-              </figure>
-              <figure className="max-w-xs overflow-hidden rounded-xl border border-brand-border-gray bg-brand-white">
-                <Image src="/product/scanner.webp" width={390} height={523} sizes="(max-width: 1023px) 320px, 22vw"
-                  alt="Mobile scanner menu showing pick, putaway, replenishment, and cycle count tasks" />
-                <figcaption className="border-t border-brand-border-gray p-4 text-sm font-semibold">Mobile scanner</figcaption>
+              <figure className="mx-auto w-full max-w-[15rem] overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-sm">
+                <Image className="block w-full" src="/product/scanner.webp" width={390} height={523} sizes="240px"
+                  alt="Invexiqs mobile scanner menu with pick, putaway, replenishment, and cycle count tasks" />
+                <figcaption className="border-t border-brand-border-gray p-3 text-sm font-semibold">Mobile scanner</figcaption>
               </figure>
             </div>
           </div>
         </section>
 
+        <section id="setup" className="mx-auto grid max-w-7xl gap-8 px-5 py-14 lg:grid-cols-[.68fr_1.32fr] lg:gap-12 lg:px-8 lg:py-20">
+          <div>
+            <h2 className="max-w-md text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">From signup to your first receipt</h2>
+            <p className="mt-3 max-w-sm leading-relaxed text-brand-muted-gray">Start with one warehouse. A dashboard checklist helps you pick up where you left off.</p>
+            <Link href="/auth/signup" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">Register for launch <ArrowRight aria-hidden size={16} /></Link>
+          </div>
+          <ol className="divide-y divide-brand-border-gray overflow-hidden rounded-2xl border border-brand-border-gray">
+            {setupSteps.map(({ icon: Icon, title, detail }) => (
+              <li key={title} className="flex gap-4 p-4 sm:p-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-lavender text-brand-royal-plum"><Icon size={20} aria-hidden /></span>
+                <div><h3 className="font-semibold text-brand-deep-plum">{title}</h3><p className="mt-1 text-sm leading-relaxed text-brand-muted-gray">{detail}</p></div>
+              </li>
+            ))}
+          </ol>
+        </section>
         <section id="solutions" className="bg-brand-deep-plum text-white">
-          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-16 md:grid-cols-2 lg:px-8">
+          <div className="mx-auto grid max-w-7xl items-center gap-7 px-5 py-12 md:grid-cols-2 lg:gap-12 lg:px-8 lg:py-16">
+            <Image src="/product/receiving-floor.webp" alt="Illustration of a warehouse worker scanning a carton at the receiving dock"
+              width={1280} height={720} sizes="(max-width: 767px) 94vw, 48vw"
+              className="aspect-[16/10] w-full rounded-2xl object-cover" />
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-brand-white">Built around the way a warehouse works</h2>
-              <p className="mt-4 max-w-xl text-brand-lavender">Invexiqs draws on firsthand warehouse and inventory management experience, from checking inbound stock and counting bins to reporting inventory discrepancies.</p>
+              <p className="mt-4 max-w-xl text-brand-lavender">Invexiqs draws on firsthand warehouse and inventory management experience, from checking inbound stock and counting bins to investigating inventory discrepancies.</p>
+              <ul className="mt-5 space-y-2 border-l border-brand-coral pl-4 text-sm text-brand-lavender sm:text-base">
+                <li>Independent distributors and wholesalers</li>
+                <li>Industrial and maintenance supply teams</li>
+                <li>Retail stockrooms and manufacturing inventory teams</li>
+              </ul>
             </div>
-            <ul className="grid content-start gap-3 text-brand-lavender">
-              <li className="rounded-lg border border-brand-lilac/50 p-4">Independent distributors and wholesalers</li>
-              <li className="rounded-lg border border-brand-lilac/50 p-4">Industrial and maintenance supply distributors</li>
-              <li className="rounded-lg border border-brand-lilac/50 p-4">Retail stockrooms and manufacturing inventory teams</li>
-            </ul>
           </div>
         </section>
 
