@@ -174,6 +174,10 @@ test('public resources and help work before signup', async ({ page }) => {
   await expect(page.getByRole('row', { name: /Pick-bin replenishment/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Stock by bin and lot/ })).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 820 });
+  await expect(page.getByRole('columnheader', { name: /Growth/ })).toBeHidden();
+  await page.getByLabel('Plan to view').selectOption({ label: 'Growth' });
+  await expect(page.getByRole('columnheader', { name: /Growth/ })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /Starter/ })).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByRole('contentinfo').getByRole('link', { name: 'Barcode and bin labels' }).click();
   await page.getByLabel('Bin code or SKU').fill('A-01-03');

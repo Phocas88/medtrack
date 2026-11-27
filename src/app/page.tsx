@@ -160,20 +160,25 @@ export default function HomePage() {
             ))}
           </ol>
         </section>
-        <section id="solutions" className="bg-brand-deep-plum text-white">
-          <div className="mx-auto grid max-w-7xl items-center gap-7 px-5 py-12 md:grid-cols-2 lg:gap-12 lg:px-8 lg:py-16">
-            <Image src="/product/receiving-floor.webp" alt="Illustration of a warehouse worker scanning a carton at the receiving dock"
-              width={1280} height={720} sizes="(max-width: 767px) 94vw, 48vw"
-              className="aspect-[16/10] w-full rounded-2xl object-cover" />
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-brand-white">Built around the way a warehouse works</h2>
-              <p className="mt-4 max-w-xl text-brand-lavender">Invexiqs draws on firsthand warehouse and inventory management experience, from checking inbound stock and counting bins to investigating inventory discrepancies.</p>
-              <ul className="mt-5 space-y-2 border-l border-brand-coral pl-4 text-sm text-brand-lavender sm:text-base">
-                <li>Independent distributors and wholesalers</li>
-                <li>Industrial and maintenance supply teams</li>
-                <li>Retail stockrooms and manufacturing inventory teams</li>
-              </ul>
-            </div>
+        <section id="solutions" aria-labelledby="industries-title" className="bg-brand-deep-plum text-white">
+          <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-16">
+            <h2 id="industries-title" className="text-3xl font-bold tracking-tight text-brand-white">Industries Invexiqs fits</h2>
+            <p className="mt-3 max-w-2xl text-brand-lavender">For teams managing physical stock across shelves, bins, and shipping stations.</p>
+            <ul className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ['Wholesale distribution', 'Receive supplier orders, track open quantities, and fulfill orders across customer accounts.'],
+                ['Packaging and shipping supplies', 'Keep similar SKUs straight and find cartons, labels, and consumables by bin.'],
+                ['Industrial and maintenance supplies', 'Locate spare parts, check reorder levels, and investigate stock discrepancies.'],
+                ['Ecommerce fulfillment', 'Pick, pack, and track shipments from one order desk. Connect online stores at launch.'],
+                ['Retail stockrooms', 'Count stock, look up barcodes, and track movements between storage locations.'],
+                ['Manufacturing inventory teams', 'Track materials and finished goods, and assemble stock kits from components.'],
+              ].map(([name, detail]) => (
+                <li key={name} className="rounded-xl border border-brand-lilac/40 px-4 py-4">
+                  <h3 className="font-semibold text-brand-white">{name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-brand-lavender">{detail}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
