@@ -55,7 +55,7 @@ test.describe("commercial upgrade boundaries", () => {
   }) => {
     await page.goto("/demo");
     await expect(
-      page.getByRole("link", { name: "Open interactive preview" }),
+      page.getByRole("link", { name: "Enter the warehouse demo" }),
     ).toBeVisible();
     await expect(page.getByText("100%", { exact: true })).toHaveCount(0);
   });

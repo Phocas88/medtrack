@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { helpTopics } from '@/lib/public-help';
 
 export function PublicHelp() {
@@ -12,10 +13,10 @@ export function PublicHelp() {
   const answer = topic ? helpTopics[topic] : undefined;
   return (
     <Dialog>
-      <DialogTrigger className="brand-cta px-4 py-2">Ask Invexiqs</DialogTrigger>
+      <DialogTrigger className="brand-cta fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-40 min-h-11 border border-brand-deep-plum/20 px-4 py-2 shadow-lg sm:right-6"><MessageCircle size={18} aria-hidden /> Ask Invexiqs</DialogTrigger>
       <DialogContent className="max-h-[85dvh] overflow-auto">
         <DialogTitle>Ask Invexiqs</DialogTitle>
-        <p className="text-sm text-muted-foreground">Ask about plans, setup, or warehouse features. Avoid passwords and customer or inventory data.</p>
+        <DialogDescription>Ask about plans, setup, or warehouse features. Avoid passwords and customer or inventory data.</DialogDescription>
         <div className="flex flex-wrap gap-2">
           {Object.entries(helpTopics).map(([key, item]) => <button type="button" key={key}
             disabled={status === 'busy'} onClick={() => { setTopic(key as keyof typeof helpTopics); setStatus('idle'); }}

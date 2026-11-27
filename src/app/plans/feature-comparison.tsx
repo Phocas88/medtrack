@@ -25,9 +25,9 @@ const groups = [
     ['Warehouse dashboard and AI assistant', included],
     ['Warehouse follow-up queue', ['—', 'Included', 'Included']],
   ] },
-  { name: 'Planned integrations', rows: [
-    ['Shopify, EasyPost and QuickBooks Online', ['—', 'Planned', 'Planned']],
-    ['Workflow automation through Zapier', ['—', '—', 'Planned']],
+  { name: 'Integrations at launch', rows: [
+    ['Shopify, EasyPost and QuickBooks Online', ['—', 'At launch', 'At launch']],
+    ['Workflow automation through Zapier', ['—', '—', 'At launch']],
   ] },
 ] as const;
 

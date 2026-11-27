@@ -8,9 +8,6 @@ export default function DemoPage() {
         <Link href="/" aria-label="Invexiqs home">
           <InvexiqsNavigationLogo />
         </Link>
-        <Link href="/auth/login" className="text-sm">
-          Sign in
-        </Link>
       </header>
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-16">
         <div>
@@ -21,29 +18,26 @@ export default function DemoPage() {
             See Invexiqs in action
           </h1>
           <p className="mt-4 leading-relaxed text-muted-foreground">
-            Explore the order-desk layout with sample orders. Search, filter and
-            inspect records without creating an account.
+            Try a sample warehouse. Look up a bin, receive stock, or investigate a held order without creating an account.
           </p>
         </div>
         <Link
           href="/demo/workspace"
           className="brand-cta px-5 py-3 text-sm"
         >
-          Open interactive preview →
+          Enter the warehouse demo →
         </Link>
         <RoleWalkthroughs />
         <section className="space-y-3 border-t pt-6">
           <h2 className="font-semibold">Try your own warehouse</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Create an account to set up your warehouse, add inventory and run
-            receiving and shipping workflows. Integrations require configuration
-            and provider authorization.
+            Register now for warehouse access when Invexiqs launches in June 2027.
           </p>
           <Link
             href="/auth/signup"
             className="inline-block text-sm text-primary underline"
           >
-            Create an account
+            Create a prelaunch account
           </Link>
         </section>
         <p className="border-t pt-5 text-xs leading-relaxed text-muted-foreground">

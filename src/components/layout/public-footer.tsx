@@ -4,13 +4,13 @@ import { PublicHelp } from './public-help';
 const groups = [
   ['Product', [['Warehouse features', '/#features'], ['Warehouse AI', '/#warehouse-ai'], ['Who it’s for', '/#solutions']]],
   ['Get started', [['Compare plans', '/plans'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
-  ['Resources', [['Integration roadmap', '/integrations-directory'], ['Warehouse guide', '/guide'], ['Support', '/support']]],
+  ['Resources', [['Launch integrations', '/integrations-directory'], ['Warehouse guide', '/guide'], ['Support', '/support']]],
   ['Free tools', [['Barcode and bin labels', '/tools#barcode'], ['Reorder-point calculator', '/tools#reorder'], ['CSV import templates', '/tools#templates']]],
 ] as const;
 
 export function PublicFooter() {
   return <footer className="bg-brand-deep-plum text-brand-white">
-    <div className="mx-auto max-w-7xl space-y-8 px-5 py-10 lg:px-8">
+    <div className="mx-auto max-w-7xl space-y-8 px-5 pb-24 pt-10 lg:px-8">
       <nav aria-label="Footer navigation" className="grid grid-cols-2 gap-6 md:grid-cols-4">
         {groups.map(([label, links]) => <section key={label}>
           <h2 className="font-semibold">{label}</h2>

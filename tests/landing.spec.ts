@@ -65,7 +65,7 @@ test('mobile navigation stays within the viewport', async ({ page }) => {
   await menu.click();
   await nav.getByRole('link', { name: 'Integrations' }).click();
   await expect(page).toHaveURL(/#integrations$/);
-  await expect(page.getByRole('heading', { name: 'Integrations planned for June 2027' })).toBeInViewport();
+  await expect(page.getByRole('heading', { name: 'Connect your systems at launch' })).toBeInViewport();
   await menu.click();
   await page.keyboard.press('Escape');
   await expect(nav).toBeHidden();
@@ -99,7 +99,7 @@ test('homepage links visitors to signup and the interactive order desk', async (
   await expect(page.getByLabel(/company.*organization/i)).toBeVisible();
 
   await page.goto('/');
-  await page.getByRole('link', { name: 'Open the interactive order desk' }).click();
+  await page.getByRole('link', { name: 'Try the warehouse demo', exact: true }).first().click();
   await expect(page).toHaveURL(/\/demo\/workspace$/);
   await expect(page.getByRole('heading', { name: 'Order desk' })).toBeVisible();
 });
@@ -181,4 +181,41 @@ test('public resources and help work before signup', async ({ page }) => {
   await page.getByLabel('Safety stock (units)').fill('20');
   await page.getByRole('button', { name: 'Calculate reorder point' }).click();
   await expect(page.getByText('Reorder at 80 units.')).toBeVisible();
+});
+
+test('warehouse demo keeps scanner, receiving, and fulfillment on sample data', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 820 });
+  await page.goto('/demo/workspace');
+  await expect(page.locator('a[href^="/auth"], a[href="/ship"], a[href="/receive"], a[href="/scan"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Inspect SO-1046' }).click();
+  const task = page.getByRole('dialog');
+  await task.getByRole('button', { name: 'Check shipping readiness' }).click();
+  await expect(task.getByRole('status')).toContainText('12 more are needed');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Receive stock' }).click();
+  await task.getByRole('button', { name: 'Record sample receipt' }).click();
+  await expect(task.getByRole('status')).toContainText('now has 24 units');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Scanner' }).click();
+  await task.getByLabel('Bin code').fill('C-03-01');
+  await task.getByRole('button', { name: 'Look up bin' }).click();
+  await expect(task.getByRole('status')).toContainText('24 units on hand');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Review sample fulfillment' }).click();
+  await task.getByRole('button', { name: 'Check shipping readiness' }).click();
+  await expect(task.getByRole('status')).toContainText('has enough sample stock');
+  await expect(page).toHaveURL(/\/demo\/workspace$/);
+});
+
+test('AI examples and floating help remain usable on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 820 });
+  await page.goto('/');
+  const launcher = page.getByRole('button', { name: 'Ask Invexiqs' });
+  const initial = await launcher.boundingBox();
+  await page.getByRole('button', { name: 'Shift priorities' }).click();
+  await expect(page.getByText(/Review SO-1046 first/)).toBeVisible();
+  const scrolled = await launcher.boundingBox();
+  expect(scrolled?.y).toBe(initial?.y);
+  await launcher.click();
+  await expect(page.getByRole('dialog', { name: 'Ask Invexiqs' })).toBeVisible();
 });

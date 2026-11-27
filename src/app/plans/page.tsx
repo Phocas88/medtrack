@@ -12,7 +12,7 @@ export default function PlansPage() {
       <p>Proposed launch pricing in USD per organization. Compare features and capacity across Starter, Growth, and Scale.</p>
     </div>
     <FeatureComparison />
-    <p>See the <Link className="font-semibold underline" href="/integrations-directory">integration roadmap</Link> for connector details. <Link className="font-semibold underline" href="/#contact">Request a pilot</Link> if you’d like to discuss your warehouse setup.</p>
+    <p>See the <Link className="font-semibold underline" href="/integrations-directory">launch integration directory</Link> for connector details. <Link className="font-semibold underline" href="/#contact">Request a pilot</Link> if you’d like to discuss your warehouse setup.</p>
     <section className="space-y-4 rounded-xl bg-brand-warm-cream p-5">
       <h2 className="text-xl font-semibold">Opening in June 2027</h2>
       <p>Prelaunch registration is free. We’ll announce the exact launch date closer to June.</p>

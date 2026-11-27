@@ -1,11 +1,11 @@
 import { PublicHeader } from '@/components/layout/public-header';
 import { PublicFooter } from '@/components/layout/public-footer';
 
-export const metadata = { title: 'Integration roadmap | Invexiqs' };
+export const metadata = { title: 'Launch integrations | Invexiqs' };
 export default function DirectoryPage() {
   return <><PublicHeader /><main className="mx-auto max-w-5xl space-y-6 px-5 py-12">
-    <h1 className="text-4xl font-bold text-brand-deep-plum">Integration roadmap</h1>
-    <p>Planned for June 2027. Pilot availability depends on connector testing and setup.</p>
+    <h1 className="text-4xl font-bold text-brand-deep-plum">Launch integrations</h1>
+    <p>Connect these systems when Invexiqs launches in June 2027. Each connector requires setup and provider authorization.</p>
     <ul className="grid gap-4 sm:grid-cols-2">
       {[
         ['Shopify','Bring in orders and send shipment tracking back.'],

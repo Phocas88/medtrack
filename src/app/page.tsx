@@ -6,13 +6,14 @@ import Image from 'next/image';
 import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Sparkles, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
+import { WarehouseAiPreview } from './warehouse-ai-preview';
 import { WarehouseStory } from './warehouse-story';
 import { InquiryForm } from './inquiry-form';
 import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata: Metadata = {
   title: 'Invexiqs WMS | Warehouse management for growing distributors',
-  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the warehouse AI assistant, see planned integrations, or set up your own warehouse.',
+  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the warehouse AI assistant, see launch integrations, or set up your own warehouse.',
   alternates: { canonical: '/' },
 };
 
@@ -63,7 +64,7 @@ export default function HomePage() {
               <p className="max-w-lg text-base leading-relaxed text-brand-lavender sm:text-lg">From the receiving dock to the last carton out, Invexiqs keeps your team on the same record of what arrived, where it went, and what’s ready to ship.</p>
               <div className="grid gap-3 min-[450px]:flex min-[450px]:flex-wrap">
                 <Link href="/auth/signup" className={primary}>Create a prelaunch account <ArrowRight aria-hidden size={18} /></Link>
-                <Link href="/demo" className={secondary}><Play aria-hidden size={16} /> Explore live demo</Link>
+                <Link href="/demo/workspace" className={secondary}><Play aria-hidden size={16} /> Try the warehouse demo</Link>
               </div>
               <p className="text-sm text-brand-lavender">Try the demo without signing in, or <Link className="font-semibold text-white underline underline-offset-4" href="#contact">request a guided pilot</Link>.</p>
             </div>
@@ -91,19 +92,15 @@ export default function HomePage() {
             <div>
               <Sparkles aria-hidden className="mb-4 text-brand-royal-plum" />
               <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Ask your warehouse AI assistant</h2>
-              <p className="mt-3 max-w-md leading-relaxed text-brand-muted-gray">Managers can ask about stock, bin locations, lot expirations, and orders that are stuck. The assistant uses warehouse records to answer questions. Inventory and order changes stay with your team.</p>
+              <p className="mt-3 max-w-md leading-relaxed text-brand-muted-gray">Ask why an order is stuck, where to find stock, or what your shift should handle first. The read-only assistant uses warehouse records to surface quantities, bins, and the next thing to check.</p>
             </div>
-            <ul aria-label="Example questions for the AI assistant" className="divide-y divide-brand-border-gray rounded-xl border border-brand-border-gray bg-brand-white">
-              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Inventory</span>Which bin holds SKU 1042?</li>
-              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Internal operations</span>Which lots are expiring soon?</li>
-              <li className="p-4"><span className="block text-sm font-semibold text-brand-royal-plum">Outbound</span>What’s holding up order SO-123?</li>
-            </ul>
+            <WarehouseAiPreview />
           </div>
         </section>
 
         <section id="integrations" className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-16">
-          <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Integrations planned for June 2027</h2>
-          <p className="mt-3 max-w-2xl text-brand-muted-gray">The launch roadmap covers ecommerce, shipping, accounting, point of sale, and workflow automation. Setup availability varies during the pilot.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Connect your systems at launch</h2>
+          <p className="mt-3 max-w-2xl text-brand-muted-gray">The June 2027 launch lineup covers ecommerce, shipping, accounting, point of sale, and workflow automation. Connect your own provider accounts to get started.</p>
           <ul className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ['Shopify', 'Bring ecommerce orders into the warehouse and send shipment tracking back.'],
@@ -130,7 +127,7 @@ export default function HomePage() {
                 <p className="mt-2 text-brand-muted-gray">The manager’s dashboard and the operator’s scanner, shown with sample data.</p>
               </div>
               <Link className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4" href="/demo/workspace">
-                Open the interactive order desk <ArrowRight aria-hidden size={15} />
+                Try the warehouse demo <ArrowRight aria-hidden size={15} />
               </Link>
             </div>
             <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
