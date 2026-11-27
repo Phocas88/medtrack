@@ -42,10 +42,12 @@ function money(rate: ShippingRate) {
 }
 export function ShippingLabel({
   orderId,
+  cartonId,
   canPurchase,
   onPurchased,
 }: {
   orderId: string;
+  cartonId?: string;
   canPurchase: boolean;
   onPurchased: () => void;
 }) {
@@ -73,7 +75,7 @@ export function ShippingLabel({
     setQuote(null);
     setResult(null);
     setRates([]);
-    fetch(`/api/shipping/label?order_id=${orderId}`, {
+    fetch(`/api/shipping/label?order_id=${orderId}${cartonId ? `&carton_id=${cartonId}` : ""}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -89,7 +91,7 @@ export function ShippingLabel({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [open, orderId]);
+  }, [open, orderId, cartonId]);
   async function jsonPost(path: string, body: unknown) {
     const response = await fetch(path, {
       method: "POST",
@@ -105,7 +107,7 @@ export function ShippingLabel({
     setBusy(true);
     setError("");
     try {
-      const data = await jsonPost("/api/shipping/rates", { from, to, parcel });
+      const data = await jsonPost("/api/shipping/rates", { from, to, parcel, order_id: orderId, carton_id: cartonId });
       setShipment(data.shipment_id);
       setRates(data.rates);
       if (!data.rates.length)
@@ -133,6 +135,7 @@ export function ShippingLabel({
         shipment_id: shipmentId,
         rate_id: rateId,
         order_id: orderId,
+        carton_id: cartonId,
       });
       const saved: ShipmentResult = {
         id: shipmentId,
@@ -217,11 +220,11 @@ export function ShippingLabel({
         onClick={() => setOpen(true)}
         className="min-h-10 w-full border bg-card px-3 text-xs font-medium hover:bg-accent"
       >
-        Shipping label
+        {cartonId ? "Carton label" : "Shipping label"}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-          <DialogTitle>Shipping label</DialogTitle>
+          <DialogTitle>{cartonId ? "Carton carrier label" : "Shipping label"}</DialogTitle>
           <p className="text-xs text-muted-foreground">
             Postage is billed to the EasyPost account connected under
             Integrations → Shipping. Buying a label does not post warehouse
@@ -259,7 +262,7 @@ export function ShippingLabel({
           ) : quote?.rate_id ? (
             <div className="space-y-3">
               <p className="text-sm">
-                A label purchase already exists for this order. Recover that
+                A label purchase already exists for this {cartonId ? "carton" : "order"}. Recover that
                 shipment before requesting another label.
               </p>
               <button
@@ -272,8 +275,7 @@ export function ShippingLabel({
             </div>
           ) : !canPurchase ? (
             <p className="text-sm">
-              No label is stored for this order. New label purchases require an
-              open order.
+              {cartonId ? "No EasyPost label is stored for this carton." : "No label is stored for this order. New label purchases require an open order."}
             </p>
           ) : (
             <>

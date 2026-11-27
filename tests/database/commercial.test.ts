@@ -561,7 +561,7 @@ describe('warehouse execution workflows', () => {
     const competingLine = (await db.query<{id: string}>(
       'select id from sales_order_lines where order_id=$1', [competing])).rows[0].id;
     const partial = JSON.stringify({order_id:competing,order_quantities:{[competingLine]:2},
-      tracking_number:'PARTIAL',cartons:[{number:'P1',scans:['EXEC-1','EXEC-1']}]});
+      cartons:[{number:'P1',scans:['EXEC-1'],carrier_label_pending:true},{number:'P2',scans:['EXEC-1'],carrier_label_pending:true}]});
     const postPartial = 'select ship_local_order_quantities($1,$2::jsonb) result';
     const partialRequest = '88888888-0000-4000-8000-000000000002';
     await expect(db.query(postPartial,[partialRequest,JSON.stringify({order_id:competing,order_quantities:{[competingLine]:6}})]))
@@ -575,6 +575,38 @@ describe('warehouse execution workflows', () => {
     expect((await db.query('select quantity_shipped from sales_order_lines where id=$1',[competingLine])).rows)
       .toEqual([{quantity_shipped:2}]);
     expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:2}]);
+    await owner();
+    const cartons = (await db.query<{id:string}>(`select c.id from shipment_cartons c
+      join shipments s on s.id=c.shipment_id where s.order_id=$1 order by c.carton_number`,[competing])).rows;
+    expect(cartons).toHaveLength(2);
+    for (const [index, carton] of cartons.entries()) {
+      const providerShipment = `shp_carton${index}`;
+      await db.query(`insert into shipping_quotes(shipment_id,tenant_id,rates,order_id,carton_id)
+        values($1,$2,'[{"id":"rate_test"}]',$3,$4)`, [providerShipment,tenant,competing,carton.id]);
+      const claim = (await db.query<{result:{mode:string;token:string}}>(
+        "select claim_carton_label_purchase($1,$2,$3,'rate_test',$4) result",
+        [tenant,competing,providerShipment,carton.id])).rows[0].result;
+      expect(claim.mode).toBe('buy');
+      await db.query('select complete_label_purchase($1,$2,$3,$4)',[tenant,providerShipment,claim.token,JSON.stringify({
+        id:providerShipment,rate:{id:'rate_test'}, label_url:'https://example.test/label',
+        tracking_code:`CARTON-${index}`,tracker_id:`tracker-${index}`,
+      })]);
+      expect((await db.query<{result:{mode:string}}>(
+        "select claim_carton_label_purchase($1,$2,$3,'rate_test',$4) result",
+        [tenant,competing,providerShipment,carton.id])).rows[0].result.mode).toBe('cached');
+    }
+    await db.query(`insert into shipping_quotes(shipment_id,tenant_id,rates,order_id,carton_id)
+      values('shp_duplicate',$1,'[{"id":"rate_test"}]',$2,$3)`,[tenant,competing,cartons[0].id]);
+    await expect(db.query("select claim_carton_label_purchase($1,$2,'shp_duplicate','rate_test',$3)",
+      [tenant,competing,cartons[0].id])).rejects.toThrow('Carton is unavailable');
+    await expect(db.query("select claim_label_purchase($1,$2,'shp_duplicate','rate_test')",
+      [tenant,competing])).rejects.toThrow('Quote or rate not found');
+    await db.query("select apply_shipping_tracking('evt_carton','tracker-0','delivered',now())");
+    expect((await db.query('select delivery_status from shipment_cartons where id=$1',[cartons[0].id])).rows)
+      .toEqual([{delivery_status:'delivered'}]);
+    expect((await db.query('select delivery_status from sales_orders where id=$1',[competing])).rows)
+      .toEqual([{delivery_status:null}]);
+    await login(manager);
     const restRequest = '88888888-0000-4000-8000-000000000003';
     await expect(db.query(post,[restRequest,JSON.stringify({order_id:competing})]))
       .rejects.toThrow('Insufficient available stock');

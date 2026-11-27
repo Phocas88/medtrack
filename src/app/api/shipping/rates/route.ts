@@ -1,7 +1,7 @@
 import { loadShippingAccount } from "@/lib/shipping-account";
 import { z } from "zod";
 import { shippingAddress, parcelSchema } from "@/lib/shipping-validation";
-import { requireUser, routeError } from "@/lib/server-auth";
+import { requireUser, routeError, HttpError } from "@/lib/server-auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
 import { getRates } from "@/lib/shipping";
@@ -11,22 +11,35 @@ export async function POST(request: Request) {
     const authorizedUser = await requireUser(["admin", "manager"], true);
     const account = await loadShippingAccount(authorizedUser.tenant_id);
 
-    const { from, to, parcel } = z
+    const { from, to, parcel, order_id, carton_id } = z
       .object({
         from: shippingAddress,
         to: shippingAddress,
         parcel: parcelSchema,
+        order_id: z.string().uuid().optional(),
+        carton_id: z.string().uuid().optional(),
       })
       .parse(await request.json());
 
+    const db = createServiceClient();
+    if (carton_id) {
+      if (!order_id) throw new HttpError(400, "Order required for carton");
+      const { data, error } = await db.from("shipment_cartons")
+        .select("id, shipments!inner(order_id)")
+        .eq("id", carton_id).eq("tenant_id", authorizedUser.tenant_id)
+        .eq("shipments.order_id", order_id).eq("tracking_number", "").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new HttpError(404, "Unlabeled carton not found");
+    }
     const result = await getRates(from, to, parcel, account.api_key);
 
-    const { error } = await createServiceClient()
+    const { error } = await db
       .from("shipping_quotes")
       .insert({
         shipment_id: result.shipment_id,
         tenant_id: authorizedUser.tenant_id,
         rates: result.rates,
+        ...(carton_id ? { carton_id, order_id } : {}),
       });
     if (error) throw error;
     return NextResponse.json(result);

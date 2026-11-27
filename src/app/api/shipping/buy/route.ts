@@ -22,14 +22,16 @@ export async function POST(request: Request) {
           .regex(/^rate_[a-zA-Z0-9]+$/)
           .max(100),
         order_id: uuid,
+        carton_id: uuid.optional(),
       })
       .parse(await request.json());
     const db = createServiceClient();
-    const { data: claim, error } = await db.rpc("claim_label_purchase", {
+    const { data: claim, error } = await db.rpc(input.carton_id ? "claim_carton_label_purchase" : "claim_label_purchase", {
       p_tenant: user.tenant_id,
       p_order: input.order_id,
       p_shipment: input.shipment_id,
       p_rate: input.rate_id,
+      ...(input.carton_id ? { p_carton: input.carton_id } : {}),
     });
     if (error)
       throw new HttpError(

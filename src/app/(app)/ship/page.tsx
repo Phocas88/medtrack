@@ -37,6 +37,7 @@ import { pickLotsForQuantity } from "@/lib/fefo";
 import { formatDate } from "@/lib/format";
 import { ExpiryBadge } from "@/components/ui/expiry-badge";
 import { OrderReservation } from "./order-reservation";
+import { ShippingLabel } from "@/components/workspace/shipping-label";
 import { PackingReview, type Carton } from "./packing-review";
 import { InvoiceButton } from "./invoice-button";
 import type { Customer, Product, Lot, SalesOrder } from "@/types/database";
@@ -51,7 +52,7 @@ interface OrderLine {
 
 interface ShippedOrder extends SalesOrder {
   customer?: Customer;
-  shipments?: { created_at: string; cartons: { id: string; carton_number: string; tracking_number: string; contents: string[] }[] }[];
+  shipments?: { created_at: string; cartons: { id: string; carton_number: string; tracking_number: string; delivery_status: string | null; contents: string[] }[] }[];
 }
 
 interface PickSuggestion {
@@ -93,6 +94,7 @@ export default function ShipPage() {
   const [pickSuggestions, setPickSuggestions] = useState<PickSuggestion[]>([]);
   const [showPicking, setShowPicking] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [buyCartonLabelsLater, setBuyCartonLabelsLater] = useState(false);
   const [cartons, setCartons] = useState<Carton[]>([]);
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [recentOrders, setRecentOrders] = useState<
@@ -156,7 +158,7 @@ export default function ShipPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from("sales_orders")
-      .select("*, customer:customers(id, name), shipments!inner(created_at,cartons:shipment_cartons(id,carton_number,tracking_number,contents))")
+      .select("*, customer:customers(id, name), shipments!inner(created_at,cartons:shipment_cartons(id,carton_number,tracking_number,delivery_status,contents))")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -204,6 +206,10 @@ export default function ShipPage() {
       return;
     }
 
+    if (buyCartonLabelsLater && (!allowPartial || !cartons.length || trackingNumber.trim() || cartons.some(carton => carton.tracking.trim()))) {
+      toast.error("Clear existing tracking numbers before choosing to buy carton labels later");
+      return;
+    }
     if (hasPartialQuantities && !cartons.length) {
       toast.error('Scan items into cartons before posting a partial shipment');
       return;
@@ -289,8 +295,8 @@ export default function ShipPage() {
         customer_id: customerId,
         ship_date: shipDate,
         notes,
-        tracking_number: trackingNumber.trim() || cartons[0]?.tracking.trim() || "",
-        ...(cartons.length ? { cartons: cartons.map(({ number, tracking, scans }) => ({ number, tracking, scans })) } : {}),
+        tracking_number: buyCartonLabelsLater ? "" : trackingNumber.trim() || cartons[0]?.tracking.trim() || "",
+        ...(cartons.length ? { cartons: cartons.map(({ number, tracking, scans }) => ({ number, tracking: buyCartonLabelsLater ? "" : tracking, scans, carrier_label_pending: buyCartonLabelsLater })) } : {}),
         lines: shipmentLines,
         ...(hasPartialQuantities ? {
           order_quantities: Object.fromEntries(shipmentLines.map(line => [line.id, line.quantity])),
@@ -314,6 +320,7 @@ export default function ShipPage() {
     const orderNum = posted.order_number;
     setRequestId(crypto.randomUUID());
     setCartons([]);
+    setBuyCartonLabelsLater(false);
 
     toast.success(posted.has_backorder ? `Shipment ${orderNum} posted. Remaining units are open.` : `Shipment ${orderNum} created successfully`);
     setShowPicking(false);
@@ -361,6 +368,7 @@ export default function ShipPage() {
             const id = event.target.value;
             setSelectedOrderId(id);
             setCartons([]);
+            setBuyCartonLabelsLater(false);
             setSerials({});
             const order = existingOrders.find(
               (candidate) => candidate.id === id,
@@ -578,6 +586,12 @@ export default function ShipPage() {
               </div>
             ))}
 
+          {allowPartial && cartons.length > 0 && (
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" checked={buyCartonLabelsLater} onChange={event => setBuyCartonLabelsLater(event.target.checked)} />
+              Post the packed stock, then buy each carton’s label from Recent Shipments. Hand off the cartons after labeling.
+            </label>
+          )}
           <PackingReview key={selectedOrderId} demand={packingDemand} cartons={cartons}
             setCartons={setCartons} tracking={trackingNumber} disabled={processing} />
 
@@ -627,7 +641,11 @@ export default function ShipPage() {
                           <ul className="space-y-1">
                             {order.shipments.flatMap(shipment => shipment.cartons).map(carton => (
                               <li key={carton.id} className="break-words">
-                                {carton.carton_number} · {carton.contents.length} items · {carton.tracking_number}
+                                {carton.carton_number} · {carton.contents.length} items · {carton.tracking_number || "Label pending"}{carton.delivery_status ? ` · ${carton.delivery_status.replaceAll("_", " ")}` : ""}
+                                {!/^SHOPIFY-\d+$/.test(order.order_number) && <ShippingLabel
+                                  orderId={order.id} cartonId={carton.id}
+                                  canPurchase={!carton.tracking_number} onPurchased={loadRecentOrders}
+                                />}
                               </li>
                             ))}
                           </ul>
