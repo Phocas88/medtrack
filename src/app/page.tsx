@@ -57,9 +57,10 @@ export default function HomePage() {
               <h1 className="max-w-xl text-balance text-[2.65rem] font-bold leading-[1.05] tracking-[-0.045em] text-brand-deep-plum sm:text-6xl">Know what’s in stock and where to find it.</h1>
               <p className="max-w-lg text-lg leading-relaxed text-brand-muted-gray">Invexiqs is warehouse management software for growing distributors. Receive into bins, track lot inventory, and fulfill orders from one workspace.</p>
               <div className="flex flex-wrap gap-3 pt-1">
-                <Link href="/auth/signup" className={primary}>Create an account <ArrowRight aria-hidden size={18} /></Link>
+                <Link href="/auth/signup" className={primary}>Create a prelaunch account <ArrowRight aria-hidden size={18} /></Link>
                 <Link href="/demo" className={secondary}><Play aria-hidden size={16} /> Explore live demo</Link>
               </div>
+              <p className="text-sm text-brand-muted-gray">Warehouse access opens at launch in June 2027. We’ll post the exact date closer to launch.</p>
               <p className="text-sm text-brand-muted-gray">See the demo without signing in, or <Link className="font-medium text-brand-royal-plum underline underline-offset-4" href="#contact">request a guided pilot</Link>.</p>
             </div>
             <figure className="min-w-0 overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-xl shadow-brand-deep-plum/10">
@@ -83,7 +84,7 @@ export default function HomePage() {
           <div>
             <h2 className="max-w-md text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">From signup to your first receipt</h2>
             <p className="mt-3 max-w-sm leading-relaxed text-brand-muted-gray">Start with one warehouse. A dashboard checklist helps you pick up where you left off.</p>
-            <Link href="/auth/signup" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">Set up your warehouse <ArrowRight aria-hidden size={16} /></Link>
+            <Link href="/auth/signup" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">Register for launch <ArrowRight aria-hidden size={16} /></Link>
           </div>
           <ol className="divide-y divide-brand-border-gray overflow-hidden rounded-2xl border border-brand-border-gray">
             {setupSteps.map(({ icon: Icon, title, detail }) => (
@@ -215,7 +216,7 @@ export default function HomePage() {
           <dl className="mt-7 grid gap-6 md:grid-cols-2">
             <div><dt className="font-semibold">Can I look around before contacting you?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Open the live demo for the interactive order desk and role walkthroughs with sample data.</dd></div>
             <div><dt className="font-semibold">Can I bring over my existing inventory?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Import products by CSV, then add opening balances for active bins. You can preview rows before they are saved.</dd></div>
-            <div><dt className="font-semibold">Can I set up an account on my own?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Create an account and set up a warehouse. If your team needs help with an import or wants a walkthrough, request a guided pilot.</dd></div>
+            <div><dt className="font-semibold">Can I set up an account on my own?</dt><dd className="mt-2 text-brand-muted-gray">Yes. Register now and sign in before launch. Self-serve warehouse setup opens at launch. If your team wants an early walkthrough, request a guided pilot.</dd></div>
           </dl>
         </section>
       </main>
@@ -224,7 +225,7 @@ export default function HomePage() {
         <nav aria-label="Footer navigation" className="mx-auto flex max-w-7xl flex-wrap gap-x-6 gap-y-3 px-5 py-8 text-sm text-brand-muted-gray lg:px-8">
           {[
             ['Contact', '/#contact'],
-            ['Create an account', '/auth/signup'],
+            ['Create a prelaunch account', '/auth/signup'],
             ['Features', '/#features'],
             ['Warehouse AI', '/#warehouse-ai'],
             ['Integrations', '/#integrations'],

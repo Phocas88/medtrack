@@ -80,8 +80,9 @@ test('mobile navigation stays within the viewport', async ({ page }) => {
 test('homepage links visitors to signup and the interactive order desk', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'From signup to your first receipt' })).toBeVisible();
-  await page.getByRole('main').getByRole('link', { name: 'Create an account' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Create a prelaunch account' }).click();
   await expect(page).toHaveURL(/\/auth\/signup$/);
+  await expect(page.getByText(/scheduled to launch in June 2027/i)).toBeVisible();
   await expect(page.getByLabel(/company.*organization/i)).toBeVisible();
 
   await page.goto('/');

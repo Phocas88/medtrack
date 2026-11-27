@@ -28,6 +28,7 @@ beforeAll(async () => {
     const sql = readFileSync(`supabase/migrations/${file}`, 'utf8').replace(/create extension if not exists "uuid-ossp";/gi, '');
     await db.exec(sql);
   }
+  await db.exec("update prelaunch_settings set signup_open=true");
   await db.query(`insert into auth.users values ($1,'admin@example.test','{"company_name":"Warehouse A","full_name":"Admin A"}'),
     ($2,'other@example.test','{"company_name":"Warehouse B","full_name":"Admin B"}')`, [admin, other]);
   tenant = (await db.query<{tenant_id: string}>('select tenant_id from users where id=$1',[admin])).rows[0].tenant_id;
@@ -658,5 +659,30 @@ describe('self-serve warehouse setup', () => {
       .toEqual([{quantity:3},{quantity:25}]);
     await login(other);
     await expect(db.query(receiving,['90000000-0000-4000-8000-000000000005',receipt[1],bins[0].id])).rejects.toThrow('active receiving bin');
+  });
+});
+
+describe('public prelaunch registration', () => {
+  it('holds warehouse access until launch and then creates the workspace once', async () => {
+    const pending = '10000000-0000-4000-8000-000000000099';
+    await owner();
+    await db.exec('update prelaunch_settings set signup_open=false');
+    await db.query(`insert into auth.users(id,email,raw_user_meta_data)
+      values($1,'early@example.test','{"company_name":"Early Distributor","full_name":"Early Buyer"}')`,[pending]);
+    expect((await db.query('select id from users where id=$1',[pending])).rows).toEqual([]);
+    await login(pending);
+    expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'paused'}]);
+    await expect(db.query('select * from prelaunch_registrations')).rejects.toThrow('permission denied');
+    await expect(db.query("select bootstrap_tenant('Override','Override')")).rejects.toThrow('paused');
+    await login(admin);
+    expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'none'}]);
+    await owner();
+    await db.exec('update prelaunch_settings set signup_open=true');
+    await login(pending);
+    expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'open'}]);
+    const first = await db.query("select bootstrap_tenant('','') tenant");
+    expect((await db.query("select bootstrap_tenant('','') tenant")).rows).toEqual(first.rows);
+    expect((await db.query('select name from tenants')).rows).toEqual([{name:'Early Distributor'}]);
+    expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'none'}]);
   });
 });

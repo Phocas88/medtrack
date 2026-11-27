@@ -38,15 +38,22 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   if (
     user &&
-    !pathname.startsWith("/auth/") &&
-    !pathname.startsWith("/portal")
+    !pathname.startsWith("/auth/")
   ) {
     const { data: profile } = await supabase
       .from("users")
       .select("role,is_active,access_level")
       .eq("id", user.id)
       .single();
-    if (profile && !profile.is_active) {
+    if (!profile) {
+      const { data: prelaunch } = await supabase.rpc("prelaunch_status");
+      if (prelaunch === "paused" || prelaunch === "open") {
+        const redirect = NextResponse.redirect(new URL("/auth/prelaunch", request.url));
+        for (const cookie of supabaseResponse.cookies.getAll()) redirect.cookies.set(cookie);
+        return redirect;
+      }
+    }
+    if (!pathname.startsWith("/portal") && profile && !profile.is_active) {
       await supabase.auth.signOut();
       return NextResponse.redirect(
         new URL("/auth/login?error=account_disabled", request.url),
@@ -54,7 +61,7 @@ export async function updateSession(request: NextRequest) {
     }
     if (
       (profile?.role === "staff" || profile?.access_level === "scanner_only") &&
-      !isScannerPath(pathname)
+      !pathname.startsWith("/portal") && !isScannerPath(pathname)
     ) {
       return NextResponse.redirect(new URL("/scan", request.url));
     }

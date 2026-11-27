@@ -84,7 +84,7 @@ export default function SignupPage() {
             <CardTitle className="text-2xl font-bold text-heading">Check Your Email</CardTitle>
             <CardDescription>
               We sent a confirmation link to your email address. Click the link to
-              activate your account and get started with Invexiqs WMS.
+              confirm your email and sign in. Warehouse access opens at launch.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -104,11 +104,12 @@ export default function SignupPage() {
           <div className="flex justify-center mb-3"><InvexiqsLogo size="lg" className="justify-center" /></div>
           <CardTitle className="text-2xl font-bold text-heading">Create your Invexiqs account</CardTitle>
           <CardDescription>
-            Start managing your warehouse today.
+            Invexiqs WMS is scheduled to launch in June 2027. We’ll post the exact date closer to launch.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">Create your account now. You can sign in after confirming your email, and your warehouse workspace will open at launch.</p>
             {serverError && (
               <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                 <AlertCircle className="h-4 w-4 shrink-0" />
