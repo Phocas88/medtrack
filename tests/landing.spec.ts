@@ -90,3 +90,51 @@ test('homepage links visitors to signup and the interactive order desk', async (
   await expect(page).toHaveURL(/\/demo\/workspace$/);
   await expect(page.getByRole('heading', { name: 'Order desk' })).toBeVisible();
 });
+
+test.describe('signup submission against a mocked Auth provider', () => {
+  test.use({ bypassCSP: true });
+
+  test('prelaunch signup checks both passwords and submits only after review', async ({ page }) => {
+    const sent: Record<string, unknown>[] = [];
+    await page.route('**/auth/v1/signup**', async route => {
+      const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' };
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers });
+        return;
+      }
+      sent.push(route.request().postDataJSON());
+      await route.fulfill({ status: 200, headers, json: { id: '10000000-0000-4000-8000-000000000079', email: 'signup@example.test' } });
+    });
+    await page.goto('/auth/signup');
+    await page.getByLabel('Full name').fill('Test Buyer');
+    await page.getByLabel('Work email').fill('signup@example.test');
+    await page.getByLabel('Password (at least 8 characters)', { exact: true }).fill('FixturePass123!');
+    await page.getByLabel('Confirm password').fill('WrongPass123!');
+    await page.getByLabel('Company / Organization Name').fill('Test Distributor');
+    await page.getByLabel('Business phone (optional)').fill('+1 202 555 0180');
+    await page.getByLabel('Business street address').fill('12 Example Road');
+    await page.getByLabel('City', { exact: true }).fill('Washington');
+    await page.getByLabel('Country', { exact: true }).fill('United States');
+    await page.getByRole('button', { name: 'Review details' }).click();
+    await expect(page.getByText('The passwords must match.')).toBeVisible();
+    expect(sent).toHaveLength(0);
+    await page.getByLabel('Confirm password').fill('FixturePass123!');
+    await page.getByRole('button', { name: 'Review details' }).click();
+    await expect(page.getByRole('heading', { name: 'Review your account details' })).toBeFocused();
+    await expect(page.getByText('12 Example Road, Washington, United States')).toBeVisible();
+    await expect(page.getByText('FixturePass123!')).toHaveCount(0);
+    const submit = page.getByRole('button', { name: 'Confirm and create account' });
+    await expect(submit).toBeDisabled();
+    await page.getByRole('button', { name: 'Edit details' }).click();
+    await expect(page.getByLabel('Full name')).toHaveValue('Test Buyer');
+    await page.getByRole('button', { name: 'Review details' }).click();
+    await page.getByRole('checkbox', { name: /I confirm/ }).check();
+    await submit.click();
+    await expect(page.getByText('Check Your Email')).toBeVisible();
+    expect(sent).toHaveLength(1);
+    expect(sent[0].data).toEqual({
+      full_name: 'Test Buyer', company_name: 'Test Distributor',
+      organization_profile: { address: '12 Example Road, Washington, United States', business_phone: '+1 202 555 0180' },
+    });
+  });
+});

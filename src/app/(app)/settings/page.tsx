@@ -122,6 +122,8 @@ export default function SettingsPage() {
 
   // --- General state ---
   const [companyName, setCompanyName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [timezone, setTimezone] = useState('America/New_York');
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
@@ -174,6 +176,8 @@ export default function SettingsPage() {
         if (data) {
           setCompanyName(data.name || '');
           const s = (data.settings || {}) as Record<string, string>;
+          setBusinessAddress(s.address || '');
+          setBusinessPhone(s.business_phone || '');
           setLogoUrl(s.logo_url || '');
           setTimezone(s.timezone || 'America/New_York');
           setDateFormat(s.date_format || 'MM/DD/YYYY');
@@ -221,7 +225,7 @@ export default function SettingsPage() {
   async function saveGeneral() {
     if (!tenantId) return;
     setSavingGeneral(true);
-    const { error } = await supabase.rpc('update_tenant_settings', { p_name: companyName, p_patch: { logo_url: logoUrl, timezone, date_format: dateFormat, currency, sales_tax_rate: salesTax / 100 } });
+    const { error } = await supabase.rpc('update_tenant_settings', { p_name: companyName, p_patch: { address: businessAddress.trim(), business_phone: businessPhone.trim(), logo_url: logoUrl, timezone, date_format: dateFormat, currency, sales_tax_rate: salesTax / 100 } });
     if (error) toast.error(error.message);
     else toast.success('Settings saved');
     setSavingGeneral(false);
@@ -435,6 +439,17 @@ export default function SettingsPage() {
                   placeholder="Your company name"
                   disabled={!isAdmin}
                 />
+              </div>
+
+              <div className="grid max-w-md gap-2">
+                <Label htmlFor="business-address">Business address</Label>
+                <Input id="business-address" value={businessAddress} maxLength={600} autoComplete="street-address"
+                  onChange={event => setBusinessAddress(event.target.value)} disabled={!isAdmin} />
+              </div>
+              <div className="grid max-w-md gap-2">
+                <Label htmlFor="business-phone">Business phone</Label>
+                <Input id="business-phone" type="tel" value={businessPhone} maxLength={40} autoComplete="tel"
+                  onChange={event => setBusinessPhone(event.target.value)} disabled={!isAdmin} />
               </div>
 
               {/* Logo URL */}

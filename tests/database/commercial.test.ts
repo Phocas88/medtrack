@@ -668,7 +668,7 @@ describe('public prelaunch registration', () => {
     await owner();
     await db.exec('update prelaunch_settings set signup_open=false');
     await db.query(`insert into auth.users(id,email,raw_user_meta_data)
-      values($1,'early@example.test','{"company_name":"Early Distributor","full_name":"Early Buyer"}')`,[pending]);
+      values($1,'early@example.test','{"company_name":"Early Distributor","full_name":"Early Buyer","organization_profile":{"address":"12 Example Road","business_phone":"2025550180","plan":"enterprise"}}')`,[pending]);
     expect((await db.query('select id from users where id=$1',[pending])).rows).toEqual([]);
     await login(pending);
     expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'paused'}]);
@@ -683,6 +683,11 @@ describe('public prelaunch registration', () => {
     const first = await db.query("select bootstrap_tenant('','') tenant");
     expect((await db.query("select bootstrap_tenant('','') tenant")).rows).toEqual(first.rows);
     expect((await db.query('select name from tenants')).rows).toEqual([{name:'Early Distributor'}]);
+    expect((await db.query("select settings->>'address' as address, settings->>'business_phone' as phone, settings->>'plan' as plan from tenants")).rows)
+      .toEqual([{address:'12 Example Road',phone:'2025550180',plan:null}]);
+    await db.query(`select update_tenant_settings('{"address":"New Company Address","business_phone":""}')`);
+    expect((await db.query("select settings->>'address' address from tenants")).rows)
+      .toEqual([{address:'New Company Address'}]);
     expect((await db.query('select prelaunch_status() status')).rows).toEqual([{status:'none'}]);
   });
 });
