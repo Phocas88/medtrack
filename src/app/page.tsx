@@ -1,3 +1,4 @@
+import { PublicFooter } from '@/components/layout/public-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -187,6 +188,7 @@ export default function HomePage() {
         <section id="pricing" className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
           <h2 className="text-3xl font-bold tracking-tight text-brand-royal-plum">Planned pricing</h2>
           <p className="mt-3 text-brand-muted-gray">Rates will be announced closer to launch. Request a pilot to discuss your warehouse locations and order volume.</p>
+          <Link href="/plans" className="mt-4 inline-block font-semibold text-brand-royal-plum underline">Compare planned billing options</Link>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {[
               ['Per warehouse', 'A monthly subscription based on the number of warehouse locations.'],
@@ -221,26 +223,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-brand-border-gray bg-brand-lavender">
-        <nav aria-label="Footer navigation" className="mx-auto flex max-w-7xl flex-wrap gap-x-6 gap-y-3 px-5 py-8 text-sm text-brand-muted-gray lg:px-8">
-          {[
-            ['Contact', '/#contact'],
-            ['Create a prelaunch account', '/auth/signup'],
-            ['Features', '/#features'],
-            ['Warehouse AI', '/#warehouse-ai'],
-            ['Integrations', '/#integrations'],
-            ['Live demo', '/demo'],
-            ['Pricing', '/#pricing'],
-            ['Privacy Policy', '/legal/privacy'],
-            ['Solutions', '/#solutions'],
-            ['Support', '/support'],
-            ['Terms of Service', '/legal/terms'],
-          ].map(([label, href]) => (
-            <Link key={href} href={href} className="hover:underline">{label}</Link>
-          ))}
-        </nav>
-        <p className="mx-auto max-w-7xl px-5 pb-8 text-sm text-brand-muted-gray lg:px-8">© {new Date().getFullYear()} {PRODUCT_NAME}.</p>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

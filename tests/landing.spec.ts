@@ -138,3 +138,26 @@ test.describe('signup submission against a mocked Auth provider', () => {
     });
   });
 });
+
+test('public resources and help work before signup', async ({ page }) => {
+  await page.route('**/api/public-help', route => route.fulfill({ json: { topic: 'pricing' } }));
+  await page.goto('/');
+  const footer = page.getByRole('contentinfo');
+  await footer.getByRole('button', { name: 'Ask Invexiqs' }).click();
+  const chat = page.getByRole('dialog');
+  await chat.getByRole('button', { name: 'Launch and signup' }).click();
+  await expect(chat.getByText(/scheduled for June 2027/)).toBeVisible();
+  await chat.getByRole('textbox', { name: 'Your question' }).fill('Can I pay yearly?');
+  await chat.getByRole('button', { name: 'Ask', exact: true }).click();
+  await chat.getByRole('link', { name: 'Compare planned billing options' }).click();
+  await expect(page.getByRole('heading', { name: 'Annual', exact: true })).toBeVisible();
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Barcode and bin labels' }).click();
+  await page.getByLabel('Bin code or SKU').fill('A-01-03');
+  await page.getByRole('button', { name: 'Generate Code 128' }).click();
+  await expect(page.getByRole('link', { name: 'Download barcode for printing' })).toBeVisible();
+  await page.getByLabel('Average daily demand (units)').fill('12');
+  await page.getByLabel('Supplier lead time (days)').fill('5');
+  await page.getByLabel('Safety stock (units)').fill('20');
+  await page.getByRole('button', { name: 'Calculate reorder point' }).click();
+  await expect(page.getByText('Reorder at 80 units.')).toBeVisible();
+});
