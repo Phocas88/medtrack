@@ -367,8 +367,42 @@ class ShopifyClient {
     shipped: Record<string, number>,
     tracking: string | null,
     carrier: string | null,
+    split?: { attempted: boolean; beforeMutation: () => Promise<void> },
   ) {
     if (!/^\d+$/.test(orderId)) throw new Error("Invalid Shopify order ID");
+    if (split) {
+      if (!tracking) throw new Error("Tracking is required for Shopify split shipments");
+      const data = await this.graphql<{ order: { fulfillments: {
+        id: string; status: string; trackingInfo: { number: string }[];
+      }[] } | null }>(
+        "query($id:ID!){order(id:$id){fulfillments(first:100){id status trackingInfo {number}}}}",
+        { id: `gid://shopify/Order/${orderId}` },
+      );
+      if (!data.order) throw new Error("Shopify order unavailable");
+      const matches = data.order.fulfillments.filter(row =>
+        row.trackingInfo.some(entry => entry.number?.trim().toLowerCase() === tracking.trim().toLowerCase()));
+      if (matches.length) {
+        if (matches.length !== 1 || matches[0].status !== "SUCCESS")
+          throw new Error("Shopify tracking matches more than one shipment or is not successful");
+        const { fulfillment } = await this.graphql<{ fulfillment: { fulfillmentLineItems: Page<{
+          quantity: number; lineItem: { sku: string | null };
+        }> } }>(
+          "query($id:ID!){fulfillment(id:$id){fulfillmentLineItems(first:250){nodes{quantity lineItem{sku}} pageInfo{hasNextPage}}}}",
+          { id: matches[0].id },
+        );
+        const confirmed = new Map<string,number>();
+        for (const line of fulfillment.fulfillmentLineItems.nodes) {
+          if (!line.lineItem.sku) throw new Error("Shopify fulfillment contains an unmapped SKU");
+          confirmed.set(line.lineItem.sku, (confirmed.get(line.lineItem.sku) ?? 0) + line.quantity);
+        }
+        if (fulfillment.fulfillmentLineItems.pageInfo.hasNextPage || confirmed.size !== Object.keys(shipped).length ||
+          Object.entries(shipped).some(([sku, quantity]) => confirmed.get(sku) !== quantity))
+          throw new Error("Shopify tracking exists with different quantities");
+        return;
+      }
+      if (split.attempted || data.order.fulfillments.length === 100)
+        throw new Error("Shopify split shipment requires manual reconciliation before retrying");
+    }
     type FulfillmentLine = {
       id: string;
       remainingQuantity: number;
@@ -399,7 +433,9 @@ class ShopifyClient {
         fulfillmentOrderLineItems: { id: string; quantity: number }[];
       }[]
     >();
-    const needed: Record<string, number> = {};
+    const needed: Record<string, number> = Object.create(null);
+    const remaining = new Map(Object.entries(shipped));
+    const candidateLocations = new Set<string>();
     for (const group of groups) {
       let lines = group.lineItems.nodes;
       if (group.lineItems.pageInfo.hasNextPage)
@@ -414,7 +450,8 @@ class ShopifyClient {
               )
             ).fulfillmentOrder.lineItems,
         );
-      const pending = lines.filter((line) => line.remainingQuantity > 0);
+      const pending = lines.filter(line => line.remainingQuantity > 0 &&
+        (!split || (!!line.lineItem.sku && Object.hasOwn(shipped, line.lineItem.sku))));
       if (!pending.length) continue;
       if (
         !["OPEN", "IN_PROGRESS"].includes(group.status) ||
@@ -423,28 +460,34 @@ class ShopifyClient {
         throw new Error(
           "Resolve Shopify fulfillment holds or assignments before retrying",
         );
-      for (const line of pending) {
-        const sku = line.lineItem.sku;
-        if (!sku || !Number.isInteger(shipped[sku]))
-          throw new Error("Fulfillment SKU is not in the warehouse shipment");
-        needed[sku] = (needed[sku] || 0) + line.remainingQuantity;
-      }
       const location = group.assignedLocation.location.id;
+      candidateLocations.add(location);
       const entries = byLocation.get(location) || [];
-      entries.push({
-        fulfillmentOrderId: group.id,
-        fulfillmentOrderLineItems: pending.map((line) => ({
-          id: line.id,
-          quantity: line.remainingQuantity,
-        })),
+      const allocated = pending.flatMap(line => {
+          const sku = line.lineItem.sku;
+          if (!sku || !Object.hasOwn(shipped, sku) || !Number.isInteger(shipped[sku]))
+            throw new Error("Fulfillment SKU is not in the warehouse shipment");
+          const quantity = split ? Math.min(line.remainingQuantity, remaining.get(sku) ?? 0) : line.remainingQuantity;
+          if (!quantity) return [];
+          if (split) remaining.set(sku, (remaining.get(sku) ?? 0) - quantity);
+          needed[sku] = (needed[sku] || 0) + quantity;
+          return [{ id: line.id, quantity }];
       });
-      byLocation.set(location, entries);
+      if (allocated.length) {
+        entries.push({ fulfillmentOrderId: group.id, fulfillmentOrderLineItems: allocated });
+        byLocation.set(location, entries);
+      }
     }
-    for (const [sku, quantity] of Object.entries(needed))
-      if (quantity > shipped[sku])
-        throw new Error(
-          "Shopify quantities changed after warehouse shipment; reconcile before retrying",
-        );
+    if (split) {
+      if (candidateLocations.size !== 1 || byLocation.size !== 1 || [...remaining.values()].some(quantity => quantity !== 0))
+        throw new Error("Split shipment must map completely to one Shopify fulfillment location");
+      await split.beforeMutation();
+    } else {
+      for (const [sku, quantity] of Object.entries(needed)) {
+        if (quantity > shipped[sku])
+          throw new Error("Shopify quantities changed after warehouse shipment; reconcile before retrying");
+      }
+    }
     for (const entries of Array.from(byLocation.values())) {
       const data = await this.graphql<{
         fulfillmentCreate: {

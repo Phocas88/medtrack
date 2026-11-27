@@ -3,11 +3,6 @@ export const unavailableWorkflows: Record<
   string,
   { title: string; message: string }
 > = {
-  "/wave-picking": {
-    title: "Wave picking",
-    message:
-      "Shared wave planning and fulfillment orchestration are not available yet. Use individual orders and assigned scanner tasks.",
-  },
   "/cross-dock": {
     title: "Cross-docking",
     message:

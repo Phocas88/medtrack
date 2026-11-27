@@ -5,7 +5,7 @@ import { BarcodeScanner } from '@/components/barcode-scanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export type Carton = { id: string; number: string; tracking: string; scans: string[] };
+export type Carton = { id: string; number: string; tracking: string; palletCode: string; scans: string[] };
 
 export function PackingReview({ demand, cartons, setCartons, tracking, disabled }: {
   demand: Map<string, number>;
@@ -51,6 +51,11 @@ export function PackingReview({ demand, cartons, setCartons, tracking, disabled 
                 onChange={event => setCartons(cartons.map(row =>
                   row.id === carton.id ? { ...row, tracking: event.target.value } : row))} />
             </label>
+            <label className="text-sm">Pallet ID (optional)
+              <Input value={carton.palletCode} maxLength={80} placeholder="PAL-001"
+                onChange={event => setCartons(cartons.map(row =>
+                  row.id === carton.id ? { ...row, palletCode: event.target.value } : row))} />
+            </label>
           </div>
           <p className="text-sm">{carton.scans.length} scanned</p>
           <div className="flex flex-wrap gap-2">
@@ -68,7 +73,7 @@ export function PackingReview({ demand, cartons, setCartons, tracking, disabled 
         const used = new Set(cartons.map(carton => carton.number));
         let next = 1;
         while (used.has(String(next))) next += 1;
-        setCartons([...cartons, { id: crypto.randomUUID(), number: String(next), tracking: '', scans: [] }]);
+        setCartons([...cartons, { id: crypto.randomUUID(), number: String(next), tracking: '', palletCode: '', scans: [] }]);
       }}>Add carton</Button>
     </fieldset>
   );

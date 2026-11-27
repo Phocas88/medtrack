@@ -499,33 +499,42 @@ export default function ScannerAppPage() {
         setCurrentStep(2);
       }
     } else if (tt === "pick") {
+      const batch = !!activeTask.pick_tote_code;
       if (currentStep === 0) {
         const bin = await resolveBin(value);
-        if (!bin) {
-          addScanLog(value, "Not found", false);
+        if (!bin || (batch && bin.id !== activeTask.source_bin_id)) {
+          addScanLog(value, "Scan the assigned bin", false);
           return;
         }
         setScannedBinCode(bin.bin_code);
-        addScanLog(value, bin.bin_code, true);
+        addScanLog(batch ? bin.bin_code : value, bin.bin_code, true);
         setCurrentStep(1);
       } else if (currentStep === 1) {
         const product = await resolveProduct(value);
-        if (!product) {
-          addScanLog(value, "Not found", false);
+        if (!product || (batch && product.id !== activeTask.product_id)) {
+          addScanLog(value, "Scan the assigned SKU", false);
           return;
         }
         setScannedProductSku(product.sku);
-        addScanLog(value, product.name, true);
+        addScanLog(batch ? product.sku : value, product.name, true);
         setCurrentStep(2);
       } else if (currentStep === 2) {
-        const qty = parseInt(value, 10);
-        if (isNaN(qty) || qty < 1) {
-          toast.error("Enter qty");
+        const qty = Number(value);
+        if (!/^\d+$/.test(value) || !Number.isSafeInteger(qty) || qty < (batch ? 0 : 1) ||
+          (batch && qty > (activeTask.requested_quantity ?? 0))) {
+          toast.error(batch ? "Enter the actual quantity picked, including zero for a short pick" : "Enter a positive whole quantity");
           return;
         }
         setEnteredQty(String(qty));
         addScanLog(String(qty), `Picked: ${qty}`, true);
         setCurrentStep(3);
+      } else if (batch && currentStep === 3) {
+        if (value.trim().toUpperCase() !== activeTask.pick_tote_code) {
+          addScanLog(value, "Scan the assigned tote", false);
+          return;
+        }
+        addScanLog(value, "Tote verified", true);
+        setCurrentStep(4);
       }
     }
     setTimeout(() => scanInputRef.current?.focus(), 50);
@@ -585,7 +594,7 @@ export default function ScannerAppPage() {
       case "putaway":
         return ["Item", "Bin", "Confirm"];
       case "pick":
-        return ["Bin", "Item", "Qty", "Confirm"];
+        return activeTask?.pick_tote_code ? ["Bin", "Item", "Qty", "Tote", "Confirm"] : ["Bin", "Item", "Qty", "Confirm"];
       default:
         return ["Scan", "Confirm"];
     }
@@ -616,7 +625,9 @@ export default function ScannerAppPage() {
       case "putaway":
         return ["Scan product", "Scan bin", "Confirm"][step] || "";
       case "pick":
-        return ["Scan bin", "Scan product", "Enter qty", "Confirm"][step] || "";
+        return (activeTask?.pick_tote_code
+          ? ["Scan assigned bin", "Scan assigned product", "Enter picked quantity (0 if short)", "Scan assigned tote", "Confirm pick"]
+          : ["Scan bin", "Scan product", "Enter qty", "Confirm"])[step] || "";
       default:
         return "Scan";
     }

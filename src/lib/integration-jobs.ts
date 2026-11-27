@@ -72,7 +72,7 @@ export async function drainIntegrationJobs(limit = 5) {
         const { data: shipment, error: shipmentError } = await db
           .from("shipments")
           .select(
-            "tracking_number,order_id,order:sales_orders(order_number,carrier),lines:shipment_lines(quantity,product:products(sku))",
+            "tracking_number,shopify_split,order_id,order:sales_orders(order_number,carrier),lines:shipment_lines(quantity,product:products(sku))",
           )
           .eq("tenant_id", job.tenant_id)
           .eq("id", job.payload.shipment_id)
@@ -86,7 +86,7 @@ export async function drainIntegrationJobs(limit = 5) {
           quantity: number;
           product: { sku: string };
         }[];
-        const shipped: Record<string, number> = {};
+        const shipped: Record<string, number> = Object.create(null);
         for (const line of lines)
           shipped[line.product.sku] =
             (shipped[line.product.sku] || 0) + line.quantity;
@@ -95,6 +95,13 @@ export async function drainIntegrationJobs(limit = 5) {
           shipped,
           shipment.tracking_number,
           order.carrier,
+          shipment.shopify_split ? {
+            attempted: !!job.fulfillment_attempted_at,
+            beforeMutation: async () => {
+              const { data: claimed, error } = await db.rpc("mark_split_fulfillment_attempt", { p_job: job.id, p_lease: job.lease_token });
+              if (error || !claimed) throw new Error("An earlier shipment must be reconciled first");
+            },
+          } : undefined,
         );
       } else {
         const { order } = await client.getOrder(String(job.payload.order_id));

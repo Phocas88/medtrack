@@ -797,3 +797,63 @@ describe('carton void, cutover drafts, and pack receiving', () => {
     expect((await db.query("select quantity_on_hand from lots where lot_number='PACK-RECEIPT'")).rows).toEqual([{quantity_on_hand:24}]);
   });
 });
+
+describe('Shopify partials, pallet codes, and shared picking', () => {
+  it('preserves locally shipped Shopify units on import replay and fences writeback attempts', async () => {
+    const order = { id:20901, customer:{ email:'split@example.test',first_name:'Split' }, line_items:[{sku:'SKU-1',quantity:4,price:'5.00'}] };
+    await owner();
+    await db.query('select save_shopify_connection($1,$2,$3,$4)',[tenant,'fixture.myshopify.com','iv:encrypted:tag','Fixture shop']);
+    const ref = (await db.query<{id:string}>('select import_shopify_order($1,$2,$3) id',[tenant,JSON.stringify(order),'split-import-1'])).rows[0].id;
+    const line = (await db.query<{id:string}>('select id from sales_order_lines where order_id=$1',[ref])).rows[0].id;
+    await db.query("insert into lots(tenant_id,product_id,lot_number,quantity_on_hand) values($1,$2,'SHOP-SPLIT-LOT',6)",[tenant,product]);
+    await login(manager);
+    const posted = (await db.query<{result:{shipment_id:string}}>('select ship_order_quantities($1,$2) result',[
+      '99999999-0000-4000-8000-000000000030',JSON.stringify({order_id:ref,order_quantities:{[line]:2},tracking_number:'TRACK-SPLIT-1',
+        cartons:[{number:'C1',scans:['SKU-1','SKU-1'],pallet_code:'pal-001'}]})])).rows[0].result;
+    expect((await db.query('select pallet_code from shipment_cartons where shipment_id=$1',[posted.shipment_id])).rows).toEqual([{pallet_code:'PAL-001'}]);
+    await owner();
+    await db.query('select import_shopify_order($1,$2,$3)',[tenant,JSON.stringify({ ...order,fulfillment_status:'partial',line_items:[{...order.line_items[0],fulfillable_quantity:2}]}),'split-import-2']);
+    expect((await db.query('select quantity_ordered,quantity_shipped from sales_order_lines where id=$1',[line])).rows).toEqual([{quantity_ordered:4,quantity_shipped:2}]);
+    const claim = (await db.query<{id:string;lease_token:string}>(
+      "update integration_jobs set status='running',lease_token=gen_random_uuid(),lease_until=now()+interval '2 minutes' where event_id=$1 returning id,lease_token",
+      ['fulfillment:'+posted.shipment_id])).rows[0];
+    const attempt = 'select mark_split_fulfillment_attempt($1,$2) allowed';
+    expect((await db.query(attempt,[claim.id,claim.lease_token])).rows).toEqual([{allowed:true}]);
+    expect((await db.query(attempt,[claim.id,claim.lease_token])).rows).toEqual([{allowed:false}]);
+  });
+
+  it('reserves shared batch stock, verifies the assigned tote, and blocks a short pick from shipping', async () => {
+    await owner();
+    const row = async (sql:string,args:unknown[]) => (await db.query<{ id:string }>(sql,args)).rows[0].id;
+    const item=await row("insert into products(tenant_id,name,sku,is_lot_tracked) values($1,'Pick item','BATCH-1',false) returning id",[tenant]);
+    const location=await row("insert into locations(tenant_id,name,code) values($1,'Batch test warehouse','BATCH') returning id",[tenant]);
+    const bin=await row("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'BATCH-BIN') returning id",[tenant,location]);
+    const lot=await row("insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand) values($1,$2,$3,'BATCH-LOT',8) returning id",[tenant,item,location]);
+    await db.query('insert into bin_inventory(tenant_id,bin_id,product_id,lot_id,quantity) values($1,$2,$3,$4,8)',[tenant,bin,item,lot]);
+    const a=await row("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'BATCH-A','confirmed') returning id",[tenant,customer]);
+    const b=await row("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'BATCH-B','confirmed') returning id",[tenant,customer]);
+    await db.query('insert into sales_order_lines(tenant_id,order_id,product_id,quantity_ordered) values($1,$2,$4,3),($1,$3,$4,3)',[tenant,a,b,item]);
+    await login(manager);
+    const batch=await row('select create_pick_batch($1,$2,$3) id',[location,[a,b],staff]);
+    expect((await db.query('select quantity from order_reservations where order_id=any($1)',[[a,b]])).rows).toEqual([{quantity:3},{quantity:3}]);
+    const tasks=(await db.query<{id:string;pick_order_id:string;pick_tote_code:string}>(
+      'select id,pick_order_id,pick_tote_code from scan_tasks where pick_batch_id=$1',[batch])).rows;
+    await login(staff);
+    const complete='select complete_scan_task($1,$2,null,$3,null,$4)';
+    const evidence=(qty:number,tote:string)=>JSON.stringify(['BATCH-BIN','BATCH-1',String(qty),tote].map(value=>({value})));
+    for(const task of tasks) {
+      await db.query('select start_scan_task($1)',[task.id]);
+      const qty=task.pick_order_id===a?3:2;
+      await expect(db.query(complete,[task.id,qty,'BATCH-BIN',evidence(qty,'WRONG-TOTE')])).rejects.toThrow('assigned bin, SKU, quantity, and tote');
+      await db.query(complete,[task.id,qty,'BATCH-BIN',evidence(qty,task.pick_tote_code)]);
+    }
+    await login(manager);
+    const post='select ship_inventory($1,$2) result';
+    await expect(db.query(post,['99999999-0000-4000-8000-000000000031',JSON.stringify({order_id:b})])).rejects.toThrow('short pick');
+    await db.query(post,['99999999-0000-4000-8000-000000000032',JSON.stringify({order_id:a})]);
+    expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:5}]);
+    expect((await db.query("select title from warehouse_followups where source_id=$1",[b])).rows).toEqual([{title:'Resolve short batch pick'}]);
+    await db.query('select cancel_pick_batch($1)',[batch]);
+    expect((await db.query('select quantity from order_reservations where order_id=$1',[b])).rows).toEqual([]);
+  });
+});

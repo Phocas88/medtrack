@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { PackQuantity } from '@/components/workspace/pack-quantity';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import {
@@ -382,17 +383,20 @@ export function PODialog({ open, onOpenChange, po, onSaved }: Props) {
                   </div>
 
                   <div className="col-span-2 space-y-1">
-                    <Label className="text-xs">Qty *</Label>
+                    <Label className="text-xs">Stock units *</Label>
                     <Input
                       type="number"
                       min={1}
                       {...form.register(`lines.${index}.quantity_ordered`)}
                       disabled={!isEditable}
                     />
+                    {isEditable && tenantId && watchLines[index]?.product_id && <PackQuantity
+                      key={watchLines[index].product_id} tenantId={tenantId} productId={watchLines[index].product_id}
+                      usage="purchase" onApply={quantity => form.setValue(`lines.${index}.quantity_ordered`, quantity, { shouldDirty: true, shouldValidate: true })} />}
                   </div>
 
                   <div className="col-span-2 space-y-1">
-                    <Label className="text-xs">Unit Cost</Label>
+                    <Label className="text-xs">Cost per stock unit</Label>
                     <Input
                       type="number"
                       step="0.01"

@@ -177,6 +177,53 @@ describe("outbound Shopify safeguards", () => {
     ).rejects.toThrow("quantities changed");
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+  it("posts only the tracked split quantity and holds an uncertain retry", async () => {
+    const pageInfo = { hasNextPage: false, endCursor: null };
+    const emptyFulfillments = () => Response.json({ data: { order: { fulfillments: [] } } });
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(emptyFulfillments())
+      .mockResolvedValueOnce(Response.json({
+        data: { order: { fulfillmentOrders: {
+          nodes: [{
+            id: "fulfillment-order-1",
+            status: "OPEN",
+            assignedLocation: { location: { id: "location-1" } },
+            lineItems: { nodes: [{
+              id: "line-1",
+              remainingQuantity: 5,
+              lineItem: { sku: "SKU-1" },
+            }], pageInfo },
+          }],
+          pageInfo,
+        } } },
+      }))
+      .mockResolvedValueOnce(Response.json({
+        data: { fulfillmentCreate: { fulfillment: { id: "shipment-1" }, userErrors: [] } },
+      }))
+      .mockResolvedValueOnce(emptyFulfillments());
+    const beforeMutation = vi.fn(async () => {
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+    vi.stubGlobal("fetch", fetch);
+    await client().fulfillWarehouseOrder("123", { "SKU-1": 2 }, "TRACK-1", null, {
+      attempted: false,
+      beforeMutation,
+    });
+    expect(JSON.parse(fetch.mock.calls[2][1].body).variables.fulfillment).toMatchObject({
+      trackingInfo: { number: "TRACK-1" },
+      lineItemsByFulfillmentOrder: [{
+        fulfillmentOrderId: "fulfillment-order-1",
+        fulfillmentOrderLineItems: [{ id: "line-1", quantity: 2 }],
+      }],
+    });
+    await expect(client().fulfillWarehouseOrder("123", { "SKU-1": 2 }, "TRACK-1", null, {
+      attempted: true,
+      beforeMutation,
+    })).rejects.toThrow("manual reconciliation");
+    expect(beforeMutation).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
   it("uses compare-and-set when publishing stock", async () => {
     const fetch = vi
       .fn()

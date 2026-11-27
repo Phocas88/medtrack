@@ -726,6 +726,9 @@ export interface ProductBinAssignment {
 }
 
 export interface ScanTask {
+  pick_batch_id?: string | null;
+  pick_order_id?: string | null;
+  pick_tote_code?: string | null;
   id: string;
   tenant_id: string;
   task_type: ScanTaskType;
