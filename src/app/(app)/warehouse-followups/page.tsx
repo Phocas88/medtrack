@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/components/providers/auth-provider';
+import { ShiftPriorities } from '@/components/workspace/shift-priorities';
 import { createClient } from '@/lib/supabase/client';
 
 type Member = { id: string; full_name: string };
@@ -151,6 +152,15 @@ export default function WarehouseFollowupsPage() {
   const current = data?.tenant === tenantId ? data : undefined;
   return <div className="space-y-4">
     <PageHeader title="Warehouse follow-ups" description="Assign and resolve shortages, damage, and shipment issues." />
+    {!source && <>
+      <ShiftPriorities />
+      <div className="flex flex-wrap gap-4 text-sm">
+        <Link className="underline" href="/expiration">Expiring lots</Link>
+        <Link className="underline" href="/replenishment">Pick-bin shortages</Link>
+        <Link className="underline" href="/integrations/shopify">Shopify sync activity</Link>
+        <Link className="underline" href="/integrations/quickbooks">QuickBooks invoice exports</Link>
+      </div>
+    </>}
     {source && <Button type="button" size="sm" variant="outline" onClick={() => setSource(undefined)}>Show all follow-ups</Button>}
     <details className="space-y-3 rounded border bg-card p-4" open={source?.type === 'sales_order' ? true : undefined}>
       <summary className="cursor-pointer font-semibold">New follow-up</summary>

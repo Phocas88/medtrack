@@ -11,20 +11,42 @@ export type SetupRow = {
   expiration?: string;
 };
 
-export function parseSetupCsv(text: string, kind: SetupImportKind) {
+export const setupColumns = {
+  products: { required: ['sku', 'name'], optional: ['lot_tracked'] },
+  opening: { required: ['sku', 'bin', 'quantity'], optional: ['lot', 'expiration'] },
+};
+
+const normalizeHeading = (heading: string) => heading.trim().toLowerCase();
+
+export function setupCsvHeaders(text: string) {
+  return Papa.parse<string[]>(text, { preview: 1, skipEmptyLines: 'greedy' })
+    .data[0]?.map(normalizeHeading) ?? [];
+}
+
+export function parseSetupCsv(text: string, kind: SetupImportKind, mapping: Record<string, string> = {}) {
   const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true, skipEmptyLines: 'greedy', transformHeader: heading => heading.trim().toLowerCase(),
+    header: true, skipEmptyLines: 'greedy', transformHeader: normalizeHeading,
   });
   const errors = parsed.errors.map(error => `Row ${(error.row ?? 0) + 2}: ${error.message}`);
-  const mandatory = kind === 'products' ? ['sku', 'name'] : ['sku', 'bin', 'quantity'];
-  if (mandatory.some(field => !parsed.meta.fields?.includes(field))) {
-    errors.push(`Required columns: ${mandatory.join(', ')}.`);
+  const { required, optional } = setupColumns[kind];
+  const columns = [...required, ...optional].map(field => [field, mapping[field] ?? field] as const);
+  const headers = setupCsvHeaders(text);
+  if (headers.some((header, index) => header && headers.indexOf(header) !== index)) {
+    errors.push('Rename duplicate column headings before importing.');
   }
+  for (const field of required) {
+    const source = mapping[field] ?? field;
+    if (!source || !headers.includes(source)) errors.push(`Map a CSV column to ${field}.`);
+  }
+  const selected = columns.map(([, source]) => source).filter(source => source && headers.includes(source));
+  if (new Set(selected).size !== selected.length) errors.push('Use each CSV column for only one field.');
   if (parsed.data.length < 1 || parsed.data.length > 250) errors.push('Import 1–250 rows at a time.');
   const seen = new Set<string>();
   const rows = parsed.data.slice(0, 250).map((raw, index): SetupRow => {
-    const values = Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === 'string')
-      .map(([key, value]) => [key, value.trim()]));
+    const values = Object.fromEntries(columns.map(([field, source]) => {
+      const value = source ? raw[source] : undefined;
+      return [field, typeof value === 'string' ? value.trim() : undefined];
+    }));
     const row = index + 2;
     const sku = values.sku ?? '';
     if (!sku || sku.length > 100) errors.push(`Row ${row}: enter a SKU of up to 100 characters.`);

@@ -3,11 +3,18 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { BarcodeScanner } from '@/components/barcode-scanner';
+import { buildLotLabelContent, printLotLabel } from '@/lib/barcode';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
-import { parseSetupCsv, type SetupImportKind } from '@/lib/setup-csv';
+import { parseSetupCsv, setupColumns, setupCsvHeaders, type SetupImportKind } from '@/lib/setup-csv';
 import { createClient } from '@/lib/supabase/client';
+
+const testLabel = {
+  productName: 'Invexiqs printer test', sku: 'TEST-SKU', lotNumber: 'TEST-LOT',
+  location: 'TEST-BIN', expirationDate: null,
+};
 
 const templates = {
   products: 'sku,name,lot_tracked\nBOX-100,Shipping box,false\n',
@@ -22,8 +29,12 @@ export default function SetupImportPage() {
 }
 
 function SetupImport({ tenantId }: { tenantId: string }) {
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerResult, setScannerResult] = useState('');
+  const [printError, setPrintError] = useState('');
   const [kind, setKind] = useState<SetupImportKind>('products');
   const [csv, setCsv] = useState('');
+  const [mappings, setMappings] = useState<Partial<Record<SetupImportKind, Record<string, string>>>>({});
   const [preview, setPreview] = useState<ReturnType<typeof parseSetupCsv>>();
   const [warehouses, setWarehouses] = useState<{id: string; name: string}[]>([]);
   const [warehouse, setWarehouse] = useState('');
@@ -31,6 +42,13 @@ function SetupImport({ tenantId }: { tenantId: string }) {
   const [busy, setBusy] = useState(false);
   const [imported, setImported] = useState<number>();
   const request = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`invexiqs:setup-mappings:${tenantId}`);
+      if (saved) setMappings(JSON.parse(saved));
+    } catch { /* Keep import available when browser storage is disabled. */ }
+  }, [tenantId]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('kind') === 'opening') setKind('opening');
@@ -49,16 +67,26 @@ function SetupImport({ tenantId }: { tenantId: string }) {
     request.current = undefined;
   }
 
+  const headers = [...new Set(setupCsvHeaders(csv).filter(Boolean))];
+  const columns = [...setupColumns[kind].required, ...setupColumns[kind].optional];
+  const effectiveMapping = Object.fromEntries(columns.map(field => {
+    const saved = mappings[kind]?.[field];
+    return [field, saved === '' || (saved && headers.includes(saved)) ? saved : field];
+  }));
+
   async function review() {
     setBusy(true);
     setError('');
     try {
-      const result = parseSetupCsv(csv, kind);
+      const result = parseSetupCsv(csv, kind, effectiveMapping);
       if (!result.errors.length && kind === 'products') {
         const { data, error: failure } = await createClient().from('products').select('sku')
           .eq('tenant_id', tenantId).in('sku', result.rows.map(row => row.sku));
         if (failure) throw failure;
-        for (const row of data ?? []) result.errors.push(`SKU ${row.sku} already exists.`);
+        const existing = new Set((data ?? []).map(row => row.sku));
+        result.rows.forEach((row, index) => {
+          if (existing.has(row.sku)) result.errors.push(`Row ${index + 2}: SKU ${row.sku} already exists.`);
+        });
       }
       setPreview(result);
       request.current ??= crypto.randomUUID();
@@ -85,6 +113,26 @@ function SetupImport({ tenantId }: { tenantId: string }) {
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader title="Import warehouse setup data" />
       <Link href="/dashboard" className="text-sm text-primary underline">Back to setup checklist</Link>
+      <section className="space-y-3 rounded-lg border bg-card p-4" aria-labelledby="hardware-test">
+        <h2 id="hardware-test" className="font-semibold">Check your scanner and label printer</h2>
+        <p className="text-sm text-muted-foreground">Print the sample label on 4 × 2 inch stock, then scan it to verify the barcode. You can use a camera or a USB/Bluetooth scanner in manual-entry mode.</p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => {
+            setPrintError(printLotLabel(testLabel) ? '' : 'Allow pop-ups to open the test label.');
+          }}>Print test label</Button>
+          <Button type="button" variant="outline" onClick={() => {
+            setScannerResult(''); setScannerOpen(true);
+          }}>Test scanner</Button>
+        </div>
+        {printError && <p role="alert" className="text-sm text-destructive">{printError}</p>}
+        {scannerOpen && <BarcodeScanner onClose={() => setScannerOpen(false)} onScan={value => {
+          if (value === buildLotLabelContent(testLabel)) {
+            setScannerResult('Test label read successfully.');
+            setScannerOpen(false);
+          } else setScannerResult('Barcode read successfully. Scan the Invexiqs test label to verify the printer too.');
+        }} />}
+        {scannerResult && <p role="status" className="text-sm">{scannerResult}</p>}
+      </section>
       <fieldset disabled={busy} className="space-y-4 rounded-lg border bg-card p-4">
         <label className="block text-sm">What are you importing?
           <select className="ml-2 rounded border bg-background p-2" value={kind} onChange={event => {
@@ -121,6 +169,28 @@ function SetupImport({ tenantId }: { tenantId: string }) {
           <textarea className="mt-1 min-h-36 w-full rounded border border-input bg-background p-2 font-mono text-sm"
             value={csv} maxLength={1048576} onChange={e => updateCsv(e.target.value)} />
         </label>
+        {headers.length > 0 && (
+          <fieldset className="grid gap-3 rounded border p-3 sm:grid-cols-2">
+            <legend className="px-1 text-sm font-medium">Match CSV columns</legend>
+            {columns.map(field => {
+              const chosen = effectiveMapping[field];
+              return <label key={field} className="text-sm">
+                {field.replaceAll('_', ' ')}{setupColumns[kind].required.includes(field) ? ' (required)' : ''}
+                <select className="mt-1 block w-full rounded border bg-background p-2"
+                  value={headers.includes(chosen) ? chosen : ''} onChange={event => {
+                    const next = { ...mappings, [kind]: { ...mappings[kind], [field]: event.target.value } };
+                    setMappings(next);
+                    updateCsv(csv);
+                    try { localStorage.setItem(`invexiqs:setup-mappings:${tenantId}`, JSON.stringify(next)); }
+                    catch { /* The current mapping still applies in this session. */ }
+                  }}>
+                  <option value="">Choose a column</option>
+                  {headers.map(header => <option key={header} value={header}>{header}</option>)}
+                </select>
+              </label>;
+            })}
+          </fieldset>
+        )}
         <Button type="button" variant="outline" disabled={!csv.trim()} onClick={() => void review()}>Preview CSV</Button>
         {preview && (
           <div className="space-y-2" aria-label="Import preview">

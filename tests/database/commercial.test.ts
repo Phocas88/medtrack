@@ -557,6 +557,34 @@ describe('warehouse execution workflows', () => {
       .toEqual([{carton_number:'C1',tracking_number:'TRACK'},{carton_number:'C2',tracking_number:'TRACK-2'}]);
     expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:4}]);
     expect((await db.query('select quantity from order_reservations where order_id=$1',[order])).rows).toEqual([]);
+    const competingLine = (await db.query<{id: string}>(
+      'select id from sales_order_lines where order_id=$1', [competing])).rows[0].id;
+    const partial = JSON.stringify({order_id:competing,order_quantities:{[competingLine]:2},
+      tracking_number:'PARTIAL',cartons:[{number:'P1',scans:['EXEC-1','EXEC-1']}]});
+    const postPartial = 'select ship_local_order_quantities($1,$2::jsonb) result';
+    const partialRequest = '88888888-0000-4000-8000-000000000002';
+    await expect(db.query(postPartial,[partialRequest,JSON.stringify({order_id:competing,order_quantities:{[competingLine]:6}})]))
+      .rejects.toThrow('Invalid shipment quantity');
+    await expect(db.query(postPartial,[partialRequest,JSON.stringify({order_id:competing,order_quantities:{[competingLine]:2}})]))
+      .rejects.toThrow('Scan items into cartons');
+    const partialResult = await db.query<{result:{has_backorder:boolean}}>(postPartial,[partialRequest,partial]);
+    expect(partialResult.rows[0].result.has_backorder).toBe(true);
+    expect((await db.query(postPartial,[partialRequest,partial])).rows).toEqual(partialResult.rows);
+    expect((await db.query('select status from sales_orders where id=$1',[competing])).rows).toEqual([{status:'picking'}]);
+    expect((await db.query('select quantity_shipped from sales_order_lines where id=$1',[competingLine])).rows)
+      .toEqual([{quantity_shipped:2}]);
+    expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:2}]);
+    const restRequest = '88888888-0000-4000-8000-000000000003';
+    await expect(db.query(post,[restRequest,JSON.stringify({order_id:competing})]))
+      .rejects.toThrow('Insufficient available stock');
+    await owner();
+    await db.query('update lots set quantity_on_hand=quantity_on_hand+1 where id=$1',[lot]);
+    await login(manager);
+    await db.query(post,[restRequest,JSON.stringify({order_id:competing})]);
+    expect((await db.query('select status from sales_orders where id=$1',[competing])).rows).toEqual([{status:'shipped'}]);
+    expect((await db.query('select quantity_shipped from sales_order_lines where id=$1',[competingLine])).rows)
+      .toEqual([{quantity_shipped:5}]);
+    expect((await db.query('select id from shipments where order_id=$1',[competing])).rows).toHaveLength(2);
     await login(other);
     expect((await db.query("select id from shipment_cartons where tracking_number='TRACK'")).rows).toEqual([]);
   });

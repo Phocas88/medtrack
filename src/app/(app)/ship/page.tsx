@@ -42,6 +42,8 @@ import { InvoiceButton } from "./invoice-button";
 import type { Customer, Product, Lot, SalesOrder } from "@/types/database";
 
 interface OrderLine {
+  id?: string;
+  openQuantity?: number;
   product_id: string;
   quantity: number;
   unit_price: number;
@@ -49,7 +51,7 @@ interface OrderLine {
 
 interface ShippedOrder extends SalesOrder {
   customer?: Customer;
-  shipments?: { cartons: { id: string; carton_number: string; tracking_number: string; contents: string[] }[] }[];
+  shipments?: { created_at: string; cartons: { id: string; carton_number: string; tracking_number: string; contents: string[] }[] }[];
 }
 
 interface PickSuggestion {
@@ -71,6 +73,7 @@ export default function ShipPage() {
       order_number: string;
       customer_id: string;
       lines: {
+        id: string;
         product_id: string;
         quantity_ordered: number;
         quantity_shipped: number;
@@ -119,7 +122,7 @@ export default function ShipPage() {
     supabase
       .from("sales_orders")
       .select(
-        "id,order_number,customer_id,lines:sales_order_lines(product_id,quantity_ordered,quantity_shipped,unit_price)",
+        "id,order_number,customer_id,lines:sales_order_lines(id,product_id,quantity_ordered,quantity_shipped,unit_price)",
       )
       .eq("tenant_id", tenantId)
       .in("status", ["confirmed", "picking"])
@@ -139,6 +142,8 @@ export default function ShipPage() {
       order.lines
         .filter((line) => line.quantity_ordered > (line.quantity_shipped ?? 0))
         .map((line) => ({
+          id: line.id,
+          openQuantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
           product_id: line.product_id,
           quantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
           unit_price: line.unit_price,
@@ -151,9 +156,8 @@ export default function ShipPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from("sales_orders")
-      .select("*, customer:customers(id, name), shipments(cartons:shipment_cartons(id,carton_number,tracking_number,contents))")
+      .select("*, customer:customers(id, name), shipments!inner(created_at,cartons:shipment_cartons(id,carton_number,tracking_number,contents))")
       .eq("tenant_id", tenantId)
-      .eq("status", "shipped")
       .order("created_at", { ascending: false })
       .limit(20);
     setRecentOrders((data as ShippedOrder[]) || []);
@@ -181,30 +185,40 @@ export default function ShipPage() {
     setLines(lines.filter((_, i) => i !== index));
   }
 
+  const selectedOrder = existingOrders.find(order => order.id === selectedOrderId);
+  const allowPartial = !!selectedOrder && !/^SHOPIFY-\d+$/.test(selectedOrder.order_number);
+  const hasPartialQuantities = allowPartial && lines.some(line => line.quantity < (line.openQuantity ?? 0));
+  const shipmentLines = allowPartial ? lines.filter(line => line.quantity !== 0) : lines;
+
   async function handlePrepareShipment() {
     if (!customerId) {
       toast.error("Select a customer");
       return;
     }
-    if (lines.length === 0) {
+    if (shipmentLines.length === 0) {
       toast.error("Add at least one line item");
       return;
     }
-    if (lines.some((l) => !l.product_id || l.quantity <= 0)) {
-      toast.error("All lines must have a product and positive quantity");
+    if (shipmentLines.some(line => !line.product_id || !Number.isInteger(line.quantity) || line.quantity <= 0 || (line.openQuantity !== undefined && line.quantity > line.openQuantity))) {
+      toast.error("Enter a whole quantity within the open balance for each selected line");
+      return;
+    }
+
+    if (hasPartialQuantities && !cartons.length) {
+      toast.error('Scan items into cartons before posting a partial shipment');
       return;
     }
 
     const supabase = createClient();
     const suggestions: PickSuggestion[] = [];
-    if (new Set(lines.map((line) => line.product_id)).size !== lines.length) {
+    if (new Set(shipmentLines.map((line) => line.product_id)).size !== shipmentLines.length) {
       toast.error(
         "Combine duplicate product lines before preparing a shipment",
       );
       return;
     }
 
-    for (const line of lines) {
+    for (const line of shipmentLines) {
       const product = products.find((p) => p.id === line.product_id)!;
 
       const { data: lots } = await supabase
@@ -268,7 +282,7 @@ export default function ShipPage() {
     setProcessing(true);
     const supabase = createClient();
 
-    const { data: posted, error } = await supabase.rpc("ship_inventory", {
+    const { data: posted, error } = await supabase.rpc(hasPartialQuantities ? "ship_local_order_quantities" : "ship_inventory", {
       p_request_id: requestId,
       p_shipment: {
         order_id: selectedOrderId || null,
@@ -277,7 +291,10 @@ export default function ShipPage() {
         notes,
         tracking_number: trackingNumber.trim() || cartons[0]?.tracking.trim() || "",
         ...(cartons.length ? { cartons: cartons.map(({ number, tracking, scans }) => ({ number, tracking, scans })) } : {}),
-        lines,
+        lines: shipmentLines,
+        ...(hasPartialQuantities ? {
+          order_quantities: Object.fromEntries(shipmentLines.map(line => [line.id, line.quantity])),
+        } : {}),
         serial_numbers: Object.fromEntries(
           Object.entries(serials).map(([id, value]) => [
             id,
@@ -298,13 +315,20 @@ export default function ShipPage() {
     setRequestId(crypto.randomUUID());
     setCartons([]);
 
-    toast.success(`Shipment ${orderNum} created successfully`);
+    toast.success(posted.has_backorder ? `Shipment ${orderNum} posted. Remaining units are open.` : `Shipment ${orderNum} created successfully`);
     setShowPicking(false);
     setLines([]);
     setCustomerId("");
     setSelectedOrderId("");
     setExistingOrders((previous) =>
-      previous.filter((order) => order.id !== selectedOrderId),
+      previous.flatMap(order => {
+        if (order.id !== selectedOrderId) return [order];
+        if (!posted.has_backorder) return [];
+        return [{ ...order, lines: order.lines.map(line => ({
+          ...line,
+          quantity_shipped: (line.quantity_shipped ?? 0) + (shipmentLines.find(shipped => shipped.id === line.id)?.quantity ?? 0),
+        })) }];
+      }),
     );
     setNotes("");
     setTrackingNumber("");
@@ -349,9 +373,11 @@ export default function ShipPage() {
                       (line) => line.quantity_ordered > (line.quantity_shipped ?? 0),
                     )
                     .map((line) => ({
+                      id: line.id,
+                      openQuantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
                       product_id: line.product_id,
                       quantity: line.quantity_ordered - (line.quantity_shipped ?? 0),
-                      unit_price: line.unit_price,
+                                    unit_price: line.unit_price,
                     }))
                 : [],
             );
@@ -368,9 +394,9 @@ export default function ShipPage() {
         {selectedOrderId && <OrderReservation key={selectedOrderId} orderId={selectedOrderId} />}
         {selectedOrderId && (
           <p className="text-sm text-muted-foreground">
-            This workflow ships all remaining quantities on the selected order.
-            Partial order fulfillment is not available in this release.
-            Quantities and prices are verified by the server.
+            {allowPartial
+              ? 'Enter what goes out today. Enter zero to leave a line open. Remaining units stay on the order for the next shipment.'
+              : 'Shopify orders ship all remaining quantities in this workflow.'}
           </p>
         )}
       </div>
@@ -469,14 +495,16 @@ export default function ShipPage() {
                       <TableCell>
                         <Input
                           type="number"
-                          min={1}
+                          min={allowPartial ? 0 : 1}
+                          max={line.openQuantity}
+                          aria-label={`Ship quantity for line ${i + 1}`}
                           value={line.quantity}
-                          disabled={!!selectedOrderId}
+                          disabled={!!selectedOrderId && !allowPartial}
                           onChange={(e) =>
                             updateLine(
                               i,
                               "quantity",
-                              parseInt(e.target.value) || 1,
+                              Number(e.target.value),
                             )
                           }
                         />
@@ -556,7 +584,7 @@ export default function ShipPage() {
           <div className="flex gap-2 pt-2">
             <Button
               onClick={handlePrepareShipment}
-              disabled={lines.length === 0}
+              disabled={shipmentLines.length === 0}
             >
               Prepare Shipment (FEFO Pick)
             </Button>
@@ -588,9 +616,9 @@ export default function ShipPage() {
                       {order.order_number}
                     </TableCell>
                     <TableCell>{order.customer?.name || "—"}</TableCell>
-                    <TableCell>{formatDate(order.ship_date)}</TableCell>
+                    <TableCell>{formatDate(order.shipments?.map(shipment => shipment.created_at).sort().at(-1) ?? order.ship_date)}</TableCell>
                     <TableCell>
-                      <Badge variant="default">Shipped</Badge>
+                      <Badge variant={order.status === "shipped" ? "default" : "secondary"}>{order.status === "shipped" ? "Shipped" : "Partially shipped"}</Badge>
                     </TableCell>
                     <TableCell>
                       {!!order.shipments?.some(shipment => shipment.cartons.length) && (
@@ -606,10 +634,10 @@ export default function ShipPage() {
                         </details>
                       )}
                       <Link className="mb-1 block text-sm underline" href={`/warehouse-followups?order=${order.id}`}>Customer follow-up</Link>
-                      <InvoiceButton
+                      {order.status === "shipped" && <InvoiceButton
                         orderId={order.id}
                         tenantId={order.tenant_id}
-                      />
+                      />}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { IScannerControls } from '@zxing/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { X, Camera, Keyboard } from 'lucide-react';
@@ -17,54 +18,51 @@ export function BarcodeScanner({ onScan, onClose }: Props) {
   const [error, setError] = useState('');
   const [scanning, setScanning] = useState(false);
 
+  const onScanRef = useRef(onScan);
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+
   useEffect(() => {
     if (mode !== 'camera') return;
+    let closed = false;
+    let stream: MediaStream | undefined;
+    let controls: IScannerControls | undefined;
 
-    let stream: MediaStream | null = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let reader: any = null;
+    function stopCamera() {
+      closed = true;
+      controls?.stop();
+      stream?.getTracks().forEach(track => track.stop());
+    }
 
     async function startCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setScanning(true);
-
-        // Use ZXing for barcode detection
         const { BrowserMultiFormatReader } = await import('@zxing/browser');
-        const codeReader = new BrowserMultiFormatReader();
-        reader = codeReader;
-
-        codeReader.decodeFromVideoElement(videoRef.current!, (result) => {
-          if (result) {
-            onScan(result.getText());
-            stopCamera();
-          }
+        if (closed) return;
+        const video = videoRef.current;
+        if (!video) return;
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (closed) { stopCamera(); return; }
+        controls = await new BrowserMultiFormatReader().decodeFromStream(stream, video, (result, _error, session) => {
+          if (closed || !result) return;
+          controls = session;
+          stopCamera();
+          setScanning(false);
+          setMode('manual');
+          onScanRef.current(result.getText());
         });
+        if (closed) stopCamera();
+        else setScanning(true);
       } catch {
+        if (closed) return;
+        stopCamera();
+        setScanning(false);
         setError('Camera access denied or not available. Use manual entry.');
         setMode('manual');
       }
     }
 
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
-      }
-      if (reader) {
-        reader.reset();
-      }
-      setScanning(false);
-    }
-
-    startCamera();
-    return () => stopCamera();
-  }, [mode, onScan]);
+    void startCamera();
+    return stopCamera;
+  }, [mode]);
 
   function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,19 +79,21 @@ export function BarcodeScanner({ onScan, onClose }: Props) {
           <Button
             variant={mode === 'camera' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setMode('camera')}
+            type="button"
+            onClick={() => { setError(''); setMode('camera'); }}
           >
             <Camera className="h-4 w-4 mr-1" /> Camera
           </Button>
           <Button
             variant={mode === 'manual' ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setMode('manual')}
+            type="button"
+            onClick={() => { setScanning(false); setMode('manual'); }}
           >
             <Keyboard className="h-4 w-4 mr-1" /> Manual
           </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button type="button" variant="ghost" size="sm" aria-label="Close scanner" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -116,6 +116,7 @@ export function BarcodeScanner({ onScan, onClose }: Props) {
           <Input
             value={manualValue}
             onChange={(e) => setManualValue(e.target.value)}
+            aria-label="Barcode value"
             placeholder="Type or scan barcode value..."
             autoFocus
           />

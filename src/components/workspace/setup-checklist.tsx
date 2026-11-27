@@ -36,6 +36,7 @@ export function SetupChecklist() {
       </ol>
       <div className="flex flex-wrap gap-3 text-sm">
         {role === 'admin' && <Link className={link} href="/admin/users">Add teammates</Link>}
+        <Link className={link} href="/onboarding/import#hardware-test">Test scanner and printer</Link>
         <Link className={link} href="/integrations/shopify">Connect Shopify later</Link>
       </div>
     </section>

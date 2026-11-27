@@ -232,6 +232,36 @@ try {
       assert.equal(orders[0].lines[0].quantity_shipped, 6);
     },
   );
+  await step("Carton-verified local partial shipment and backorder", async () => {
+    const order = checked(await adminA.from("sales_orders").insert({
+      tenant_id: tenantA, customer_id: customer, order_number: `ACCEPT-PART-${run}`, status: "confirmed",
+    }).select("id").single());
+    const line = checked(await adminA.from("sales_order_lines").insert({
+      tenant_id: tenantA, order_id: order.id, product_id: product, quantity_ordered: 3, unit_price: 5,
+    }).select("id").single());
+    const item = checked(await adminA.from("products").select("sku").eq("id", product).single());
+    const request = {
+      p_request_id: randomUUID(),
+      p_shipment: {
+        order_id: order.id,
+        order_quantities: { [line.id]: 2 },
+        cartons: [{ number: "ACCEPT-C1", scans: [item.sku, item.sku], tracking: "ACCEPT-CARTON" }],
+      },
+    };
+    const first = checked(await adminA.rpc("ship_local_order_quantities", request));
+    assert.equal(first.has_backorder, true);
+    assert.deepEqual(checked(await adminA.rpc("ship_local_order_quantities", request)), first);
+    const remaining = checked(await adminA.from("sales_order_lines").select("quantity_shipped")
+      .eq("id", line.id).single());
+    assert.equal(remaining.quantity_shipped, 2);
+    assert.ok((await adminB.rpc("ship_local_order_quantities", request)).error);
+    const final = checked(await adminA.rpc("ship_inventory", {
+      p_request_id: randomUUID(), p_shipment: { order_id: order.id },
+    }));
+    assert.notEqual(final.shipment_id, first.shipment_id);
+    const closed = checked(await adminA.from("sales_orders").select("status").eq("id", order.id).single());
+    assert.equal(closed.status, "shipped");
+  });
   await step("Staff cannot invoke financial or order-desk RPCs", async () => {
     const read = await staff.rpc("list_order_desk");
     assert.ok(read.error);
