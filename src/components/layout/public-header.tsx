@@ -7,12 +7,14 @@ import Link from 'next/link';
 import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
 
 const publicNavigation = [
+  ['Contact', '/#contact'],
   ['Features', '/#features'],
-  ['Warehouse AI', '/#warehouse-ai'],
   ['Integrations', '/#integrations'],
   ['Live demo', '/demo'],
   ['Pricing', '/#pricing'],
   ['Sign in', '/auth/login'],
+  ['Solutions', '/#solutions'],
+  ['Warehouse AI', '/#warehouse-ai'],
 ] as const;
 
 export function PublicHeader({ currentPath, controls }: { currentPath?: string; controls?: ReactNode }) {
@@ -22,7 +24,7 @@ export function PublicHeader({ currentPath, controls }: { currentPath?: string; 
         <Link href="/" aria-label="Invexiqs WMS home" className="flex w-36 min-w-0 items-center rounded-sm py-1 sm:w-48">
           <InvexiqsLogo />
         </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-5 text-sm font-medium text-brand-muted-gray xl:flex">
+        <nav aria-label="Main navigation" className="hidden items-center gap-4 text-sm font-medium text-brand-muted-gray lg:flex xl:gap-5">
           {publicNavigation.map(([label, href]) => (
             <Link key={href} href={href} aria-current={currentPath === href ? 'page' : undefined}
               className="whitespace-nowrap rounded-sm py-2 hover:text-brand-royal-plum hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 aria-[current=page]:font-semibold">
@@ -33,12 +35,12 @@ export function PublicHeader({ currentPath, controls }: { currentPath?: string; 
         <div className="flex shrink-0 items-center gap-2">
           <Link href="/#contact" className="brand-cta min-h-11 whitespace-nowrap px-3 py-2 text-sm">Request a pilot</Link>
           <Popover.Root>
-            <Popover.Trigger aria-label="Menu" className="inline-flex size-11 items-center justify-center rounded-lg border border-brand-control-border hover:bg-brand-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 xl:hidden">
+            <Popover.Trigger aria-label="Menu" className="inline-flex size-11 items-center justify-center rounded-lg border border-brand-control-border hover:bg-brand-lavender focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 lg:hidden">
               <Menu aria-hidden size={21} />
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content aria-label="Site menu" align="end" sideOffset={8} collisionPadding={16}
-                className="z-50 w-56 max-w-[calc(100vw-2rem)] rounded-xl border border-brand-border-gray bg-brand-white p-2 text-brand-deep-plum shadow-lg xl:hidden">
+                className="z-50 w-56 max-w-[calc(100vw-2rem)] rounded-xl border border-brand-border-gray bg-brand-white p-2 text-brand-deep-plum shadow-lg lg:hidden">
                 <nav aria-label="Mobile navigation">
                   {publicNavigation.map(([label, href]) => (
                     <Popover.Close asChild key={href}>

@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test('anonymous buyers can view the complete page and reach the pilot form', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Know what’s in stock and where to find it.');
   await expect(page.locator('body')).not.toContainText(/\b(?:free trial|14.day trial|start (?:a |your )?trial)\b/i);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav.getByRole('link')).toHaveText(['Features', 'Warehouse AI', 'Integrations', 'Live demo', 'Pricing', 'Sign in']);
+  await expect(nav.getByRole('link')).toHaveText(['Contact', 'Features', 'Integrations', 'Live demo', 'Pricing', 'Sign in', 'Solutions', 'Warehouse AI']);
+  await expect(nav).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Menu', exact: true })).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1024);
   await nav.getByRole('link', { name: 'Pricing' }).click();
   await expect(page).toHaveURL(/#pricing$/);
   const pricing = page.locator('#pricing');
