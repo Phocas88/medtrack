@@ -149,9 +149,15 @@ test('public resources and help work before signup', async ({ page }) => {
   await chat.getByRole('textbox', { name: 'Your question' }).fill('Can I pay yearly?');
   await chat.getByRole('button', { name: 'Ask', exact: true }).click();
   await chat.getByRole('link', { name: 'Compare pricing and features' }).click();
-  await expect(page.getByRole('heading', { name: 'Annual', exact: true })).toBeVisible();
-  await expect(page.getByText(/\$948 billed once a year/)).toBeVisible();
-  await expect(page.getByRole('row', { name: /Stock by bin and lot/ })).toHaveText(/Included.*Included/);
+  await expect(page.getByRole('columnheader', { name: /Growth/ })).toBeVisible();
+  await page.getByRole('radio', { name: 'Annual', exact: true }).check();
+  await expect(page.getByText(/\$948 billed annually/)).toBeVisible();
+  await expect(page.getByRole('row', { name: /Stock by bin and lot/ })).toHaveText(/Included.*Included.*Included/);
+  await page.getByRole('searchbox', { name: 'Search features' }).fill('replenishment');
+  await expect(page.getByRole('row', { name: /Pick-bin replenishment/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Stock by bin and lot/ })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 820 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.getByRole('contentinfo').getByRole('link', { name: 'Barcode and bin labels' }).click();
   await page.getByLabel('Bin code or SKU').fill('A-01-03');
   await page.getByRole('button', { name: 'Generate Code 128' }).click();
