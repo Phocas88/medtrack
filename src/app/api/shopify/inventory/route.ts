@@ -28,18 +28,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ warehouses: data }, { headers: { "Cache-Control": "no-store" } });
     }
     const client = await loadShopifyConnection(user.tenant_id);
-    const [locations, mappings] = await Promise.all([
+    const [locations, mappings, warehouses] = await Promise.all([
       client.getLocations(),
       db
         .from("shopify_inventory_mappings")
         .select(
-          "product_id,variant_id,location_id,publish_enabled,product:products(name,sku)",
+          "product_id,variant_id,location_id,warehouse_id,publish_enabled,product:products(name,sku)",
         )
         .eq("tenant_id", user.tenant_id),
+      db.from("locations").select("id,name,is_active").eq("tenant_id", user.tenant_id).order("name"),
     ]);
-    if (mappings.error) throw mappings.error;
+    if (mappings.error || warehouses.error) throw mappings.error || warehouses.error;
     return NextResponse.json(
-      { locations: locations.locations, mappings: mappings.data },
+      { locations: locations.locations, mappings: mappings.data, warehouses: warehouses.data },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
@@ -54,12 +55,13 @@ export async function POST(request: Request) {
         product_id: uuid,
         location_id: z.string().regex(/^gid:\/\/shopify\/Location\/\d+$/),
         publish_enabled: z.boolean(),
+        warehouse_id: uuid.nullable().optional(),
       })
       .parse(await request.json());
     const db = createServiceClient();
     const { data: mapping, error } = await db
       .from("shopify_inventory_mappings")
-      .select("inventory_item_id")
+      .select("inventory_item_id,warehouse_id")
       .eq("tenant_id", user.tenant_id)
       .eq("product_id", input.product_id)
       .single();
@@ -75,20 +77,21 @@ export async function POST(request: Request) {
         input.location_id,
       );
     }
-    const { error: saveError } = await db
-      .from("shopify_inventory_mappings")
-      .update({
-        location_id: input.location_id,
-        publish_enabled: input.publish_enabled,
-      })
-      .eq("tenant_id", user.tenant_id)
-      .eq("product_id", input.product_id);
-    if (saveError) throw saveError;
-    const { error: queueError } = await db.rpc("enqueue_shopify_stock", {
+    const warehouseId = input.warehouse_id === undefined ? mapping.warehouse_id : input.warehouse_id;
+    if (warehouseId && input.publish_enabled) {
+      const { data: warehouse, error: warehouseError } = await db.from("locations")
+        .select("id").eq("tenant_id", user.tenant_id).eq("id", warehouseId).eq("is_active", true).maybeSingle();
+      if (warehouseError) throw warehouseError;
+      if (!warehouse) throw new HttpError(400, "Choose an active warehouse in this workspace");
+    }
+    const { error: saveError } = await db.rpc("configure_shopify_stock_source", {
       p_tenant: user.tenant_id,
       p_product: input.product_id,
+      p_location: input.location_id,
+      p_warehouse: warehouseId,
+      p_enabled: input.publish_enabled,
     });
-    if (queueError) throw queueError;
+    if (saveError) throw saveError;
     after(async () => {
       try {
         await drainIntegrationJobs(3);

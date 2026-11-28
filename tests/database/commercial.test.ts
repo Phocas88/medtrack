@@ -892,6 +892,27 @@ describe('Shopify warehouse stock preview', () => {
       { warehouse_id: west, eligible_units: 6, allocated_demand: 0, unallocated_demand: 0 },
       { warehouse_id: east, eligible_units: 4, allocated_demand: 3, unallocated_demand: 0 },
     ]));
+    const destination = 'gid://shopify/Location/95';
+    const quantityQuery = 'select shopify_stock_quantity_for_mapping($1,$2,$3,$4) as quantity';
+    await db.query("select map_shopify_variant($1,$2,'gid://shopify/ProductVariant/95','gid://shopify/InventoryItem/95')", [tenant, item]);
+    await db.query('select configure_shopify_stock_source($1,$2,$3,null,true)', [tenant, item, destination]);
+    expect((await db.query(quantityQuery, [tenant, item, destination, null])).rows).toEqual([{ quantity: 7 }]);
+    await db.query('select configure_shopify_stock_source($1,$2,$3,$4,true)', [tenant, item, destination, east]);
+    expect((await db.query(quantityQuery, [tenant, item, destination, east])).rows).toEqual([{ quantity: 1 }]);
+    expect((await db.query(quantityQuery, [tenant, item, destination, null])).rows).toEqual([{ quantity: null }]);
+    const revisionQuery = "select revision from integration_jobs where tenant_id=$1 and payload->>'kind'='inventory' and payload->>'product_id'=$2";
+    const { rows: [queued] } = await db.query<{ revision: number }>(revisionQuery, [tenant, item]);
+    await owner();
+    await db.query("update bins set is_active=false where id=$1", [bin]);
+    await db.exec('set role service_role');
+    expect((await db.query(revisionQuery, [tenant, item])).rows).toEqual([{ revision: queued.revision + 1 }]);
+    expect((await db.query(quantityQuery, [tenant, item, destination, east])).rows).toEqual([{ quantity: 0 }]);
+    await owner();
+    const foreign = await createRow("insert into locations(tenant_id,name,code) values($1,'Other preview warehouse','FOREIGN-W') returning id", [tenantB]);
+    await db.exec('set role service_role');
+    await expect(db.query('select configure_shopify_stock_source($1,$2,$3,$4,true)', [tenant, item, destination, foreign])).rejects.toThrow('Choose an active warehouse');
+    await db.query('select configure_shopify_stock_source($1,$2,$3,$4,false)', [tenant, item, destination, east]);
+    expect((await db.query(quantityQuery, [tenant, item, destination, east])).rows).toEqual([{ quantity: null }]);
     await owner();
   });
 });

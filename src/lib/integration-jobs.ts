@@ -56,11 +56,16 @@ export async function drainIntegrationJobs(limit = 5) {
               "Inventory job lease must be recovered before publishing",
             );
           const { data: quantity, error: quantityError } = await db.rpc(
-            "stock_publish_quantity",
-            { p_tenant: job.tenant_id, p_product: job.payload.product_id },
+            "shopify_stock_quantity_for_mapping",
+            {
+              p_tenant: job.tenant_id,
+              p_product: job.payload.product_id,
+              p_location: mapping.location_id,
+              p_warehouse: mapping.warehouse_id,
+            },
           );
           if (quantityError) throw quantityError;
-          await client.publishInventory(
+          if (quantity !== null) await client.publishInventory(
             mapping.inventory_item_id,
             mapping.location_id,
             quantity,

@@ -7,6 +7,7 @@ type Mapping = {
   product_id: string;
   variant_id: string;
   location_id: string | null;
+  warehouse_id: string | null;
   publish_enabled: boolean;
   product: { name: string; sku: string } | null;
 };
@@ -16,6 +17,7 @@ export function InventoryPublishing() {
   const [locations, setLocations] = useState<{ id: number; name: string }[]>(
     [],
   );
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string; is_active: boolean }[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -28,6 +30,7 @@ export function InventoryPublishing() {
       if (!response.ok) throw new Error(data.error);
       setMappings(data.mappings);
       setLocations(data.locations);
+      setWarehouses(data.warehouses);
       setLoaded(true);
     } catch (failure) {
       setError(
@@ -41,11 +44,14 @@ export function InventoryPublishing() {
   }
   async function save(product: string, form: HTMLFormElement) {
     const fields = new FormData(form);
+    const warehouse = fields.get("warehouse");
     const enabled = fields.get("enabled") === "on";
     if (
       enabled &&
       !window.confirm(
-        "Publish total available inventory from all Invexiqs locations to this Shopify location? Invexiqs will be the inventory source; manual Shopify quantity edits will be overwritten.",
+        warehouse
+          ? "Publish available inventory from the selected Invexiqs warehouse? Invexiqs will overwrite the Shopify stock count at the selected destination."
+          : "Publish company-wide available inventory? Invexiqs will overwrite the Shopify stock count at the selected destination.",
       )
     )
       return;
@@ -58,6 +64,7 @@ export function InventoryPublishing() {
           product_id: product,
           location_id: fields.get("location"),
           publish_enabled: enabled,
+          warehouse_id: warehouse || null,
         }),
       });
       const data = await response.json();
@@ -93,10 +100,9 @@ export function InventoryPublishing() {
         </button>
       </div>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Import products first. Each product can publish total available stock
-        across all Invexiqs locations to one Shopify location. Open confirmed
-        orders are deducted from availability; held and expired stock is
-        excluded. Invexiqs becomes the quantity source for enabled mappings.
+        Import products first. Each product can publish company-wide stock or stock from one Invexiqs
+        warehouse to one Shopify location. Warehouse publishing deducts demand assigned to the
+        selected warehouse and all demand awaiting assignment. Held and expired stock is excluded.
       </p>
       {error && (
         <p role="alert" className="text-sm">
@@ -139,6 +145,18 @@ export function InventoryPublishing() {
                   value={`gid://shopify/Location/${location.id}`}
                 >
                   {location.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1 text-xs">
+            <span>Invexiqs stock source</span>
+            <select name="warehouse" defaultValue={mapping.warehouse_id || ""} disabled={role !== "admin"}
+              className="block min-h-10 max-w-full border bg-card px-2">
+              <option value="">All locations</option>
+              {warehouses.filter((warehouse) => warehouse.is_active || warehouse.id === mapping.warehouse_id).map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}{warehouse.is_active ? "" : " (inactive)"}
                 </option>
               ))}
             </select>
