@@ -56,6 +56,8 @@ const schema = z.object({
   par_level_min: stockLevel,
   par_level_max: stockLevel,
   stock_rotation: z.enum(['FIFO', 'FEFO', 'LIFO']),
+  cycle_count_class: z.enum(['', 'A', 'B', 'C', 'D']),
+  cycle_count_class_locked: z.boolean(),
   storage_requirement: z.enum(['room_temp', 'refrigerated', 'frozen']),
   is_lot_tracked: z.boolean(),
   is_serial_tracked: z.boolean(),
@@ -110,6 +112,8 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
       par_level_min: '',
       par_level_max: '',
       stock_rotation: 'FEFO',
+      cycle_count_class: '',
+      cycle_count_class_locked: false,
       storage_requirement: 'room_temp',
       is_lot_tracked: true,
       is_serial_tracked: false,
@@ -145,6 +149,8 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
         par_level_min: product.par_level_min?.toString() ?? '',
         par_level_max: product.par_level_max?.toString() ?? '',
         stock_rotation: product.stock_rotation ?? 'FEFO',
+        cycle_count_class: product.cycle_count_class ?? '',
+        cycle_count_class_locked: product.cycle_count_class_locked ?? false,
         storage_requirement: product.storage_requirement,
         is_lot_tracked: product.is_lot_tracked,
         is_serial_tracked: product.is_serial_tracked,
@@ -175,6 +181,8 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
       par_level_min: data.par_level_min === '' ? null : Number(data.par_level_min),
       par_level_max: data.par_level_max === '' ? null : Number(data.par_level_max),
       stock_rotation: data.stock_rotation,
+      cycle_count_class: data.cycle_count_class || null,
+      cycle_count_class_locked: data.cycle_count_class_locked,
       storage_requirement: data.storage_requirement,
       is_lot_tracked: data.is_lot_tracked,
       is_serial_tracked: data.is_serial_tracked,
@@ -357,6 +365,17 @@ function ProductDetailsForm({
           <option value="LIFO">LIFO · Newest received first</option>
         </select>
         <p className="text-xs text-muted-foreground">Applies to outbound lot selection. Accounting valuation stays separate.</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="product-count-class">Cycle Count Class</Label>
+        <select id="product-count-class" className="block min-h-10 w-full rounded-md border bg-background px-3" {...form.register('cycle_count_class')}>
+          <option value="">Unclassified</option>
+          {['A', 'B', 'C', 'D'].map(group => <option key={group}>{group}</option>)}
+        </select>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" {...form.register('cycle_count_class_locked')} /> Protect this class from ABC analysis updates
+        </label>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

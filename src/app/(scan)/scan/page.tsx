@@ -170,6 +170,7 @@ export default function ScannerAppPage() {
   const [binItems, setBinItems] = useState<BinItem[]>([]);
   const [targetBinCode, setTargetBinCode] = useState("");
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [countEvidence, setCountEvidence] = useState<string[]>([]);
   const [varianceTotal, setVarianceTotal] = useState(0);
   const [completing, setCompleting] = useState(false);
 
@@ -340,6 +341,7 @@ export default function ScannerAppPage() {
     setTargetBinCode("");
     setCurrentItemIndex(0);
     setVarianceTotal(0);
+    setCountEvidence([]);
     toast.success("Task started");
     setTimeout(() => scanInputRef.current?.focus(), 100);
   };
@@ -356,6 +358,26 @@ export default function ScannerAppPage() {
     if (!value || !activeTask) return;
     setScanInput("");
     const tt = activeTask.task_type;
+
+    if (activeTask.cycle_count_line_id) {
+      let valid = false;
+      if (currentStep === 0) valid = value.toUpperCase() === activeTask.bin?.bin_code.toUpperCase();
+      if (currentStep === 1) valid = value.toUpperCase() === activeTask.product?.sku.toUpperCase();
+      if (currentStep === 2) {
+        const { data } = await createClient().from("staff_lots").select("lot_number")
+          .eq("tenant_id", tenantId!).eq("id", activeTask.lot_id).maybeSingle();
+        valid = value.toUpperCase() === data?.lot_number.toUpperCase();
+      }
+      if (currentStep === 3) valid = /^\d+$/.test(value) && Number(value) <= 2147483647;
+      if (!valid) {
+        toast.error(["Scan the assigned bin", "Scan the assigned SKU", "Scan the assigned lot", "Enter a nonnegative whole quantity"][currentStep]);
+        return;
+      }
+      setCountEvidence(previous => [...previous.slice(0, currentStep), value]);
+      setCurrentStep(currentStep + 1);
+      setTimeout(() => scanInputRef.current?.focus(), 50);
+      return;
+    }
 
     if (tt === "verify_stock" || tt === "cycle_count") {
       if (currentStep === 0) {
@@ -558,18 +580,21 @@ export default function ScannerAppPage() {
     ) {
       scannedQty = parseInt(enteredQty, 10) || 0;
     }
-    const { error } = await supabase.rpc("complete_scan_task", {
-      p_task_id: activeTask.id,
-      p_quantity: scannedQty,
-      p_variance: variance,
-      p_source: scannedBinCode,
-      p_target: targetBinCode,
-      p_scans: scanLog
-        .filter((entry) => entry.success)
-        .map((entry) => ({ value: entry.value })),
-    });
-    if (error) {
-      toast.error(error.message);
+    const result = activeTask.cycle_count_line_id
+      ? await supabase.rpc("submit_scanner_cycle_count", {
+          p_task: activeTask.id, p_bin: countEvidence[0], p_sku: countEvidence[1],
+          p_lot: countEvidence[2], p_quantity: Number(countEvidence[3]),
+        })
+      : await supabase.rpc("complete_scan_task", {
+          p_task_id: activeTask.id,
+          p_quantity: scannedQty,
+          p_variance: variance,
+          p_source: scannedBinCode,
+          p_target: targetBinCode,
+          p_scans: scanLog.filter((entry) => entry.success).map((entry) => ({ value: entry.value })),
+        });
+    if (result.error) {
+      toast.error(result.error.message);
       setCompleting(false);
       return;
     }
@@ -640,9 +665,13 @@ export default function ScannerAppPage() {
   // RENDER: Active Task (scan workflow)
   // ═══════════════════════════════════════
   if (mode === "active" && activeTask) {
-    const steps = getSteps(activeTask.task_type);
-    const prompt = getPrompt(activeTask.task_type, currentStep);
-    const showSubmit = isSubmitStep(activeTask.task_type, currentStep);
+    const plannedCount = !!activeTask.cycle_count_line_id;
+    const steps = plannedCount ? ["Bin", "SKU", "Lot", "Qty", "Submit"] : getSteps(activeTask.task_type);
+    const prompt = plannedCount
+      ? ["Scan assigned bin", "Scan assigned SKU", "Scan lot number", "Enter physical quantity", "Review and submit"][currentStep]
+      : getPrompt(activeTask.task_type, currentStep);
+    const showSubmit = plannedCount ? currentStep === 4 : isSubmitStep(activeTask.task_type, currentStep);
+    const quantityStep = plannedCount ? currentStep === 3 : currentStep === 2;
 
     return (
       <div className="flex flex-col h-full">
@@ -714,10 +743,10 @@ export default function ScannerAppPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleScan();
                   }}
-                  placeholder={currentStep === 2 ? "Qty..." : "Scan..."}
+                  placeholder={quantityStep ? "Qty..." : "Scan..."}
                   className="h-11 text-base font-mono"
                   autoFocus
-                  inputMode={currentStep === 2 ? "numeric" : "text"}
+                  inputMode={quantityStep ? "numeric" : "text"}
                 />
                 <Button onClick={handleScan} className="h-11 w-11 shrink-0">
                   <ScanBarcode className="h-5 w-5" />
@@ -726,8 +755,18 @@ export default function ScannerAppPage() {
             </div>
           )}
 
+          {plannedCount && showSubmit && (
+            <Card>
+              <CardContent className="space-y-1 p-4 text-sm">
+                <p>{countEvidence[1]} · Lot {countEvidence[2]}</p>
+                <p>Bin {countEvidence[0]}</p>
+                <p className="font-semibold">Counted Quantity: {countEvidence[3]}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bin items for count/verify */}
-          {(activeTask.task_type === "verify_stock" ||
+          {!plannedCount && (activeTask.task_type === "verify_stock" ||
             activeTask.task_type === "cycle_count") &&
             currentStep >= 1 && (
               <Card>

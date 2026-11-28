@@ -945,3 +945,80 @@ describe('product stock policies', () => {
       .toEqual([{ lot_number: expected }]);
   });
 });
+
+describe('warehouse coverage count plan', () => {
+  it('schedules a fixed scope, blocks stale counts, and posts bin variances with reasons', async () => {
+    await owner();
+    async function createRow(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const warehouse = await createRow("insert into locations(tenant_id,name,code) values($1,'Coverage warehouse','COVERAGE') returning id", [tenant]);
+    const item = await createRow("insert into products(tenant_id,name,sku) values($1,'Coverage product','COVERAGE-ITEM') returning id", [tenant]);
+    const lot = await createRow("insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand) values($1,$2,$3,'COVERAGE-LOT',13) returning id", [tenant,item,warehouse]);
+    const a = await createRow("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'COVERAGE-A') returning id", [tenant,warehouse]);
+    const b = await createRow("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'COVERAGE-B') returning id", [tenant,warehouse]);
+    await db.query('insert into bin_inventory(tenant_id,product_id,lot_id,bin_id,quantity) values($1,$2,$3,$4,6),($1,$2,$3,$5,7)',[tenant,item,lot,a,b]);
+
+    await login(other);
+    await expect(db.query('select create_cycle_count_plan($1,current_date,current_date+1)', [warehouse])).rejects.toThrow('Active warehouse not found');
+    await login(manager);
+    const plan = await createRow('select create_cycle_count_plan($1,current_date,current_date+1) as id',[warehouse]);
+    const progress = 'select approved::int,total::int,due_today::int,per_day::int from cycle_count_plan_progress() where id=$1';
+    expect((await db.query(progress,[plan])).rows).toEqual([{approved:0,total:2,due_today:1,per_day:1}]);
+    await expect(db.query('select create_cycle_count_plan($1,current_date,current_date+1)',[warehouse])).rejects.toThrow('open count documents');
+    const doc = await createRow('select id from cycle_counts where plan_id=$1 and planned_date=current_date',[plan]);
+    await expect(db.query('update cycle_counts set status=\'approved\' where id=$1',[doc])).rejects.toThrow('approval');
+    expect((await db.query('select assign_cycle_count_scanner($1,$2) as assigned',[doc,staff])).rows).toEqual([{assigned:1}]);
+    expect((await db.query('select assign_cycle_count_scanner($1,$2) as assigned',[doc,staff])).rows).toEqual([{assigned:0}]);
+    const task = await createRow("select t.id from scan_tasks t join cycle_count_lines l on l.id=t.cycle_count_line_id where l.count_id=$1",[doc]);
+    await login(staff);
+    await db.query('select start_scan_task($1)',[task]);
+    const submit = 'select submit_scanner_cycle_count($1,$2,$3,$4,$5)';
+    await expect(db.query(submit,[task,'COVERAGE-A','COVERAGE-ITEM','WRONG-LOT',5])).rejects.toThrow('Scan the assigned');
+    await db.query(submit,[task,'COVERAGE-A','COVERAGE-ITEM','COVERAGE-LOT',5]);
+    await login(manager);
+    expect((await db.query('select counted_by,counted_quantity from cycle_count_lines where count_id=$1',[doc])).rows)
+      .toEqual([{counted_by:staff,counted_quantity:5}]);
+    await db.query("update cycle_count_lines set reason_code='damaged' where count_id=$1",[doc]);
+    await db.query("update cycle_counts set status='pending_review' where id=$1",[doc]);
+    await owner();
+    await db.query('update bin_inventory set quantity=4 where bin_id=$1',[a]);
+    await db.query('update lots set quantity_on_hand=11 where id=$1',[lot]);
+    await login(manager);
+    await expect(db.query('select post_cycle_count($1)',[doc])).rejects.toThrow('Bin inventory moved');
+    await db.query('select refresh_cycle_count_document($1)',[doc]);
+    expect((await db.query('select counted_quantity,system_quantity from cycle_count_lines where count_id=$1',[doc])).rows).toEqual([{counted_quantity:null,system_quantity:4}]);
+    await db.query("update cycle_count_lines set counted_quantity=3,reason_code='damaged' where count_id=$1",[doc]);
+    await db.query("update cycle_counts set status='pending_review' where id=$1",[doc]);
+    await db.query('select post_cycle_count($1)',[doc]);
+    await db.query('select post_cycle_count($1)',[doc]);
+    expect((await db.query(progress,[plan])).rows).toEqual([{approved:1,total:2,due_today:0,per_day:1}]);
+    expect((await db.query('select quantity from bin_inventory where bin_id=$1',[a])).rows).toEqual([{quantity:3}]);
+    expect((await db.query('select quantity_on_hand from lots where id=$1',[lot])).rows).toEqual([{quantity_on_hand:10}]);
+    expect((await db.query("select reason from stock_movements where lot_id=$1 and movement_type='adjust'",[lot])).rows).toEqual([{reason:'Cycle count: damaged'}]);
+  });
+});
+
+describe('recurring counts and ABC recommendations', () => {
+  it('preserves locked classes and generates only eligible warehouse lots', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const warehouse = await id("insert into locations(tenant_id,name,code) values($1,'Recurring warehouse','RECURRING') returning id", [tenant]);
+    const locked = await id("insert into products(tenant_id,name,sku,cycle_count_class,cycle_count_class_locked) values($1,'Locked count item','REC-LOCK','B',true) returning id", [tenant]);
+    const unlocked = await id("insert into products(tenant_id,name,sku) values($1,'Unclassified count item','REC-FREE') returning id", [tenant]);
+    await db.query("insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand,received_date) values($1,$2,$3,'DUE',8,current_date-10),($1,$4,$3,'NEW',3,current_date)", [tenant,locked,warehouse,unlocked]);
+    await login(admin);
+    await db.query("select save_cycle_count_rule('B',12,10,1,4), save_cycle_count_rule('D',1,365,0,4)");
+    const { rows } = await db.query<{ product_id: string; current_class: string; locked: boolean }>(
+      "select product_id,current_class,locked from analyze_cycle_count_abc(current_date,current_date,'consumption',true)",
+    );
+    expect(rows.find(row=>row.product_id===locked)).toMatchObject({current_class:'B',locked:true});
+    expect(rows.find(row=>row.product_id===unlocked)).toMatchObject({current_class:'D',locked:false});
+    const plan = await id('select generate_due_cycle_counts($1) as id', [warehouse]);
+    expect(plan).toBeTruthy();
+    expect((await db.query('select l.product_id from cycle_counts c join cycle_count_lines l on l.count_id=c.id where c.plan_id=$1',[plan])).rows).toEqual([{product_id:locked}]);
+    expect((await db.query('select generate_due_cycle_counts($1) as id',[warehouse])).rows).toEqual([{id:null}]);
+  });
+});

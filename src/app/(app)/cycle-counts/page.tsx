@@ -1,5 +1,8 @@
 'use client';
 
+import { CountPlanner } from './count-planner';
+import { RecurringCounts } from './recurring-counts';
+import { AssignScanner } from './assign-scanner';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -118,6 +121,8 @@ export default function CycleCountsPage() {
   const supabase = createClient();
 
   // ---- data ----
+  const [planRevision, setPlanRevision] = useState(0);
+  const [refreshingSnapshot, setRefreshingSnapshot] = useState(false);
   const [counts, setCounts] = useState<CountWithDetails[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -186,6 +191,7 @@ export default function CycleCountsPage() {
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
     setCounts((data as CountWithDetails[]) || []);
+    setPlanRevision(revision => revision + 1);
     setLoading(false);
   }, [tenantId]);
 
@@ -435,6 +441,53 @@ export default function CycleCountsPage() {
   // Count entry
   // =========================================================================
 
+  async function refreshSnapshot(count: CountWithDetails) {
+    if (!window.confirm('Refresh system balances and clear previous entries for a new physical count?')) return;
+    setRefreshingSnapshot(true);
+    try {
+      const { error } = await supabase.rpc('refresh_cycle_count_document', { p_count_id: count.id });
+      if (error) { toast.error(error.message); return; }
+      setCountEntryOpen(false);
+      setVarianceDetailOpen(false);
+      setSelectedCount(null);
+      setActiveTab('active');
+      await loadCounts();
+      toast.success('Balances refreshed. Open the document to enter the new count.');
+    } finally { setRefreshingSnapshot(false); }
+  }
+
+  function printCountSheet(count: CountWithDetails) {
+    const preview = window.open('', '_blank');
+    if (!preview) { toast.error('Allow pop-ups to print the count sheet.'); return; }
+    preview.opener = null;
+    const doc = preview.document;
+    doc.title = count.count_number;
+    const heading = doc.createElement('h1');
+    heading.textContent = `Count Sheet · ${count.count_number}`;
+    const summary = doc.createElement('p');
+    summary.textContent = [count.location?.name, count.planned_date, 'Counter: __________________'].filter(Boolean).join(' · ');
+    const table = doc.createElement('table');
+    table.style.cssText = 'border-collapse:collapse;width:100%;font:14px system-ui';
+    const columns = ['Bin / Location', 'SKU', 'Product', 'Lot', ...(count.is_blind ? [] : ['System Qty']), 'Actual Qty'];
+    const header = table.createTHead().insertRow();
+    const body = table.createTBody();
+    function writeCell(row: HTMLTableRowElement, value: string, headerCell = false) {
+      const cell = doc.createElement(headerCell ? 'th' : 'td');
+      cell.style.cssText = 'border:1px solid #777;padding:8px;text-align:left';
+      cell.textContent = value;
+      row.append(cell);
+    }
+    columns.forEach(column => writeCell(header, column, true));
+    (count.lines || []).forEach(line => {
+      const row = body.insertRow();
+      [line.location || '', line.product?.sku || '', line.product?.name || '', line.lot?.lot_number || '',
+        ...(count.is_blind ? [] : [String(line.system_quantity)]), ''].forEach(value => writeCell(row, value));
+    });
+    doc.body.append(heading, summary, table);
+    preview.focus();
+    preview.print();
+  }
+
   function openCountEntry(count: CountWithDetails) {
     setSelectedCount(count);
     setEntryLines(
@@ -469,7 +522,11 @@ export default function CycleCountsPage() {
     }
     // Validate reason codes for variances
     for (const line of entryLines) {
-      const counted = parseInt(line.counted_quantity, 10);
+      const counted = Number(line.counted_quantity);
+      if (!Number.isInteger(counted) || counted < 0 || counted > 2147483647) {
+        toast.error('Enter a nonnegative whole quantity for each line.');
+        return;
+      }
       const variance = counted - line.system_quantity;
       if (variance !== 0 && !line.reason_code) {
         toast.error(`Please provide a reason code for "${line.product_name}" (variance detected).`);
@@ -481,15 +538,18 @@ export default function CycleCountsPage() {
     try {
       // Update each line
       for (const line of entryLines) {
-        const counted = parseInt(line.counted_quantity, 10);
+        const counted = Number(line.counted_quantity);
+        const original = selectedCount.lines?.find((item) => item.id === line.lineId);
+        const countedBy = original?.counted_quantity === counted ? original.counted_by ?? user.id : user.id;
+        const countedAt = original?.counted_quantity === counted ? original.counted_at ?? new Date().toISOString() : new Date().toISOString();
         const { error } = await supabase
           .from('cycle_count_lines')
           .update({
             counted_quantity: counted,
             reason_code: line.reason_code || null,
             notes: line.notes || null,
-            counted_by: user.id,
-            counted_at: new Date().toISOString(),
+            counted_by: countedBy,
+            counted_at: countedAt,
           })
           .eq('id', line.lineId)
           .eq('tenant_id', tenantId);
@@ -925,6 +985,9 @@ export default function CycleCountsPage() {
         }
       />
 
+      <CountPlanner locations={locations} onCreated={loadCounts} revision={planRevision} />
+      <RecurringCounts locations={locations} onGenerated={loadCounts} />
+
       {/* Stat Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Active Counts" value={activeCounts.length} icon={ClipboardCheck} />
@@ -1268,7 +1331,16 @@ export default function CycleCountsPage() {
               </Table>
             </div>
           </div>
+          {selectedCount?.plan_id && tenantId && (
+            <AssignScanner key={selectedCount.id} countId={selectedCount.id} tenantId={tenantId} />
+          )}
           <DialogFooter>
+            {selectedCount && (
+              <Button variant="outline" onClick={() => printCountSheet(selectedCount)}>Print Count Sheet</Button>
+            )}
+            {selectedCount?.plan_id && (
+              <Button variant="outline" disabled={refreshingSnapshot} onClick={() => void refreshSnapshot(selectedCount)}>Refresh and Recount</Button>
+            )}
             <Button variant="outline" onClick={() => setCountEntryOpen(false)}>
               Cancel
             </Button>
@@ -1412,7 +1484,12 @@ export default function CycleCountsPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => selectedCount && openRecountDialog(selectedCount)}
+              disabled={refreshingSnapshot}
+              onClick={() => {
+                if (!selectedCount) return;
+                if (selectedCount.plan_id) void refreshSnapshot(selectedCount);
+                else openRecountDialog(selectedCount);
+              }}
             >
               <RefreshCw className="h-4 w-4 mr-2" /> Request Recount
             </Button>

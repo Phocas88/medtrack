@@ -53,6 +53,8 @@ export interface Product {
   price: number;
   low_stock_threshold: number;
   stock_rotation: StockRotation;
+  cycle_count_class?: 'A' | 'B' | 'C' | 'D' | null;
+  cycle_count_class_locked?: boolean;
   storage_requirement: StorageRequirement;
   is_lot_tracked: boolean;
   is_serial_tracked: boolean;
@@ -428,6 +430,7 @@ export interface ReturnLine {
 }
 
 export interface CycleCount {
+  plan_id?: string | null;
   id: string;
   tenant_id: string;
   count_number: string;
@@ -729,6 +732,7 @@ export interface ProductBinAssignment {
 }
 
 export interface ScanTask {
+  cycle_count_line_id?: string | null;
   pick_batch_id?: string | null;
   pick_order_id?: string | null;
   pick_tote_code?: string | null;

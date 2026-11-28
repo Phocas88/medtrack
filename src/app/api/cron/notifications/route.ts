@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${secret}`)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   await drainIntegrationJobs(10);
+  const { error: cycleCountError } = await createServiceClient().rpc("schedule_due_cycle_counts");
+  if (cycleCountError) console.error("Cycle count scheduler failed", cycleCountError.code);
   const { error } = await createServiceClient()
     .from("gdpr_requests")
     .update({ payload: {} })
