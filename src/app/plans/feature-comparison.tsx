@@ -20,6 +20,8 @@ const groups = [
     ['SKU catalog and product categories', included],
     ['Product archiving and restoration', included],
     ['Stock by bin and lot', included],
+    ['Min/max stock targets by bin and product', included],
+    ['FIFO, FEFO, and LIFO stock rotation', included],
     ['Serial capture on supported receipts and shipments', included],
     ['Lot expiration tracking', included],
     ['Quarantine holds and dispositions', growth],

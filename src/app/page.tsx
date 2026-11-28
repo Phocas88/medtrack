@@ -14,7 +14,7 @@ import { PublicHeader } from '@/components/layout/public-header';
 
 export const metadata: Metadata = {
   title: 'Invexiqs WMS | Warehouse management for growing distributors',
-  description: 'Track stock by bin, receive inventory, and fulfill orders with Invexiqs WMS. Explore the warehouse AI assistant, see launch integrations, or set up your own warehouse.',
+  description: 'Set stock targets by bin and across your workspace, choose FIFO, FEFO, or LIFO picking, and fulfill orders with Invexiqs WMS. Try the demo or explore free warehouse tools.',
   alternates: { canonical: '/' },
 };
 
@@ -88,6 +88,33 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="stock-controls" aria-labelledby="stock-controls-title" className="border-y border-brand-border-gray bg-brand-lavender">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:px-8 lg:py-16">
+            <div>
+              <h2 id="stock-controls-title" className="text-balance text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">Know What to Restock and Which Lot to Pick</h2>
+              <p className="mt-4 max-w-lg leading-relaxed text-brand-muted-gray">Set minimums and maximums for individual bins and total product stock. Give your team a clear replenishment target and choose how each product moves through outbound picking.</p>
+              <Link href="/academy#stock-rotation" className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">
+                See How Stock Rotation Works <ArrowRight aria-hidden size={16} />
+              </Link>
+            </div>
+            <div className="rounded-xl border border-brand-border-gray bg-brand-white p-5 sm:p-6">
+              <h3 className="text-lg font-semibold text-brand-deep-plum">Choose a Picking Policy Per Product</h3>
+              <dl className="mt-3 divide-y divide-brand-border-gray">
+                {[
+                  ['FIFO', 'Pick the oldest receipts first.'],
+                  ['FEFO', 'Pick the lots with the earliest expiry first.'],
+                  ['LIFO', 'Pick the newest receipts first.'],
+                ].map(([policy, detail]) => (
+                  <div key={policy} className="grid grid-cols-[4rem_1fr] gap-3 py-3">
+                    <dt className="font-bold text-brand-royal-plum">{policy}</dt>
+                    <dd className="text-brand-muted-gray">{detail}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </section>
+
         <section id="warehouse-ai" className="border-t border-brand-border-gray bg-brand-warm-cream">
           <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-2 lg:px-8 lg:py-16">
             <div>
@@ -97,6 +124,20 @@ export default function HomePage() {
             </div>
             <WarehouseAiPreview />
           </div>
+        </section>
+
+        <section aria-label="Workspace branding and free tools" className="mx-auto grid max-w-7xl gap-4 px-5 py-10 md:grid-cols-2 lg:px-8">
+          <article className="rounded-xl border border-brand-border-gray p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-brand-deep-plum">Make the Workspace Yours</h2>
+            <p className="mt-2 text-brand-muted-gray">Add your company logo to the workspace, mobile scanner, and POS. Each displays your logo with “Powered by Invexiqs.”</p>
+          </article>
+          <article className="rounded-xl border border-brand-border-gray p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-brand-deep-plum">Try the Free Warehouse Tools</h2>
+            <p className="mt-2 text-brand-muted-gray">Generate a SKU, a barcode label, or a printable purchase order without creating an account.</p>
+            <Link href="/tools" className="mt-4 inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">
+              Open Free Warehouse Tools <ArrowRight aria-hidden size={16} />
+            </Link>
+          </article>
         </section>
 
         <section id="integrations" className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-16">
