@@ -3,7 +3,7 @@ import { FeatureComparison } from './plans/feature-comparison';
 import { PublicFooter } from '@/components/layout/public-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
+import { ProductTour } from './product-tour';
 import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Sparkles, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
@@ -159,25 +159,14 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20">
             <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h2 id="product-tour" className="text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">See the warehouse from both sides</h2>
-                <p className="mt-2 text-brand-muted-gray">The manager’s dashboard and the operator’s scanner, shown with sample data.</p>
+                <h2 id="product-tour" className="text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">Explore the Invexiqs Workspace</h2>
+                <p className="mt-2 text-brand-muted-gray">See how orders, inventory, receiving, and picking look in Invexiqs. These screens show a sample warehouse.</p>
               </div>
               <Link className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4" href="/demo/workspace">
                 Try the warehouse demo <ArrowRight aria-hidden size={15} />
               </Link>
             </div>
-            <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-              <figure className="min-w-0 overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-sm">
-                <Image className="block w-full" src="/product/dashboard.webp" width={1280} height={593} sizes="(max-width: 639px) 95vw, 72vw"
-                  alt="Invexiqs dashboard showing inventory totals and warehouse tasks" />
-                <figcaption className="border-t border-brand-border-gray p-3 text-sm font-semibold">Warehouse dashboard</figcaption>
-              </figure>
-              <figure className="mx-auto w-full max-w-[15rem] overflow-hidden rounded-2xl border border-brand-border-gray bg-brand-white shadow-sm">
-                <Image className="block w-full" src="/product/scanner.webp" width={390} height={523} sizes="240px"
-                  alt="Invexiqs mobile scanner menu with pick, putaway, replenishment, and cycle count tasks" />
-                <figcaption className="border-t border-brand-border-gray p-3 text-sm font-semibold">Mobile scanner</figcaption>
-              </figure>
-            </div>
+            <ProductTour />
           </div>
         </section>
 
