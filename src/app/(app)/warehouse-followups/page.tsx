@@ -101,6 +101,7 @@ export default function WarehouseFollowupsPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('filter') === 'resolved') setFilter('resolved');
     for (const [param,type] of sourceOptions) {
       const id = params.get(param);
       if (id && /^[0-9a-f-]{36}$/i.test(id)) {

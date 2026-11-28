@@ -1097,3 +1097,97 @@ describe('supplier PO confirmations', () => {
       .toMatchObject([{reply:{name:'Supplier contact',lines:[{quantity:8}]}}]);
   });
 });
+
+describe('supplier scorecards', () => {
+  it('separates usable fill, overdue balances, documented damage, and undocumented completion dates', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const supplier = await id("insert into suppliers(tenant_id,name) values($1,'Scorecard Supplier') returning id", [tenant]);
+    const location = await id("insert into locations(tenant_id,name,code) values($1,'Scorecard Dock','SCORECARD') returning id", [tenant]);
+    const createPO = "insert into purchase_orders(tenant_id,supplier_id,po_number,status,expected_date) values($1,$2,$3,$4,current_date+$5::integer) returning id";
+    const onTime = await id(createPO, [tenant,supplier,'SCORE-ON-TIME','sent',1]);
+    const overdue = await id(createPO, [tenant,supplier,'SCORE-OVERDUE','sent',-2]);
+    const undated = await id(createPO, [tenant,supplier,'SCORE-LEGACY','received',-3]);
+    const outside = await id(createPO, [tenant,supplier,'SCORE-OUTSIDE','sent',-99]);
+    const createLine = "insert into po_lines(tenant_id,po_id,product_id,quantity_ordered,quantity_received,unit_cost) values($1,$2,$3,10,$4,2) returning id";
+    const completeLine = await id(createLine, [tenant,onTime,product,0]);
+    const partialLine = await id(createLine, [tenant,overdue,product,0]);
+    await id(createLine, [tenant,undated,product,10]);
+    await id(createLine, [tenant,outside,product,0]);
+    await login(manager);
+    const receive = 'select receive_purchase_order(gen_random_uuid(),$1,$2,$3::jsonb)';
+    await db.query(receive,[onTime,location,JSON.stringify([{po_line_id:completeLine,quantity_to_receive:9,damaged_quantity:1,lot_number:'SCORE-FULL'}])]);
+    await db.query(receive,[overdue,location,JSON.stringify([{po_line_id:partialLine,quantity_to_receive:4,damaged_quantity:1,confirmed_shortage:true,lot_number:'SCORE-PART'}])]);
+    const report = `select po_count::int,ordered_units::int,delivered_units::int,damaged_units::int,usable_units::int,
+      overdue_pos::int,overdue_units::int,timed_completions::int,on_time_completions::int,unknown_completions::int,
+      shortage_reports::int, late_orders from supplier_scorecards(current_date-30,current_date+1) where supplier_id=$1`;
+    expect((await db.query(report,[supplier])).rows).toEqual([{
+      po_count:3,ordered_units:30,delivered_units:25,damaged_units:2,usable_units:23,
+      overdue_pos:1,overdue_units:5,timed_completions:1,on_time_completions:1,unknown_completions:1,
+      shortage_reports:1,late_orders:[expect.objectContaining({id:overdue,number:'SCORE-OVERDUE',open:5})],
+    }]);
+    await login(staff);
+    await expect(db.query(report,[supplier])).rejects.toThrow('Manager required');
+    await login(other);
+    expect((await db.query(report,[supplier])).rows).toEqual([]);
+  });
+});
+
+describe('warehouse operations comparison', () => {
+  it('attributes split lots once and flags mismatched stock without leaking across tenants', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const west = await id("insert into locations(tenant_id,name,code) values($1,'Comparison West','COMP-W') returning id",[tenant]);
+    const east = await id("insert into locations(tenant_id,name,code) values($1,'Comparison East','COMP-E') returning id",[tenant]);
+    const stocked = await id("insert into products(tenant_id,name,sku) values($1,'Comparison Item','COMPARED') returning id",[tenant]);
+    const easternBin = await id("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'COMP-BIN') returning id",[tenant,east]);
+    const insertLot = "insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand,cost_at_receipt) values($1,$2,$3,$4,$5,2) returning id";
+    const split = await id(insertLot,[tenant,stocked,west,'COMP-SPLIT',10]);
+    const inconsistent = await id(insertLot,[tenant,stocked,west,'COMP-REVIEW',3]);
+    await db.query('insert into bin_inventory(tenant_id,product_id,lot_id,bin_id,quantity) values($1,$2,$3,$5,4),($1,$2,$4,$5,5)',[tenant,stocked,split,inconsistent,easternBin]);
+    await db.query("insert into scan_tasks(tenant_id,location_id,title,task_type,status) values($1,$2,'Compare pick','pick','assigned')",[tenant,east]);
+    await db.query("insert into cycle_counts(tenant_id,location_id,count_number,planned_date,status) values($1,$2,'COMP-COUNT',current_date-3,'planned')",[tenant,west]);
+    const report = "select warehouse_id,stock_units::int,stock_value::int,unavailable_units::int,open_picks::int,overdue_counts::int from warehouse_operations_comparison()";
+    await login(manager);
+    expect((await db.query(report)).rows).toEqual(expect.arrayContaining([
+      {warehouse_id:west,stock_units:6,stock_value:12,unavailable_units:0,open_picks:0,overdue_counts:1},
+      {warehouse_id:east,stock_units:4,stock_value:8,unavailable_units:0,open_picks:1,overdue_counts:0},
+    ]));
+    expect((await db.query(report+" where warehouse_id is null")).rows[0]).toMatchObject({warehouse_id:null});
+    const needsReview = "select stock_units::int as units from warehouse_operations_comparison() where warehouse_id is null";
+    expect((await db.query<{units:number}>(needsReview)).rows[0].units).toBeGreaterThanOrEqual(3);
+    await login(other);
+    expect((await db.query(report+" where warehouse_id in ($1,$2)",[west,east])).rows).toEqual([]);
+    await login(staff);
+    await expect(db.query(report)).rejects.toThrow('Manager required');
+  });
+});
+
+describe('delivery exception follow-ups', () => {
+  it('surfaces order and carton exceptions only in their workspace and avoids duplicate follow-ups', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const order = await id("insert into sales_orders(tenant_id,customer_id,order_number,status,delivery_status,tracking_number,tracking_updated_at) values($1,$2,'CARRIER-LATE','shipped','failure','ORDER-123',now()) returning id",[tenant,customer]);
+    const shipment = await id("insert into shipments(tenant_id,order_id,customer_id,shipped_by) values($1,$2,$3,$4) returning id",[tenant,order,customer,manager]);
+    const carton = await id("insert into shipment_cartons(tenant_id,shipment_id,carton_number,tracking_number,contents,delivery_status,tracking_updated_at) values($1,$2,'BOX-1','CARTON-123','[]','return_to_sender',now()) returning id",[tenant,shipment]);
+    const queue = "select source_id,source_kind,followup_id,total::int from delivery_exception_queue('return_to_sender') where source_id=$1";
+    const followup = 'select create_delivery_exception_followup($1,$2,$3) as id';
+    await login(manager);
+    expect((await db.query(queue,[carton])).rows).toEqual([{source_id:carton,source_kind:'carton',followup_id:null,total:1}]);
+    const checkOrder = "select source_kind from delivery_exception_queue('failure') where source_id=$1";
+    expect((await db.query(checkOrder,[order])).rows).toEqual([{source_kind:'order'}]);
+    const created = await id(followup,['carton',carton,'return_to_sender']);
+    expect(await id(followup,['carton',carton,'return_to_sender'])).toBe(created);
+    expect((await db.query(queue,[carton])).rows).toEqual([{source_id:carton,source_kind:'carton',followup_id:created,total:1}]);
+    await expect(db.query(followup,['carton',carton,'failure'])).rejects.toThrow('has changed');
+    await login(other);
+    expect((await db.query(queue,[carton])).rows).toEqual([]);
+    await expect(db.query(followup,['carton',carton,'return_to_sender'])).rejects.toThrow('has changed');
+  });
+});

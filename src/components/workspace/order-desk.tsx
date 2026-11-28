@@ -39,11 +39,11 @@ const statuses = [
 const label = (status: string) =>
   statuses.find(([value]) => value === status)?.[1] || status;
 
-export function OrderDesk() {
+export function OrderDesk({ initialQuery = "" }: { initialQuery?: string }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
   const [status, setStatus] = useState("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);

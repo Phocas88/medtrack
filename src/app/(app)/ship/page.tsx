@@ -364,6 +364,7 @@ export default function ShipPage() {
       <PageHeader
         product="shipping" title="Ship Order"
         description="Create shipments using each product’s stock rotation policy"
+        actions={<Link href="/delivery-exceptions" className="text-sm font-semibold text-primary underline">Delivery Exceptions</Link>}
       />
 
       <div className="space-y-2">

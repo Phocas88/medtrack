@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { DailyExceptions } from './daily-exceptions';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -261,6 +262,7 @@ export default function AnalyticsPage() {
       <PageHeader
         product="analytics" title="Analytics"
         description="Inventory insights, performance metrics, and business intelligence"
+        actions={<Link href="/warehouse-comparison" className="text-sm font-semibold text-primary underline">Compare Warehouses</Link>}
       />
 
       {tenantId && <DailyExceptions key={tenantId} tenantId={tenantId} />}

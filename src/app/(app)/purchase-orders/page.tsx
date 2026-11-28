@@ -284,7 +284,8 @@ export default function PurchaseOrdersPage() {
         product="purchasing" title="Purchase Orders"
         description="Manage supplier purchase orders and receiving"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" asChild><Link href="/supplier-scorecards">Supplier Scorecards</Link></Button>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="h-4 w-4 mr-1" /> Export
             </Button>
