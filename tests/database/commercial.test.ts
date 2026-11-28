@@ -1082,7 +1082,16 @@ describe('supplier PO confirmations', () => {
     expect((await db.query(submit,[second,reply(8)])).rows).toEqual([{recorded:true}]);
     expect((await db.query(submit,[second,reply(8)])).rows).toEqual([{recorded:true}]);
     expect((await db.query(submit,[second,reply(9)])).rows).toEqual([{recorded:false}]);
+    const ship = "select submit_supplier_shipment_notice($1,$2,current_date,'TRACK-99',$3::jsonb) as id";
+    const shipment = (quantity: number) => JSON.stringify([{po_line_id:line,quantity}]);
+    await expect(db.query(ship,[second,'asn-99',shipment(9)])).rejects.toThrow('confirmed balance');
+    const { rows: [shipmentRow] } = await db.query<{ id: string }>(ship,[second,'asn-99',shipment(5)]);
+    expect(shipmentRow.id).toBeTruthy();
+    expect((await db.query(ship,[second,'asn-99',shipment(5)])).rows).toEqual([shipmentRow]);
+    expect((await db.query(openLink,[second])).rows[0]).toMatchObject({document:{submitted:true,shipment_items:[{id:line,available:3}]}});
+    await expect(db.query(ship,[second,'asn-second',shipment(4)])).rejects.toThrow('confirmed balance');
     await login(manager);
+    expect((await db.query('select reference from inbound_notices where po_id=$1',[po])).rows).toEqual([{reference:'ASN-99'}]);
     expect((await db.query('select quantity_received from po_lines where id=$1',[line])).rows).toEqual([{quantity_received:0}]);
     expect((await db.query('select reply from list_supplier_confirmations($1) where submitted_at is not null',[po])).rows)
       .toMatchObject([{reply:{name:'Supplier contact',lines:[{quantity:8}]}}]);

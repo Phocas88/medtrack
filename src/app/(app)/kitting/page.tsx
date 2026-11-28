@@ -369,7 +369,7 @@ export default function KittingPage() {
   if (loading) {
     return (
       <div className="space-y-6 p-6">
-        <PageHeader title="Kitting" />
+        <PageHeader product="manufacturing" title="Kitting" />
         <div className="text-muted-foreground">Loading kit data...</div>
       </div>
     );
@@ -378,7 +378,7 @@ export default function KittingPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="Kitting"
+        product="manufacturing" title="Kitting"
         description="Manage kits and assemble products from components"
         actions={
           <div className="flex gap-2">

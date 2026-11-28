@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getSuiteProduct } from "@/lib/product-suite";
 
 export const uuid = z.string().uuid();
 
@@ -47,6 +48,7 @@ export function isPublicPage(path: string): boolean {
       "/support",
       "/guide",
       "/plans",
+      "/suite",
       "/tools",
       "/windows",
       "/supplier-confirmation",
@@ -58,7 +60,7 @@ export function isPublicPage(path: string): boolean {
       "/opengraph-image",
       "/robots.txt",
       "/sitemap.xml",
-    ].includes(path) || path.startsWith("/legal/")
+    ].includes(path) || path.startsWith("/legal/") || (path.startsWith("/suite/") && !!getSuiteProduct(path.slice("/suite/".length)))
   );
 }
 

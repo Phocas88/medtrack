@@ -1,5 +1,6 @@
 'use client';
 
+import { DailyExceptions } from './daily-exceptions';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -249,7 +250,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="space-y-6 p-6">
-        <PageHeader title="Analytics" />
+        <PageHeader product="analytics" title="Analytics" />
         <div className="text-muted-foreground">Loading analytics...</div>
       </div>
     );
@@ -258,9 +259,11 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title="Analytics"
+        product="analytics" title="Analytics"
         description="Inventory insights, performance metrics, and business intelligence"
       />
+
+      {tenantId && <DailyExceptions key={tenantId} tenantId={tenantId} />}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

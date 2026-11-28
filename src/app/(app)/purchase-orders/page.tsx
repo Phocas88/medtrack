@@ -281,7 +281,7 @@ export default function PurchaseOrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Purchase Orders"
+        product="purchasing" title="Purchase Orders"
         description="Manage supplier purchase orders and receiving"
         actions={
           <div className="flex items-center gap-2">

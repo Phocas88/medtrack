@@ -152,6 +152,7 @@ export default function HomePage() {
             ))}
           </ul>
           <Link href="/integrations-directory" className="mt-6 inline-block font-semibold text-brand-royal-plum underline">View the Integration Directory</Link>
+          <Link href="/suite" className="mt-4 block w-fit font-semibold text-brand-royal-plum underline">Explore the Invexiqs Product Suite</Link>
           <p className="mt-3 text-sm text-brand-muted-gray">Setting up inventory today? Use CSV files from Excel or Google Sheets to import products and opening balances.</p>
         </section>
 

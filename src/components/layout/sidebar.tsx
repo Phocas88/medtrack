@@ -92,6 +92,7 @@ const navSections: NavSection[] = [
     defaultOpen: true,
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Invexiqs Suite", href: "/suite-workspace", icon: Layers },
       { label: "Metrics", href: "/metrics", icon: BarChart3 },
       { label: "Inventory Overview", href: "/inventory-overview", icon: Package },
       { label: "Inventory Assistant", href: "/inventory-assistant", icon: BarChart3 },

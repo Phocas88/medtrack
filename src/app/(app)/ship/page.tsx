@@ -362,7 +362,7 @@ export default function ShipPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ship Order"
+        product="shipping" title="Ship Order"
         description="Create shipments using each product’s stock rotation policy"
       />
 

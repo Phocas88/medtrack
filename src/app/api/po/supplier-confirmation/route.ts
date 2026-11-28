@@ -15,16 +15,32 @@ const reply = z.object({
   }).strict()).min(1).max(200),
 }).strict();
 
+const shipment = z.object({
+  reference: z.string().trim().min(1).max(120),
+  arrival: z.string().date(),
+  tracking: z.string().trim().max(200),
+  lines: z.array(z.object({
+    po_line_id: z.string().uuid(),
+    quantity: z.number().int().positive().max(2147483647),
+  }).strict()).min(1).max(200),
+}).strict();
+
 export async function POST(request: Request) {
   try {
     if (request.headers.get('sec-fetch-site') === 'cross-site') throw new HttpError(403, 'Open the original confirmation link.');
     if (!request.headers.get('content-type')?.startsWith('application/json')) throw new HttpError(415, 'Send a JSON request.');
     const ip = request.headers.get('x-vercel-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     await enforceRateLimit('supplier-confirmation-ip', ip, 30, 60);
-    const input = z.object({ token, reply: reply.optional() }).strict().parse(await request.json());
+    const input = z.object({ token, reply: reply.optional(), shipment: shipment.optional() }).strict().parse(await request.json());
     const hash = createHash('sha256').update(input.token).digest('hex');
     const db = createServiceClient();
-    const result = input.reply
+    if (input.reply && input.shipment) throw new HttpError(400, 'Submit one action at a time.');
+    const result = input.shipment
+      ? await db.rpc('submit_supplier_shipment_notice', {
+          p_hash: hash, p_reference: input.shipment.reference, p_arrival: input.shipment.arrival,
+          p_tracking: input.shipment.tracking, p_lines: input.shipment.lines,
+        })
+      : input.reply
       ? await db.rpc('submit_supplier_confirmation', { p_hash: hash, p_reply: input.reply })
       : await db.rpc('open_supplier_confirmation', { p_hash: hash });
     if (result.error) {

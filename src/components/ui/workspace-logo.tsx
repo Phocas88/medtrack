@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/components/providers/auth-provider';
+import { InvexiqsProductLogo } from './invexiqs-product-logo';
+import type { SuiteProductId } from '@/lib/product-suite';
 import { InvexiqsLogo, InvexiqsNavigationLogo } from './invexiqs-logo';
 
-export function WorkspaceLogo({ navigation = false }: { navigation?: boolean }) {
+export function WorkspaceLogo({ navigation = false, product }: { navigation?: boolean; product?: SuiteProductId }) {
   const { tenantName, tenantLogoUrl } = useAuth();
   const [failedLogo, setFailedLogo] = useState<string>();
   if (!tenantLogoUrl || failedLogo === tenantLogoUrl) {
+    if (product) return <InvexiqsProductLogo product={product} className="text-sm text-white" />;
     return navigation ? <InvexiqsNavigationLogo /> : <InvexiqsLogo theme="dark" size="sm" />;
   }
   return (

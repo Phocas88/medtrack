@@ -790,7 +790,7 @@ export default function CustomerPortalPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Customer Portal" />
+        <PageHeader product="commerce" title="Customer Portal" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
@@ -805,7 +805,7 @@ export default function CustomerPortalPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customer Portal"
+        product="commerce" title="Customer Portal"
         description="Customer management, self-service catalog, ordering, and profiles"
       />
 

@@ -21,7 +21,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-brand-deep-plum text-white">
         <div className="flex flex-col items-center gap-3">
-          <WorkspaceLogo />
+          <WorkspaceLogo product="pos" />
           <span className="text-sm">Loading register...</span>
         </div>
       </div>
@@ -33,8 +33,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
       {/* Register top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-brand-deep-plum text-white shrink-0">
         <div className="flex items-center gap-3">
-          <WorkspaceLogo />
-          <span className="text-[10px] text-brand-lavender ml-1">POS</span>
+          <WorkspaceLogo product="pos" />
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-brand-lavender">

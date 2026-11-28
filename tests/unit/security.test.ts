@@ -28,11 +28,11 @@ describe("Shopify request destinations", () => {
     ));
 });
 describe("public routes", () => {
-  it.each(["/", "/demo", "/legal/privacy", "/support", "/guide", "/academy", "/windows"])(
+  it.each(["/", "/demo", "/legal/privacy", "/support", "/guide", "/academy", "/windows", "/suite", "/suite/analytics"])(
     "allows %s",
     (path) => expect(isPublicPage(path)).toBe(true),
   );
-  it.each(["/dashboard", "/demo/private", "/products", "/billing"])(
+  it.each(["/dashboard", "/demo/private", "/products", "/billing", "/suite-workspace", "/suite/unknown"])(
     "protects %s",
     (path) => expect(isPublicPage(path)).toBe(false),
   );
