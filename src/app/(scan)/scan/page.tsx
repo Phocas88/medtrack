@@ -67,8 +67,7 @@ interface ScanFunction {
   label: string;
   description: string;
   icon: typeof ScanBarcode;
-  color: string;
-  iconColor: string;
+  iconStyle: string;
 }
 
 const SCAN_FUNCTIONS: ScanFunction[] = [
@@ -77,56 +76,49 @@ const SCAN_FUNCTIONS: ScanFunction[] = [
     label: "Pick",
     description: "Pick items for orders",
     icon: ScanBarcode,
-    color: "bg-blue-50 hover:bg-blue-100",
-    iconColor: "text-blue-600",
+    iconStyle: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
   },
   {
     key: "putaway",
     label: "Put Away",
     description: "Store received items",
     icon: PackageOpen,
-    color: "bg-green-50 hover:bg-green-100",
-    iconColor: "text-green-600",
+    iconStyle: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
   },
   {
     key: "replenish",
     label: "Replenish",
     description: "Restock pick bins",
     icon: RefreshCw,
-    color: "bg-amber-50 hover:bg-amber-100",
-    iconColor: "text-amber-600",
+    iconStyle: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
   },
   {
     key: "cycle_count",
     label: "Cycle Count",
     description: "Count bin inventory",
     icon: ClipboardList,
-    color: "bg-purple-50 hover:bg-purple-100",
-    iconColor: "text-purple-600",
+    iconStyle: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200",
   },
   {
     key: "verify_stock",
     label: "Verify Stock",
     description: "Verify bin contents",
     icon: PackageCheck,
-    color: "bg-teal-50 hover:bg-teal-100",
-    iconColor: "text-teal-600",
+    iconStyle: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200",
   },
   {
     key: "bin_to_bin",
     label: "Transfer",
     description: "Move between bins",
     icon: ArrowRightLeft,
-    color: "bg-indigo-50 hover:bg-indigo-100",
-    iconColor: "text-indigo-600",
+    iconStyle: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
   },
   {
     key: "verify_bin",
     label: "Verify Bin",
     description: "Confirm bin location",
     icon: MapPin,
-    color: "bg-slate-50 hover:bg-slate-100",
-    iconColor: "text-slate-600",
+    iconStyle: "bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-200",
   },
 ];
 
@@ -692,23 +684,24 @@ export default function ScannerAppPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-slate-400 hover:text-white h-7"
+              className="size-11 p-0 text-brand-lavender hover:bg-white/10 hover:text-white"
+              aria-label="Return to task list"
               onClick={handleCancelActive}
             >
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
           {/* Steps */}
-          <div className="flex items-center gap-1 mt-1.5 overflow-x-auto">
+          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1">
             {steps.map((label, idx) => (
               <div key={idx} className="flex items-center gap-0.5 shrink-0">
                 <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
                     idx < currentStep
-                      ? "bg-green-500 text-white"
+                      ? "bg-emerald-300 text-emerald-950"
                       : idx === currentStep
-                        ? "bg-blue-500 text-white"
-                        : "bg-slate-700 text-slate-400"
+                        ? "bg-brand-coral text-brand-deep-plum"
+                        : "bg-white/10 text-brand-lavender"
                   }`}
                 >
                   {idx < currentStep ? (
@@ -718,7 +711,7 @@ export default function ScannerAppPage() {
                   )}
                 </div>
                 <span
-                  className={`text-[9px] ${idx === currentStep ? "text-white" : "text-slate-500"}`}
+                  className={`text-[11px] ${idx === currentStep ? "text-white" : "text-brand-lavender"}`}
                 >
                   {label}
                 </span>
@@ -748,7 +741,7 @@ export default function ScannerAppPage() {
                   autoFocus
                   inputMode={quantityStep ? "numeric" : "text"}
                 />
-                <Button onClick={handleScan} className="h-11 w-11 shrink-0">
+                <Button onClick={handleScan} aria-label={quantityStep ? "Enter quantity" : "Submit scan"} className="h-11 w-11 shrink-0">
                   <ScanBarcode className="h-5 w-5" />
                 </Button>
               </div>
@@ -913,11 +906,12 @@ export default function ScannerAppPage() {
   if (mode === "tasks" && selectedFunction) {
     return (
       <div className="flex flex-col h-full">
-        <div className="px-3 py-2 border-b bg-muted/30 shrink-0 flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3 border-b bg-card px-3 py-2">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="size-11 p-0"
+            aria-label="Back to scanner tasks"
             onClick={backToMenu}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -934,7 +928,8 @@ export default function ScannerAppPage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-7 w-7 p-0"
+            className="size-11 p-0"
+            aria-label="Refresh assigned tasks"
             onClick={() => loadTasks(selectedFunction)}
           >
             <RotateCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
@@ -978,9 +973,10 @@ export default function ScannerAppPage() {
                   </div>
                   <Button
                     onClick={() => handleStartTask(task)}
-                    className="h-9 w-9 shrink-0 rounded-lg"
+                    className="size-11 shrink-0 rounded-lg p-0"
+                    aria-label={`Start ${task.title}`}
                   >
-                    <Play className="h-4 w-4" />
+                    <Play aria-hidden className="size-4" />
                   </Button>
                 </CardContent>
               </Card>
@@ -997,44 +993,41 @@ export default function ScannerAppPage() {
   const totalTasks = Object.values(taskCounts).reduce((s, c) => s + c, 0);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b bg-muted/30 shrink-0">
-        <p className="text-sm font-semibold">Scanner Functions</p>
-        <p className="text-[10px] text-muted-foreground">
-          {totalTasks} task{totalTasks !== 1 ? "s" : ""} assigned to you
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-3">
-        <div className="grid grid-cols-2 gap-2.5">
-          {SCAN_FUNCTIONS.map((fn) => {
-            const count = taskCounts[fn.key] || 0;
-            return (
-              <Card
-                key={fn.key}
-                className={`cursor-pointer transition-all ${fn.color} border-transparent hover:shadow-md`}
-                onClick={() => openFunction(fn.key)}
-              >
-                <CardContent className="p-3 flex flex-col items-center text-center gap-1.5 relative">
-                  {count > 0 && (
-                    <Badge className="absolute -top-1.5 -right-1.5 h-5 min-w-5 flex items-center justify-center text-[10px] bg-red-500">
-                      {count}
-                    </Badge>
-                  )}
-                  <div className="p-2 rounded-lg bg-white/70 shadow-sm">
-                    <fn.icon className={`h-5 w-5 ${fn.iconColor}`} />
-                  </div>
-                  <p className="text-xs font-semibold text-slate-700">
-                    {fn.label}
-                  </p>
-                  <p className="text-[9px] text-slate-500 leading-tight">
-                    {fn.description}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
+    <div className="h-full overflow-y-auto px-3 py-3 sm:px-5 sm:py-5">
+      <section aria-labelledby="scanner-task-heading" className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-brand-deep-plum px-4 py-4 text-white sm:mb-4 sm:px-5">
+        <div className="min-w-0">
+          <h1 id="scanner-task-heading" className="text-xl font-bold tracking-tight sm:text-2xl">Scanner Tasks</h1>
+          <p className="mt-1 text-xs text-brand-lavender">Choose a task type to view your queue.</p>
         </div>
+        <div aria-label={`${totalTasks} tasks assigned to you`} className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-center">
+          <span className="block text-2xl font-bold leading-none tabular-nums">{totalTasks}</span>
+          <span className="mt-1 block text-[11px] font-medium text-brand-lavender">Assigned</span>
+        </div>
+      </section>
+
+      <div aria-label="Task types" className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        {SCAN_FUNCTIONS.map((fn) => {
+          const count = taskCounts[fn.key] || 0;
+          return (
+            <button
+              key={fn.key}
+              type="button"
+              onClick={() => openFunction(fn.key)}
+              className="group flex min-h-24 min-w-0 flex-col rounded-xl border bg-card p-3 text-left shadow-sm transition-colors hover:border-primary/50 hover:bg-muted/30 active:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:p-4"
+            >
+              <span className="flex w-full items-center justify-between gap-2">
+                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${fn.iconStyle}`}>
+                  <fn.icon aria-hidden className="size-4" />
+                </span>
+                {count > 0 ? (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold tabular-nums text-primary" aria-label={`${count} assigned`}>{count}</span>
+                ) : <ChevronRight aria-hidden className="size-4 text-muted-foreground group-hover:text-primary" />}
+              </span>
+              <span className="mt-2 text-sm font-semibold leading-tight text-foreground">{fn.label}</span>
+              <span className="mt-0.5 text-xs leading-tight text-muted-foreground">{fn.description}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
