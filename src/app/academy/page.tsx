@@ -32,8 +32,8 @@ export default function WarehouseAcademy() {
     </section>
     <section id="windows" className="space-y-3 rounded-xl border p-5">
       <h2 className="text-2xl font-semibold">Use Invexiqs on Windows</h2>
-      <p>Open Invexiqs in your Windows browser. If your browser offers an install option, use it to open the web app in its own window and pin it to the taskbar.</p>
-      <Link className="font-semibold underline" href="/auth/login">Sign In</Link>
+      <p>Install the Invexiqs web app through Microsoft Edge to open your warehouse workspace in its own window and pin it to the taskbar.</p>
+      <Link className="font-semibold underline" href="/windows">View Windows Installation</Link>
     </section>
   </main><PublicFooter /></>;
 }

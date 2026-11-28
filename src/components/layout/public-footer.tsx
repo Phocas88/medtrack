@@ -4,7 +4,7 @@ import { PublicHelp } from './public-help';
 const groups = [
   ['Product', [['Warehouse features', '/#features'], ['Warehouse AI', '/#warehouse-ai'], ['Who it’s for', '/#solutions']]],
   ['Get Started', [['Compare plans', '/#pricing'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
-  ['Resources', [['Integration Directory', '/integrations-directory'], ['Warehouse Academy', '/academy'], ['Warehouse Guide', '/guide'], ['Warehouse Automation', '/academy#automation'], ['Windows Access', '/academy#windows'], ['Support', '/support']]],
+  ['Resources', [['Integration Directory', '/integrations-directory'], ['Warehouse Academy', '/academy'], ['Warehouse Guide', '/guide'], ['Warehouse Automation', '/academy#automation'], ['Install on Windows', '/windows'], ['Support', '/support']]],
   ['Free Tools', [['Barcode and Bin Labels', '/tools#barcode'], ['SKU Generator', '/tools#sku'], ['Purchase Order Generator', '/tools#purchase-order'], ['Reorder Point Calculator', '/tools#reorder'], ['CSV Import Templates', '/tools#templates']]],
 ] as const;
 

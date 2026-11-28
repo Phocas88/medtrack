@@ -28,7 +28,7 @@ describe("Shopify request destinations", () => {
     ));
 });
 describe("public routes", () => {
-  it.each(["/", "/demo", "/legal/privacy", "/support", "/guide", "/academy"])(
+  it.each(["/", "/demo", "/legal/privacy", "/support", "/guide", "/academy", "/windows"])(
     "allows %s",
     (path) => expect(isPublicPage(path)).toBe(true),
   );

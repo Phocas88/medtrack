@@ -97,7 +97,7 @@ const featureToggles = [
 // --- Integration cards config ---
 const integrations = [
   { name: 'QuickBooks', description: 'Sync invoices, payments, and purchase orders with QuickBooks Online.', icon: DollarSign },
-  { name: 'Xero', description: 'Two-way accounting sync with Xero for seamless financial management.', icon: CreditCard },
+  { name: 'Xero', description: 'Request a Xero accounting connector for your workspace.', icon: CreditCard },
   { name: 'UPS', description: 'Real-time shipping rates, label generation, and package tracking.', icon: Truck },
   { name: 'FedEx', description: 'Automated shipping workflows with FedEx rate shopping and tracking.', icon: Truck },
   { name: 'Stripe', description: 'Accept online payments, manage subscriptions, and process refunds.', icon: CreditCard },

@@ -6,11 +6,16 @@ export default function manifest(): MetadataRoute.Manifest {
     name: PRODUCT_NAME,
     short_name: PRODUCT_NAME,
     description: BRAND_TAGLINE,
-    start_url: '/scanner',
+    id: '/scanner',
+    scope: '/',
+    start_url: '/dashboard',
     display: 'standalone',
     background_color: BRAND_PALETTE.white,
     theme_color: BRAND_COLOR,
-    orientation: 'portrait',
+    shortcuts: [
+      { name: 'Warehouse Workspace', url: '/dashboard' },
+      { name: 'Mobile Scanner', url: '/scan' },
+    ],
     icons: [
       { src: BRAND_ICON_PATH, sizes: 'any', type: 'image/svg+xml' },
       { src: '/branding/invexiqs-192.png', sizes: '192x192', type: 'image/png' },

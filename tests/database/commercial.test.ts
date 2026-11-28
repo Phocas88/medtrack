@@ -1022,3 +1022,34 @@ describe('recurring counts and ABC recommendations', () => {
     expect((await db.query('select generate_due_cycle_counts($1) as id',[warehouse])).rows).toEqual([{id:null}]);
   });
 });
+
+describe('advance shipment notices', () => {
+  it('matches notices to PO lines and posts a partial delivery only once', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const location = await id("insert into locations(tenant_id,name,code) values($1,'ASN Receiving','ASN-RECEIVE') returning id", [tenant]);
+    const supplier = await id("insert into suppliers(tenant_id,name) values($1,'ASN Supplier') returning id", [tenant]);
+    const po = await id("insert into purchase_orders(tenant_id,po_number,supplier_id,status) values($1,'PO-ASN',$2,'sent') returning id", [tenant,supplier]);
+    const line = await id("insert into po_lines(tenant_id,po_id,product_id,quantity_ordered,unit_cost) values($1,$2,$3,10,2) returning id", [tenant,po,product]);
+    await login(other);
+    const create = "select create_inbound_notice($1,$2,current_date,null,$3::jsonb) as id";
+    const expected = JSON.stringify([{po_line_id:line,quantity:7}]);
+    await expect(db.query(create,[po,'foreign',expected])).rejects.toThrow('Open purchase order not found');
+    await login(manager);
+    const notice = await id(create,[po,'asn-12',expected]);
+    await expect(db.query(create,[po,'asn-13',expected])).rejects.toThrow('available to schedule');
+    const receive = 'select receive_inbound_notice($1,$2,$3,$4,$5::jsonb) as receipt';
+    const request = 'fed10000-0000-4000-8000-000000000001';
+    const receipt = (quantity: number) => JSON.stringify([{po_line_id:line,quantity_to_receive:quantity,damaged_quantity:1,lot_number:'ASN-LOT'}]);
+    await expect(db.query(receive,[request,notice,po,location,receipt(7)])).rejects.toThrow('Receipt exceeds');
+    const first = await db.query(receive,[request,notice,po,location,receipt(4)]);
+    expect((await db.query(receive,[request,notice,po,location,receipt(4)])).rows).toEqual(first.rows);
+    expect((await db.query('select delivered_quantity from inbound_notice_lines where notice_id=$1',[notice])).rows).toEqual([{delivered_quantity:5}]);
+    expect((await db.query('select quantity_received from po_lines where id=$1',[line])).rows).toEqual([{quantity_received:5}]);
+    expect((await db.query("select quantity_on_hand from lots where lot_number='ASN-LOT'")).rows).toEqual([{quantity_on_hand:4}]);
+    await db.query('select cancel_inbound_notice($1)',[notice]);
+    expect(await id(create,[po,'asn-replacement',JSON.stringify([{po_line_id:line,quantity:5}])])).toBeTruthy();
+  });
+});

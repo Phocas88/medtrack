@@ -1,5 +1,6 @@
 'use client';
 
+import { InboundNoticePanel, type InboundNotice } from './inbound-notice';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -65,6 +66,7 @@ interface Props {
 
 export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
   const { user, tenantId } = useAuth();
+  const [notice, setNotice] = useState<InboundNotice | null>(null);
   const [lines, setLines] = useState<ReceiveLine[]>([]);
   const [history, setHistory] = useState<Discrepancy[]>([]);
   const [historyError, setHistoryError] = useState(false);
@@ -81,6 +83,7 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
 
   useEffect(() => {
     if (!open || !po) return;
+    setNotice(null);
     setScanOpen(false);
     setScanMessage('');
     setHandoff('');
@@ -266,9 +269,13 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
     const supabase = createClient();
 
     try {
-      const { error } = await supabase.rpc('receive_purchase_order', {
-        p_request_id: requestId, p_po_id: po.id, p_location_id: receivingLocationId, p_lines: linesToReceive,
-      });
+      const { error } = notice
+        ? await supabase.rpc('receive_inbound_notice', {
+            p_request: requestId, p_notice: notice.id, p_po: po.id, p_location: receivingLocationId, p_lines: linesToReceive,
+          })
+        : await supabase.rpc('receive_purchase_order', {
+            p_request_id: requestId, p_po_id: po.id, p_location_id: receivingLocationId, p_lines: linesToReceive,
+          });
       if (error) throw error;
       setRequestId(crypto.randomUUID());
       toast.success('Receiving review saved');
@@ -292,6 +299,13 @@ export function ReceivePODialog({ open, onOpenChange, po, onSaved }: Props) {
           </DialogTitle>
         </DialogHeader>
 
+        {open && tenantId && <InboundNoticePanel key={po.id} poId={po.id} tenantId={tenantId} lines={lines}
+          selected={notice} onSelect={setNotice} canReceive={canReceive} />}
+        {notice && <p className="text-sm" role="status">
+          Enter actual quantities against {notice.reference}. Expected remaining: {notice.lines.map(line =>
+            `${lines.find(row => row.po_line_id === line.po_line_id)?.sku ?? 'Item'}: ${line.expected_quantity - line.delivered_quantity}`
+          ).join(' · ')}.
+        </p>}
         {historyError && <p role="status" className="text-sm">Could not load discrepancy history.</p>}
         {history.length > 0 && (
           <section className="space-y-2" aria-label="Recent receiving discrepancies">
