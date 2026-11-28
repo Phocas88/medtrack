@@ -31,3 +31,15 @@ No production migration or provider write has been executed by the implementatio
 - Disconnecting Shopify removes embedded identity links and queued work and disables stock publishing. Reconnection and publishing are explicit actions. Shop redaction also removes mappings and challenges.
 - Revoking QuickBooks access preserves exported invoice references and immutable snapshots for reconciliation. Changing companies is blocked until mappings/exports have been deliberately reconciled.
 - Restore tests must check tenant isolation, role restrictions, billing state, stock totals, document contents/access and worker configuration before any outgoing work resumes.
+
+## Invexiqs Suite Add-ons
+
+Apply forward migrations 00063 through 00069 in order before serving the updated app. The **Invexiqs Suite** workspace shows each optional subscription and links to the included WMS workflow. Add-on access requires an eligible WMS subscription and a current subscription for that product.
+
+- **Billing** uses a separate Stripe subscription for each add-on through the existing WMS billing customer. Configure the six `STRIPE_PRICE_ADDON_*` variables with approved recurring prices. Keep the existing verified Stripe webhook and enable subscription cancellation in the customer portal. Verify checkout, activation, renewal, failed payment, and cancellation using Stripe test mode.
+- **Purchasing** uses Supabase Auth invitations. Allow the supplier recovery redirect under `/auth/reset` in Supabase Auth and verify delivery using the configured sender. Confirm an invited supplier sees only orders from the purchasing account that invited them.
+- **Analytics** uses the existing daily scheduler and Resend notification worker. Test a daily CSV snapshot, email delivery, and the recipient’s private report download with a configured sender.
+- **Commerce** imports paid WooCommerce orders awaiting fulfillment. Create a connection in the Commerce workspace, configure an active **Order updated** webhook on a test store, and match its SKUs to Invexiqs SKUs. The review queue supports retrying an unmapped order. Shopify keeps its existing integration.
+- **POS** uses a store-owned Stripe Terminal account. In a test workspace, connect a supported simulated or physical reader with a restricted test key. The key needs Terminal reader access, PaymentIntent access, charge reads, and refund access. Verify approval, cancellation, replay, refund, and drawer closeout before connecting a live reader.
+- **Shipping** uses EasyPost rates for parcel recommendations. The dispatch board records freight shipment manifests, pickup, and delivery. Carrier booking is handled through the carrier.
+- **Manufacturing** uses active kit definitions as bills of materials. Work orders record their component quantities at planning time and post actual material, labor, and overhead cost to the finished lot at completion.

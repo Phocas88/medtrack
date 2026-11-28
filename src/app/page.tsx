@@ -121,7 +121,7 @@ export default function HomePage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="max-w-2xl">
                 <h2 id="landing-suite-title" className="text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">Invexiqs Product Suite</h2>
-                <p className="mt-3 leading-relaxed text-brand-muted-gray">Explore the workflows included in Invexiqs WMS and the paid add-ons we’re developing around them.</p>
+                <p className="mt-3 leading-relaxed text-brand-muted-gray">Explore the workflows included in Invexiqs WMS and the specialist tools available with each add-on at launch.</p>
               </div>
               <Link href="/suite" className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">
                 View All Products <ArrowRight aria-hidden size={15} />

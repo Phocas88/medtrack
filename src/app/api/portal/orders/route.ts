@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requirePortalCustomer } from '@/lib/portal-auth';
 import { createServiceClient } from '@/lib/supabase/service';
-import { routeError } from '@/lib/server-auth';
+import { HttpError, routeError } from '@/lib/server-auth';
 import { uuid } from '@/lib/security';
 export async function GET(request: Request) {
   try {
@@ -17,6 +17,8 @@ export async function POST(request: Request) {
     const input = z.object({ customer_id: uuid, request_id: uuid, lines: z.array(z.object({ product_id: uuid, quantity: z.number().int().positive() })).min(1).max(100) }).parse(await request.json());
     const { membership, session } = await requirePortalCustomer(input.customer_id);
     const { data, error } = await session.rpc('portal_place_order', { p_request_id: input.request_id, p_customer_id: membership.customer_id, p_lines: input.lines });
+    if (error?.code === '42501') throw new HttpError(403, 'Portal access required');
+    if (error?.code === 'P0001') throw new HttpError(409, error.message);
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) { return routeError(error); }

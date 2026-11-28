@@ -12,9 +12,10 @@ export async function requirePortalCustomer(customerId?: string) {
   let query = createServiceClient()
     .from("portal_memberships")
     .select(
-      "customer_id,tenant_id,customer:customers(id,tenant_id,name,email,phone,ship_to_address,price_tier_id)",
+      "customer_id,tenant_id,customer:customers!inner(id,tenant_id,name,email,phone,ship_to_address,price_tier_id)",
     )
-    .eq("auth_user_id", user.id);
+    .eq("auth_user_id", user.id)
+    .eq("customer.is_archived", false);
   if (customerId) query = query.eq("customer_id", customerId);
   const { data, error } = await query.order("created_at").limit(2);
   if (error || !data?.length)

@@ -36,7 +36,7 @@ export default async function SuiteProductPage({ params }: Props) {
         <ul className="list-inside list-disc space-y-2">{product.included.map(feature => <li key={feature}>{feature}</li>)}</ul>
       </section>
       <section className="space-y-3 rounded-xl border p-5">
-        <h2 className="text-xl font-semibold">Features in Development</h2>
+        <h2 className="text-xl font-semibold">Add-on Features</h2>
         <ul className="list-inside list-disc space-y-2">{product.expansion.map(feature => <li key={feature}>{feature}</li>)}</ul>
       </section>
     </div>

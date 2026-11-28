@@ -4,6 +4,7 @@ import { shippingAddress, parcelSchema } from "@/lib/shipping-validation";
 import { requireUser, routeError, HttpError } from "@/lib/server-auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { NextResponse } from "next/server";
+import { recommendRate } from "@/lib/shipping-routing";
 import { getRates } from "@/lib/shipping";
 
 export async function POST(request: Request) {
@@ -42,7 +43,15 @@ export async function POST(request: Request) {
         ...(carton_id ? { carton_id, order_id } : {}),
       });
     if (error) throw error;
-    return NextResponse.json(result);
+    const access = await db.rpc('suite_workspace_available', { p_tenant: authorizedUser.tenant_id, p_product: 'shipping' });
+    if (access.error) throw access.error;
+    if (!access.data) return NextResponse.json(result);
+    const rules = await db.from('shipping_routing_rules').select('*').eq('tenant_id', authorizedUser.tenant_id);
+    if (rules.error) throw rules.error;
+    return NextResponse.json({
+      ...result,
+      recommendation: recommendRate(rules.data, result.rates, to.country || 'US', parcel.weight),
+    });
   } catch (err) {
     return routeError(err);
   }

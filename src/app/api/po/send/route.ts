@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     if (poErr || !po)
       return NextResponse.json({ error: "PO not found" }, { status: 404 });
 
+    if (!['approved', 'sent', 'partial', 'received'].includes(po.status))
+      return NextResponse.json({ error: 'Approve the purchase order before sending it' }, { status: 409 });
+
     const supplier = po.supplier as Record<string, string> | null;
     if (!supplier?.email) {
       return NextResponse.json(
@@ -157,7 +160,9 @@ export async function POST(request: Request) {
     await supabase
       .from("purchase_orders")
       .update({ status: "sent" })
-      .eq("id", po_id);
+      .eq("id", po_id)
+      .eq("tenant_id", authUser.tenant_id)
+      .eq("status", "approved");
 
     // Log to audit
     await supabase.from("stock_movements").insert({

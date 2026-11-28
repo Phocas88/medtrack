@@ -23,9 +23,13 @@ function ResetForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isCallback = searchParams.get('type') === 'recovery';
+  const portal = searchParams.get('portal');
+  const portalPath = portal === 'supplier' ? '/supplier-portal' : portal === 'customer' ? '/portal' : null;
+  const recoveryPath = `/auth/reset?type=recovery${portalPath ? `&portal=${portal}` : ''}`;
 
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -40,7 +44,7 @@ function ResetForm() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) { if (active) setError('This recovery link is invalid or expired. Request a new link.'); return; }
-        window.history.replaceState({}, '', '/auth/reset?type=recovery');
+        window.history.replaceState({}, '', recoveryPath);
       }
       // Initializes Supabase's hash-token detection for invitations using its default email template.
       const { data, error } = await supabase.auth.getSession();
@@ -50,7 +54,7 @@ function ResetForm() {
     }
     void establishRecoverySession();
     return () => { active = false; };
-  }, [isCallback]);
+  }, [isCallback, recoveryPath]);
 
 
   // Step 1: Request reset link
@@ -62,7 +66,7 @@ function ResetForm() {
 
     const supabase = createClient();
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset?type=recovery`,
+      redirectTo: `${window.location.origin}${recoveryPath}`,
     });
 
     setLoading(false);
@@ -80,6 +84,10 @@ function ResetForm() {
       setError('Password must be at least 8 characters');
       return;
     }
+    if (newPassword !== confirmation) {
+      setError('Passwords must match.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -91,7 +99,7 @@ function ResetForm() {
       setError(updateErr.message);
     } else {
       setChanged(true);
-      setTimeout(() => router.push('/dashboard'), 2000);
+      setTimeout(() => router.push(portalPath ?? '/dashboard'), 2000);
     }
   };
 
@@ -117,7 +125,7 @@ function ResetForm() {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <CardTitle className="text-xl">Password Changed</CardTitle>
-              <CardDescription>Redirecting to dashboard...</CardDescription>
+              <CardDescription>{portalPath ? 'Opening your portal…' : 'Opening your dashboard…'}</CardDescription>
             </>
           ) : isCallback ? (
             <>
@@ -148,9 +156,20 @@ function ResetForm() {
                   <Input
                     id="newPassword"
                     type="password"
+                    autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Min 8 characters"
+                    required
+                    minLength={8}
+                  />
+                  <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmNewPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
                     required
                     minLength={8}
                   />

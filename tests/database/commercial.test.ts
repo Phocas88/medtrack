@@ -1214,3 +1214,248 @@ describe('scheduled analytics digests', () => {
     expect((await db.query('select cadence from analytics_digest_preferences')).rows).toEqual([]);
   });
 });
+
+describe('Invexiqs Suite add-ons', () => {
+  const products = ['purchasing', 'analytics', 'commerce', 'pos', 'shipping', 'manufacturing'];
+  let source: string, remote: string, localStock: string, remoteStock: string, register: string, shift: string;
+  const supplierIdentity = '10000000-0000-4000-8000-000000000031';
+
+  beforeAll(async () => {
+    await owner();
+    await db.query("update tenant_billing set status='active',plan='enterprise',stripe_customer_id='cus_addons' where tenant_id=$1", [tenant]);
+    await db.query(`insert into suite_subscriptions(tenant_id,product,status,stripe_price_id,current_period_end)
+      select $1,p,'active','price_direct_fixture',now()+interval '1 month' from unnest($2::text[]) p`, [tenant, products]);
+    const stores = await db.query<{ id: string; code: string }>(
+      "insert into locations(tenant_id,name,code) values($1,'Retail Store','POS-LOCAL'),($1,'Other Retail Store','POS-REMOTE') returning id,code", [tenant]);
+    source = stores.rows.find(row => row.code === 'POS-LOCAL')!.id;
+    remote = stores.rows.find(row => row.code === 'POS-REMOTE')!.id;
+    const stock = await db.query<{ id: string; lot_number: string }>(`insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand,cost_at_receipt)
+      values($1,$2,$3,'POS-LOCAL-STOCK',5,3),($1,$2,$4,'POS-REMOTE-STOCK',20,3) returning id,lot_number`, [tenant, product, source, remote]);
+    localStock = stock.rows.find(row => row.lot_number === 'POS-LOCAL-STOCK')!.id;
+    remoteStock = stock.rows.find(row => row.lot_number === 'POS-REMOTE-STOCK')!.id;
+  });
+
+  it('keeps entitlements tenant-scoped and honors cancellation and subscription expiry', async () => {
+    await login(admin);
+    expect((await db.query('select product,enabled from list_suite_subscriptions()')).rows).toHaveLength(6);
+    await expect(db.query("update suite_subscriptions set status='active'")).rejects.toThrow();
+    await login(other);
+    expect((await db.query("select suite_has_access('purchasing') enabled")).rows[0]).toEqual({ enabled: false });
+    await login(staff);
+    expect((await db.query("select suite_has_access('purchasing') enabled")).rows[0]).toEqual({ enabled: false });
+    await owner();
+    await db.query("update suite_subscriptions set status='canceled' where tenant_id=$1 and product='shipping'", [tenant]);
+    const reserved = (await db.query<{ checkout: { id: string } }>(
+      "select reserve_suite_checkout($1,'shipping','price_new') checkout", [tenant])).rows[0].checkout;
+    const repeated = (await db.query<{ checkout: { id: string } }>(
+      "select reserve_suite_checkout($1,'shipping','price_new') checkout", [tenant])).rows[0].checkout;
+    expect(repeated.id).toBe(reserved.id);
+    const apply = `select apply_suite_subscription($1,'shipping',$2,$3,'sub_shipping',$4,$5,now()+interval '30 days',$6) applied`;
+    expect((await db.query(apply, [tenant, reserved.id, 'cus_other', 'price_new', 'active', 20])).rows[0]).toEqual({ applied: false });
+    expect((await db.query(apply, [tenant, reserved.id, 'cus_addons', 'price_new', 'active', 20])).rows[0]).toEqual({ applied: true });
+    expect((await db.query(apply, [tenant, reserved.id, 'cus_addons', 'price_new', 'canceled', 30])).rows[0]).toEqual({ applied: true });
+    expect((await db.query(apply, [tenant, reserved.id, 'cus_addons', 'price_new', 'active', 20])).rows[0]).toEqual({ applied: false });
+    await login(manager);
+    expect((await db.query("select suite_has_access('shipping') enabled")).rows[0]).toEqual({ enabled: false });
+    await owner();
+    await db.query("update suite_subscriptions set status='active' where tenant_id=$1 and product='shipping'", [tenant]);
+  });
+
+  it('enforces approval thresholds, locks the approved terms and isolates supplier history', async () => {
+    await owner();
+    const suppliers = await db.query<{ id: string; email: string }>(
+      "insert into suppliers(tenant_id,name,email) values($1,'Supplier A','supplier-addon@example.test'),($1,'Supplier B','private-addon@example.test') returning id,email", [tenant]);
+    const supplier = suppliers.rows[0].id;
+    await db.query('insert into auth.users(id,email) values($1,$2)', [supplierIdentity, suppliers.rows[0].email]);
+    await db.query('insert into supplier_portal_memberships(auth_user_id,tenant_id,supplier_id) values($1,$2,$3)', [supplierIdentity, tenant, supplier]);
+    await login(admin);
+    await db.query('select set_purchase_approval_rules(25,true)');
+    await login(manager);
+    const lines = JSON.stringify([{ product_id: product, quantity_ordered: 2, unit_cost: 20 }]);
+    const po = (await db.query<{ id: string }>("select save_purchase_order(null,'ADDON-PO',$1::jsonb,$2::jsonb,true) id",
+      [JSON.stringify({ supplier_id: supplier }), lines])).rows[0].id;
+    await expect(db.query("update purchase_orders set status='sent' where id=$1", [po])).rejects.toThrow('Approve this purchase order');
+    await expect(db.query("update purchase_orders set status='approved' where id=$1", [po])).rejects.toThrow('different user');
+    await expect(db.query('update po_lines set unit_cost=1 where po_id=$1', [po])).rejects.toThrow('lines are locked');
+    await login(admin);
+    const approving = await db.query("update purchase_orders set status='approved' where id=$1 returning approved_by,total_amount", [po]);
+    expect(approving.rows[0]).toEqual({ approved_by: admin, total_amount: '40.0000' });
+    await db.query("update purchase_orders set status='sent' where id=$1", [po]);
+    await db.query("select save_purchase_order(null,'SUPPLIER-B-DRAFT',$1::jsonb,$2::jsonb,false)",
+      [JSON.stringify({ supplier_id: suppliers.rows[1].id }), lines]);
+    await login(supplierIdentity);
+    const visible = await db.query("select po_number,status,lines from supplier_purchase_history()");
+    expect(visible.rows[0]).toMatchObject({ po_number: 'ADDON-PO', status: 'sent', lines: [{ ordered: 2, received: 0, unit_cost: 20 }] });
+    expect(visible.rows).toHaveLength(1);
+    expect((await db.query("select id from purchase_orders where id=$1", [po])).rows).toHaveLength(0);
+    await login(other);
+    expect((await db.query("select * from supplier_purchase_history()")).rows).toHaveLength(0);
+  });
+
+  it('saves private analytics dashboards and queues one email and CSV snapshot per schedule', async () => {
+    await owner();
+    await db.query('delete from analytics_digest_history where tenant_id=$1 and user_id=$2', [tenant, manager]);
+    await login(manager);
+    const dash = await db.query<{ id: string }>(`insert into analytics_dashboards(tenant_id,user_id,name,metrics)
+      values($1,$2,'Warehouse Watch',array['active_products','aging_orders']) returning id`, [tenant, manager]);
+    expect((await db.query("select (suite_dashboard_metrics()->>'active_products')::int>0 loaded")).rows[0]).toEqual({ loaded: true });
+    await db.query("select set_analytics_delivery('daily',true,true)");
+    await login(admin);
+    expect((await db.query('select id from analytics_dashboards where id=$1', [dash.rows[0].id])).rows).toHaveLength(0);
+    await owner();
+    await db.query('select queue_analytics_digests()');
+    await db.query('select queue_analytics_digests()');
+    expect((await db.query(`select h.csv_export,n.is_email_sent from analytics_digest_history h join notifications n on n.entity_id=h.export_id
+      where h.tenant_id=$1 and h.user_id=$2 and h.report_date=current_date`, [tenant, manager])).rows).toEqual([{ csv_export: true, is_email_sent: false }]);
+  });
+
+  it('uses published products and negotiated prices at checkout, and imports a store order once', async () => {
+    await owner();
+    const buyer = '10000000-0000-4000-8000-000000000005';
+    const buyerId = (await db.query<{ id: string }>("select id from customers where tenant_id=$1 and email='portal@example.test'", [tenant])).rows[0].id;
+    await login(admin);
+    await db.query("insert into commerce_storefronts(tenant_id,name,curated) values($1,'Wholesale Shop',true)", [tenant]);
+    await db.query('insert into commerce_catalog_products values($1,$2)', [tenant, product]);
+    await db.query('insert into commerce_volume_prices values($1,$2,$3,5,4.25)', [tenant, buyerId, product]);
+    await login(buyer);
+    const catalog = (await db.query<{ catalog: { name: string; products: object[] } }>("select portal_storefront($1,'SKU-1',0) catalog", [buyerId])).rows[0].catalog;
+    expect(catalog).toMatchObject({ name: 'Wholesale Shop', products: [{ id: product, breaks: [{ quantity: 5, price: 4.25 }] }] });
+    const ordered = (await db.query<{ order_id: string }>(
+      "select portal_place_order(gen_random_uuid(),$1,$2::jsonb)->>'order_id' order_id",
+      [buyerId, JSON.stringify([{ product_id: product, quantity: 3, unit_price: 0 }, { product_id: product, quantity: 2 }])])).rows[0].order_id;
+    await owner();
+    expect((await db.query('select quantity_ordered,unit_price from sales_order_lines where order_id=$1', [ordered])).rows)
+      .toEqual([{ quantity_ordered: 5, unit_price: '4.2500' }]);
+    const connection = (await db.query<{ id: string }>(
+      "insert into woocommerce_connections(tenant_id,name,encrypted_secret) values($1,'Web Store','fixture') returning id", [tenant])).rows[0].id;
+    const payload = { id: 22, currency: 'USD', name: 'New Customer', address: '101 Main Street', email: 'woo-addon@example.test',
+      lines: [{ sku: 'NEEDS-MATCH', quantity: 2, total: 15 }] };
+    const initial = await db.query("select import_woocommerce_order($1,$2::jsonb)->>'review' review", [connection, JSON.stringify(payload)]);
+    expect(initial.rows[0]).toEqual({ review: 'Match every WooCommerce SKU to an active Invexiqs product' });
+    expect((await db.query("select id from customers where email='woo-addon@example.test'")).rows).toHaveLength(0);
+    await db.query("insert into products(tenant_id,name,sku) values($1,'Woo Product','NEEDS-MATCH')", [tenant]);
+    await login(manager);
+    const successful = await db.query("select retry_woocommerce_import($1,22)->>'order_id' order_id", [connection]);
+    expect(successful.rows[0]).toMatchObject({ order_id: expect.any(String) });
+    await owner();
+    expect((await db.query("select import_woocommerce_order($1,$2::jsonb)->>'order_id' order_id", [connection, JSON.stringify(payload)])).rows)
+      .toEqual(successful.rows);
+    expect((await db.query("select payload from woocommerce_imports where connection_id=$1", [connection])).rows).toEqual([{ payload: {} }]);
+  });
+
+  it('posts cash at the selected store and reconciles the shift exactly once', async () => {
+    register = crypto.randomUUID();
+    await login(admin);
+    await db.query("select save_pos_register($1,$2,'Front Register',true)", [register, source]);
+    await login(manager);
+    shift = (await db.query<{ id: string }>('select open_pos_shift($1,20) id', [register])).rows[0].id;
+    const cart = JSON.stringify([{ lineType: 'product', productId: product, quantity: 2, unitPrice: 0 }]);
+    const input = [shift, crypto.randomUUID(), cart, 'Counter Customer'];
+    const paid = await db.query("select post_register_cash_sale($1,$2,$3::jsonb,$4,0,20) receipt", input);
+    expect(paid.rows[0]).toMatchObject({ receipt: { total: 14, change: 6, payment: 'cash' } });
+    expect((await db.query("select post_register_cash_sale($1,$2,$3::jsonb,$4,0,20) receipt", input)).rows).toEqual(paid.rows);
+    expect((await db.query('select quantity_on_hand from lots where id=$1', [localStock])).rows).toEqual([{ quantity_on_hand: 3 }]);
+    expect((await db.query('select quantity_on_hand from lots where id=$1', [remoteStock])).rows).toEqual([{ quantity_on_hand: 20 }]);
+    await expect(db.query('select post_register_cash_sale($1,gen_random_uuid(),$2::jsonb,null,0,50)',
+      [shift, JSON.stringify([{ lineType: 'product', productId: product, quantity: 4 }])])).rejects.toThrow('Insufficient available stock');
+    const close = await db.query("select close_pos_shift($1,33,'Counted') closeout", [shift]);
+    expect(close.rows[0]).toMatchObject({ closeout: { expected_cash: 34, counted_cash: 33, variance: -1 } });
+  });
+
+  it('posts a verified Terminal payment exactly once and excludes cards from the cash drawer', async () => {
+    await owner();
+    await db.query("select configure_pos_terminal($1,$2,'tmr_fixture','encrypted-fixture',false)", [tenant, register]);
+    await login(manager);
+    const cardShift = (await db.query<{ id: string }>('select open_pos_shift($1,10) id', [register])).rows[0].id;
+    const attempt = crypto.randomUUID();
+    const cart = JSON.stringify([{ lineType: 'product', productId: product, quantity: 1, unitPrice: 0 }]);
+    await db.query('select begin_pos_card_attempt($1,$2,$3::jsonb,null,0)', [cardShift, attempt, cart]);
+    await expect(db.query("select record_pos_card_state($1,$2,'pi_fixture','paid')", [tenant, attempt])).rejects.toThrow();
+    await expect(db.query('select close_pos_shift($1,10,null)', [cardShift])).rejects.toThrow('Resolve pending card payments');
+    expect((await db.query('select complete_pos_card_sale($1) result', [attempt])).rows[0]).toEqual({ result: { status: 'pending' } });
+    await owner();
+    await db.query("select record_pos_card_state($1,$2,'pi_fixture','paid')", [tenant, attempt]);
+    await login(manager);
+    const posted = await db.query('select complete_pos_card_sale($1) result', [attempt]);
+    expect(posted.rows[0]).toMatchObject({ result: { status: 'posted', receipt: { total: 7, payment: 'card' } } });
+    expect((await db.query('select complete_pos_card_sale($1) result', [attempt])).rows).toEqual(posted.rows);
+    expect((await db.query('select close_pos_shift($1,10,null) closeout', [cardShift])).rows[0])
+      .toMatchObject({ closeout: { expected_cash: 10, variance: 0 } });
+  });
+
+  it('holds a paid card sale for review if store stock disappears before posting and allows a verified refund', async () => {
+    await login(manager);
+    const cardShift = (await db.query<{ id: string }>('select open_pos_shift($1,0) id', [register])).rows[0].id;
+    const attempt = crypto.randomUUID();
+    const cart = JSON.stringify([{ lineType: 'product', productId: product, quantity: 2 }]);
+    await db.query('select begin_pos_card_attempt($1,$2,$3::jsonb,null,0)', [cardShift, attempt, cart]);
+    await owner();
+    await db.query('update lots set quantity_on_hand=0 where id=$1', [localStock]);
+    await db.query("select record_pos_card_state($1,$2,'pi_review','paid')", [tenant, attempt]);
+    await login(manager);
+    expect((await db.query('select complete_pos_card_sale($1) result', [attempt])).rows[0]).toMatchObject({ result: { status: 'paid_review' } });
+    expect((await db.query('select id from pos_sales where request_id=$1', [attempt])).rows).toHaveLength(0);
+    await owner();
+    expect((await db.query('select claim_pos_refund($1,$2) intent', [tenant, attempt])).rows[0]).toEqual({ intent: 'pi_review' });
+    await db.query("select record_pos_refund($1,$2,'re_review',true)", [tenant, attempt]);
+    await login(manager);
+    expect((await db.query('select complete_pos_card_sale($1) result', [attempt])).rows).toEqual([{ result: { status: 'refunded' } }]);
+    await db.query('select close_pos_shift($1,0,null)', [cardShift]);
+  });
+
+  it('keeps freight shipment assignments exclusive and records dispatch transitions', async () => {
+    await owner();
+    const shipment = (await db.query<{ id: string }>(`with so as (
+      insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'FREIGHT-ADDON','shipped') returning id)
+      insert into shipments(tenant_id,order_id,customer_id) select $1,id,$2 from so returning id`, [tenant, customer])).rows[0].id;
+    await login(manager);
+    const load = crypto.randomUUID();
+    const details = JSON.stringify({ location_id: source, destination: 'Buyer Dock', carrier: 'Freight Company', equipment: 'ltl', planned_pickup: '2027-06-01T12:00:00Z' });
+    await db.query('select save_freight_load($1,$2::jsonb,$3::uuid[])', [load, details, [shipment]]);
+    await expect(db.query('select save_freight_load(gen_random_uuid(),$1::jsonb,$2::uuid[])', [details, [shipment]])).rejects.toThrow('assigned to another');
+    await expect(db.query("select update_freight_load($1,'deliver')", [load])).rejects.toThrow('Invalid freight load transition');
+    await db.query("select update_freight_load($1,'dispatch','BOL-001')", [load]);
+    await db.query("select update_freight_load($1,'deliver')", [load]);
+    expect((await db.query('select status,tracking_reference from freight_loads where id=$1', [load])).rows[0])
+      .toEqual({ status: 'delivered', tracking_reference: 'BOL-001' });
+  });
+
+  it('plans freight before shipment and attaches the posted shipment during dispatch', async () => {
+    await owner();
+    const order = (await db.query<{ id: string }>("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'FREIGHT-OPEN','confirmed') returning id",
+      [tenant, customer])).rows[0].id;
+    await login(manager);
+    const load = crypto.randomUUID();
+    const details = JSON.stringify({ location_id: source, destination: 'Buyer Dock', carrier: 'Freight Company', equipment: 'ltl', planned_pickup: '2027-06-02T12:00:00Z' });
+    await db.query("select save_freight_load($1,$2::jsonb,'{}'::uuid[],$3::uuid[])", [load, details, [order]]);
+    await expect(db.query("select update_freight_load($1,'dispatch','BOL-002')", [load])).rejects.toThrow('Post a shipment for each planned order');
+    await owner();
+    const shipment = (await db.query<{ id: string }>('insert into shipments(tenant_id,order_id,customer_id) values($1,$2,$3) returning id',
+      [tenant, order, customer])).rows[0].id;
+    await login(manager);
+    await db.query("select update_freight_load($1,'dispatch','BOL-002')", [load]);
+    expect((await db.query('select shipment_id from freight_load_shipments where load_id=$1', [load])).rows).toEqual([{ shipment_id: shipment }]);
+  });
+
+  it('plans component demand and capitalizes the actual material, labor, and overhead cost once', async () => {
+    await owner();
+    const skus = await db.query<{ id: string; sku: string }>(
+      "insert into products(tenant_id,name,sku) values($1,'Factory Part','FACT-PART'),($1,'Factory Output','FACT-OUT') returning id,sku", [tenant]);
+    const part = skus.rows[0].id;
+    const output = skus.rows[1].id;
+    const kit = (await db.query<{ id: string }>("insert into kits(tenant_id,product_id,name) values($1,$2,'Factory BOM') returning id", [tenant, output])).rows[0].id;
+    await db.query('insert into kit_components(tenant_id,kit_id,component_product_id,quantity) values($1,$2,$3,2)', [tenant, kit, part]);
+    await db.query("insert into lots(tenant_id,product_id,lot_number,quantity_on_hand,cost_at_receipt) values($1,$2,'FACT-PART-LOT',10,3)", [tenant, part]);
+    await login(manager);
+    const job = crypto.randomUUID();
+    await db.query("select create_production_job($1,$2,2,current_date,'Shop floor')", [job, kit]);
+    expect((await db.query('select required,available,shortage from production_material_plan() where product_id=$1', [part])).rows)
+      .toEqual([{ required: 4, available: 10, shortage: 0 }]);
+    await db.query("select update_production_job($1,'start')", [job]);
+    const complete = await db.query("select update_production_job($1,'complete',2,4) job", [job]);
+    expect(complete.rows[0]).toMatchObject({ job: { status: 'completed', material_cost: 12, labor_cost: 2, overhead_cost: 4 } });
+    expect((await db.query("select update_production_job($1,'complete',2,4) job", [job])).rows).toEqual(complete.rows);
+    expect((await db.query('select quantity_on_hand,cost_at_receipt from lots where product_id=$1', [output])).rows)
+      .toEqual([{ quantity_on_hand: 2, cost_at_receipt: '9.0000' }]);
+  });
+});

@@ -149,67 +149,25 @@ export function PODialog({ open, onOpenChange, po, onSaved }: Props) {
     setSaving(true);
     const supabase = createClient();
 
-    const poFields = {
-      supplier_id: data.supplier_id,
-      expected_date: data.expected_date || null,
-      location_id: data.location_id || null,
-      notes: data.notes || null,
-      total_amount: total,
-      status: submitStatus,
-    };
-
+    const poNumber = po?.po_number ?? generatePONumber();
     try {
-      if (po) {
-        const { error } = await supabase
-          .from('purchase_orders')
-          .update(poFields)
-          .eq('id', po.id);
-        if (error) throw error;
-
-        // Delete existing lines and re-insert
-        await supabase.from('po_lines').delete().eq('po_id', po.id);
-        const lineRows = data.lines.map((line) => ({
-          tenant_id: tenantId,
-          po_id: po.id,
-          product_id: line.product_id,
-          quantity_ordered: line.quantity_ordered,
-          quantity_received: 0,
-          unit_cost: line.unit_cost,
-          notes: line.notes || null,
-        }));
-        const { error: lineErr } = await supabase.from('po_lines').insert(lineRows);
-        if (lineErr) throw lineErr;
-
-        toast.success('Purchase order updated');
-      } else {
-        const poNumber = generatePONumber();
-        const { data: newPO, error } = await supabase
-          .from('purchase_orders')
-          .insert({
-            ...poFields,
-            tenant_id: tenantId,
-            po_number: poNumber,
-            order_date: new Date().toISOString(),
-            created_by: user.id,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
-
-        const lineRows = data.lines.map((line) => ({
-          tenant_id: tenantId,
-          po_id: newPO.id,
-          product_id: line.product_id,
-          quantity_ordered: line.quantity_ordered,
-          quantity_received: 0,
-          unit_cost: line.unit_cost,
-          notes: line.notes || null,
-        }));
-        const { error: lineErr } = await supabase.from('po_lines').insert(lineRows);
-        if (lineErr) throw lineErr;
-
-        toast.success(`Purchase order ${poNumber} created`);
+      const { error } = await supabase.rpc('save_purchase_order', {
+        p_id: po?.id ?? null,
+        p_number: poNumber,
+        p_header: {
+          supplier_id: data.supplier_id,
+          expected_date: data.expected_date || null,
+          location_id: data.location_id || null,
+          notes: data.notes || null,
+        },
+        p_lines: data.lines,
+        p_submit: submitStatus === 'pending_approval',
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
       }
+      toast.success(po ? 'Purchase order updated' : `Purchase order ${poNumber} created`);
 
       onOpenChange(false);
       onSaved();
@@ -233,7 +191,9 @@ export function PODialog({ open, onOpenChange, po, onSaved }: Props) {
         approved_by: approved ? user.id : null,
         approved_at: approved ? new Date().toISOString() : null,
       })
-      .eq('id', po.id);
+      .eq('id', po.id)
+      .eq('status', 'pending_approval')
+      .select('id').single();
 
     if (error) {
       toast.error(error.message);

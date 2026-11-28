@@ -62,6 +62,7 @@ export function ShippingLabel({
     weight: 0,
   });
   const [rates, setRates] = useState<ShippingRate[]>([]);
+  const [recommendation, setRecommendation] = useState<{ rateId: string; rule: string } | null>(null);
   const [shipment, setShipment] = useState("");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [result, setResult] = useState<ShipmentResult | null>(null);
@@ -111,6 +112,7 @@ export function ShippingLabel({
       const data = await jsonPost("/api/shipping/rates", { from, to, parcel, order_id: orderId, carton_id: cartonId });
       setShipment(data.shipment_id);
       setRates(data.rates);
+      setRecommendation(data.recommendation ?? null);
       if (!data.rates.length)
         setError("No carrier rates are available for this parcel and address.");
     } catch (failure) {
@@ -373,6 +375,7 @@ export function ShippingLabel({
                     >
                       <span>
                         {rate.carrier} {rate.service}
+                        {recommendation?.rateId === rate.id && <span className="block text-xs text-primary">Recommended by {recommendation.rule}</span>}
                       </span>
                       <button
                         disabled={busy}

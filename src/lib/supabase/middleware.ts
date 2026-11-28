@@ -36,6 +36,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const portalPath = pathname.startsWith('/supplier-portal') ? '/supplier-portal' : '/portal';
+  const isPortalRoute = pathname === portalPath || pathname.startsWith(`${portalPath}/`);
+  const isPortalLogin = pathname === `${portalPath}/login`;
   if (
     user &&
     !pathname.startsWith("/auth/")
@@ -45,7 +48,7 @@ export async function updateSession(request: NextRequest) {
       .select("role,is_active,access_level")
       .eq("id", user.id)
       .single();
-    if (!profile) {
+    if (!profile && !isPortalRoute) {
       const { data: prelaunch } = await supabase.rpc("prelaunch_status");
       if (prelaunch === "paused" || prelaunch === "open") {
         const redirect = NextResponse.redirect(new URL("/auth/prelaunch", request.url));
@@ -53,7 +56,7 @@ export async function updateSession(request: NextRequest) {
         return redirect;
       }
     }
-    if (!pathname.startsWith("/portal") && profile && !profile.is_active) {
+    if (!isPortalRoute && profile && !profile.is_active) {
       await supabase.auth.signOut();
       return NextResponse.redirect(
         new URL("/auth/login?error=account_disabled", request.url),
@@ -61,26 +64,24 @@ export async function updateSession(request: NextRequest) {
     }
     if (
       (profile?.role === "staff" || profile?.access_level === "scanner_only") &&
-      !pathname.startsWith("/portal") && !isScannerPath(pathname)
+      !isPortalRoute && !isScannerPath(pathname)
     ) {
       return NextResponse.redirect(new URL("/scan", request.url));
     }
   }
 
   const isAuthPage = pathname.startsWith("/auth");
-  const isPortalRoute = pathname.startsWith("/portal");
-  const isPortalLogin = pathname === "/portal/login";
 
   // Portal routes: redirect to portal login if not authenticated
   if (isPortalRoute) {
     if (!user && !isPortalLogin) {
       const url = request.nextUrl.clone();
-      url.pathname = "/portal/login";
+      url.pathname = `${portalPath}/login`;
       return NextResponse.redirect(url);
     }
     if (user && isPortalLogin) {
       const url = request.nextUrl.clone();
-      url.pathname = "/portal";
+      url.pathname = portalPath;
       return NextResponse.redirect(url);
     }
     return supabaseResponse;

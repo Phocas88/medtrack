@@ -14,10 +14,10 @@ export function formatRelativeDate(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, currency = 'USD'): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: /^[A-Z]{3}$/.test(currency) ? currency : 'USD',
   }).format(amount);
 }
 

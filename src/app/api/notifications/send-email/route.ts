@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import { escapeHtml } from "@/lib/html";
 import { enforceRateLimit } from "@/lib/distributed-rate-limit";
+import { digestCsv } from "@/lib/analytics-digest";
 import { routeError } from "@/lib/server-auth";
 
 const resend = process.env.RESEND_API_KEY
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     const { data: notifications, error: nErr } = await supabase
       .from("notifications")
       .select(
-        "id, tenant_id, user_id, notification_type, priority, title, message, created_at",
+        "id, tenant_id, user_id, notification_type, priority, title, message, created_at, entity_type, entity_id",
       )
       .eq("is_email_sent", false)
       .order("created_at", { ascending: true })
@@ -90,18 +91,45 @@ export async function POST(request: Request) {
         }
       }
 
+      let attachment: { filename: string; content: Buffer } | undefined;
+      if (notification.entity_type === 'analytics_digest') {
+        const [access, preference, snapshot] = await Promise.all([
+          supabase.rpc('suite_workspace_available', { p_tenant: notification.tenant_id, p_product: 'analytics' }),
+          supabase.from('analytics_digest_preferences').select('email_delivery,csv_export')
+            .eq('tenant_id', notification.tenant_id).eq('user_id', notification.user_id).maybeSingle(),
+          supabase.from('analytics_digest_history').select('*').eq('tenant_id', notification.tenant_id)
+            .eq('user_id', notification.user_id).eq('export_id', notification.entity_id).maybeSingle(),
+        ]);
+        if (access.error || preference.error || snapshot.error) { failedCount++; continue; }
+        if (!access.data || !preference.data?.email_delivery || !snapshot.data) {
+          await supabase.from('notifications').update({ is_email_sent: true }).eq('id', notification.id);
+          skippedCount++;
+          continue;
+        }
+        if (snapshot.data.csv_export && preference.data.csv_export) {
+          attachment = {
+            filename: `invexiqs-exceptions-${snapshot.data.report_date}.csv`,
+            content: Buffer.from(digestCsv(snapshot.data)),
+          };
+        }
+      }
+
       // If notification targets all users (user_id is null), get all tenant users
       // with email enabled for this type
       let recipients: string[] = [];
 
       if (notification.user_id) {
         // Single user — get their email
-        const { data: user } = await supabase
+        const { data: user, error: userError } = await supabase
           .from("users")
-          .select("email")
+          .select("email,role,access_level")
           .eq("id", notification.user_id)
-          .single();
-        if (user?.email) {
+          .eq("tenant_id", notification.tenant_id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (userError) { failedCount++; continue; }
+        if (user?.email && (notification.entity_type !== 'analytics_digest'
+          || (['admin', 'manager'].includes(user.role) && user.access_level !== 'scanner_only'))) {
           recipients = [user.email];
         }
       } else {
@@ -151,6 +179,7 @@ export async function POST(request: Request) {
                 from: `${PRODUCT_NAME} <${fromAddress}>`,
                 to: recipientEmail,
                 subject: notification.title,
+                attachments: attachment ? [attachment] : undefined,
                 html: `<div style="font-family: sans-serif; padding: 20px;">
       <h2 style="color:${BRAND_COLOR}">${escapeHtml(notification.title)}</h2>
       <p>${escapeHtml(notification.message)}</p>

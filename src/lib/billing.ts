@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import type { SuiteProductId } from '@/lib/product-suite';
 import { HttpError } from '@/lib/server-auth';
 
 export const planKeys = ['starter', 'professional', 'enterprise'] as const;
@@ -17,4 +18,15 @@ export function planForPrice(price: string): PlanKey | null {
 export function stripeClient(): Stripe {
   if (!process.env.STRIPE_SECRET_KEY) throw new HttpError(503, 'Payments are not configured');
   return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
+
+export function addOnPriceId(product: SuiteProductId): string | undefined {
+  const price = process.env[`STRIPE_PRICE_ADDON_${product.toUpperCase()}`];
+  return price && /^price_[a-zA-Z0-9]+$/.test(price) ? price : undefined;
+}
+
+export function priceForAddOn(product: SuiteProductId): string {
+  const price = addOnPriceId(product);
+  if (!price) throw new HttpError(503, 'This add-on is not available for purchase yet.');
+  return price;
 }

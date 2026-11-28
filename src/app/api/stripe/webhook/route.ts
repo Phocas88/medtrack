@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { stripeClient, planForPrice } from '@/lib/billing';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getSuiteProduct } from '@/lib/product-suite';
 import { routeError, HttpError } from '@/lib/server-auth';
 
 export async function POST(request: Request) {
@@ -35,6 +36,22 @@ export async function POST(request: Request) {
     if (subscription.metadata.tenantId && subscription.metadata.tenantId !== billing.tenant_id) throw new Error('Tenant metadata mismatch');
     const item = subscription.items.data[0];
     const priceId = item?.price.id;
+    if (subscription.metadata.suiteProduct) {
+      const product = getSuiteProduct(subscription.metadata.suiteProduct);
+      if (!product || !subscription.metadata.suiteCheckout || subscription.metadata.tenantId !== billing.tenant_id) {
+        throw new Error('Invalid add-on subscription metadata');
+      }
+      const { error } = await db.rpc('apply_suite_subscription', {
+        p_tenant: billing.tenant_id, p_product: product.slug, p_checkout: subscription.metadata.suiteCheckout,
+        p_customer: customerId, p_subscription: subscription.id,
+        p_price: !subscription.items.has_more && subscription.items.data.length === 1 && item.quantity === 1 ? priceId : null,
+        p_status: subscription.status,
+        p_period_end: item?.current_period_end ? new Date(item.current_period_end * 1000).toISOString() : null,
+        p_event_at: event.created,
+      });
+      if (error) throw error;
+      return NextResponse.json({ received: true });
+    }
     const plan = priceId ? planForPrice(priceId) : null;
     if (!plan) throw new Error('Unrecognized subscription price');
     const { error } = await db.rpc('apply_billing_event', {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,7 +34,6 @@ import {
   Play,
   Clock,
   User,
-  DollarSign,
   ClipboardList,
   Wrench,
 } from 'lucide-react';
@@ -61,7 +61,13 @@ interface WOResult {
   grand_total: number;
 }
 
-type PaymentMethod = 'card' | 'cash' | 'check';
+type PaymentMethod = 'card' | 'cash';
+type Register = { id: string; name: string };
+type Shift = { id: string; register_id: string };
+type Terminal = { register_id: string; livemode: boolean };
+type PaymentReceipt = { items: CartItem[]; total: number; tax: number; ref: string; change: number };
+type CardResult = { status: string; receipt?: PaymentReceipt; message?: string };
+
 
 export default function POSRegisterPage() {
   const { user, tenantId } = useAuth();
@@ -84,12 +90,54 @@ export default function POSRegisterPage() {
   const [woSearch, setWoSearch] = useState('');
   const [woResults, setWoResults] = useState<WOResult[]>([]);
   const [woLoading, setWoLoading] = useState(false);
+  const [registers, setRegisters] = useState<Register[]>();
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [terminals, setTerminals] = useState<Terminal[]>([]);
+  const [register, setRegister] = useState('');
+  const [registerError, setRegisterError] = useState(false);
+  const [cardPending, setCardPending] = useState(false);
+  const [cardMessage, setCardMessage] = useState('');
+  const [waitingForReader, setWaitingForReader] = useState(false);
+  const shift = shifts.find(item => item.register_id === register);
+  const terminal = terminals.find(item => item.register_id === register);
   const scanRef = useRef<HTMLInputElement>(null);
 
   const [TAX_RATE, setTaxRate] = useState(0);
+  const [currency, setCurrency] = useState('USD');
+  const money = (amount: number) => formatCurrency(amount, currency);
   useEffect(() => {
     if (!tenantId) return;
-    createClient().from('tenants').select('settings').eq('id', tenantId).single().then(({ data }) => setTaxRate(Number(data?.settings?.sales_tax_rate || 0)));
+    createClient().from('tenants').select('settings').eq('id', tenantId).single().then(({ data }) => {
+      setTaxRate(Number(data?.settings?.sales_tax_rate || 0));
+      setCurrency(String(data?.settings?.currency || 'USD').toUpperCase());
+    });
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const db = createClient();
+    const controller = new AbortController();
+    async function loadRegisters() {
+      const enabled = await db.rpc('suite_has_access', { p_product: 'pos' }).abortSignal(controller.signal);
+      if (enabled.error) throw enabled.error;
+      if (controller.signal.aborted) return;
+      if (!enabled.data) { setRegisters([]); return; }
+      const [list, open, readers] = await Promise.all([
+        db.from('pos_registers').select('id,name').eq('tenant_id', tenantId).eq('is_active', true).order('name').abortSignal(controller.signal),
+        db.from('pos_register_shifts').select('id,register_id').eq('tenant_id', tenantId).is('closed_at', null).abortSignal(controller.signal),
+        db.rpc('pos_register_terminal_state').abortSignal(controller.signal),
+      ]);
+      if (list.error || open.error || readers.error) throw new Error('Register configuration is unavailable.');
+      if (controller.signal.aborted) return;
+      setRegisters(list.data);
+      setShifts(open.data);
+      setTerminals(readers.data);
+      const requested = new URLSearchParams(window.location.search).get('register');
+      const initial = list.data.find(item => item.id === requested) ?? (list.data.length === 1 ? list.data[0] : null);
+      setRegister(initial?.id ?? '');
+    }
+    void loadRegisters().catch(() => { if (!controller.signal.aborted) setRegisterError(true); });
+    return () => controller.abort();
   }, [tenantId]);
 
   useEffect(() => { scanRef.current?.focus(); }, []);
@@ -256,29 +304,83 @@ export default function POSRegisterPage() {
     toast.success('Transaction recalled');
   };
 
-  const handleCheckout = async () => {
-    if (!tenantId || !user || cart.length === 0) return;
-    if (paymentMethod === 'cash' && (!cashTendered || parseFloat(cashTendered) < total)) {
-      toast.error('Insufficient cash tendered');
-      return;
-    }
-    setProcessing(true);
-    const supabase = createClient();
-
-    if (paymentMethod !== 'cash') {
-      toast.error('Only cash checkout is currently available. No payment has been recorded.'); setProcessing(false); return;
-    }
-    const { data: posted, error } = await supabase.rpc('post_cash_sale', { p_request_id: requestId, p_items: cart, p_customer_name: customerName, p_order_discount: orderDiscount, p_tendered: Number(cashTendered) });
-    if (error) { toast.error(error.message); setProcessing(false); return; }
+  function showReceipt(posted: PaymentReceipt, payment: PaymentMethod) {
     setRequestId(crypto.randomUUID());
-    setProcessing(false);
-    setLastReceipt({ items: posted.items, total: posted.total, tax: posted.tax, ref: posted.ref, payment: paymentMethod, change: posted.change });
+    setLastReceipt({ ...posted, payment });
     setCart([]);
     setCustomerName('');
     setOrderDiscount(0);
     setCashTendered('');
+    setCardPending(false);
+    setWaitingForReader(false);
+    setCardMessage('');
     toast.success(`Sale: ${posted.ref}`);
     scanRef.current?.focus();
+  }
+
+  async function updateCard(action: 'start' | 'status' | 'cancel') {
+    setProcessing(true);
+    setCardPending(true);
+    if (action === 'cancel') setWaitingForReader(false);
+    try {
+      const response = await fetch('/api/pos/charge', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId, action, ...(action === 'start' ? { shiftId: shift?.id, items: cart, customerName, discount: orderDiscount } : {}),
+        }),
+      });
+      const data = await response.json() as CardResult & { error?: string };
+      if (!response.ok) {
+        if (response.status === 404 && action !== 'start') setCardPending(false);
+        throw new Error(data.error || 'The payment could not be checked.');
+      }
+      if (data.receipt) { showReceipt(data.receipt, 'card'); return; }
+      if (data.status === 'cancelled' || data.status === 'refunded') {
+        setRequestId(crypto.randomUUID());
+        setCardPending(false);
+        setWaitingForReader(false);
+        setCardMessage('');
+        toast.info(data.status === 'cancelled' ? 'Payment cancelled.' : 'Payment refunded.');
+        return;
+      }
+      setWaitingForReader(data.status === 'pending' && !data.message?.includes('payment error'));
+      setCardMessage(data.message ?? 'Check this transaction in Register Operations.');
+    } catch (error) {
+      setWaitingForReader(false);
+      const message = error instanceof Error ? error.message : 'Check this transaction before taking another payment.';
+      toast.error(message);
+      setCardMessage(message);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!waitingForReader || processing || !cardPending) return;
+    const timer = window.setTimeout(() => void updateCard('status'), 5000);
+    return () => window.clearTimeout(timer);
+  });
+
+  const handleCheckout = async () => {
+    if (!tenantId || !user || !registers || cart.length === 0 || (registers.length && !shift)) return;
+    if (paymentMethod === 'card') {
+      if (!terminal || !shift) return;
+      await updateCard('start');
+      return;
+    }
+    if (!cashTendered || Number(cashTendered) < total) { toast.error('Insufficient cash tendered'); return; }
+    setProcessing(true);
+    try {
+      const db = createClient();
+      const fields = { p_request_id: requestId, p_items: cart, p_customer_name: customerName, p_tendered: Number(cashTendered) };
+      const { data, error } = shift
+        ? await db.rpc('post_register_cash_sale', { ...fields, p_shift: shift.id, p_discount: orderDiscount })
+        : await db.rpc('post_cash_sale', { ...fields, p_order_discount: orderDiscount });
+      if (error) { toast.error(error.message); return; }
+      showReceipt(data, 'cash');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const applyDiscount = () => {
@@ -331,7 +433,7 @@ export default function POSRegisterPage() {
                 <p className="text-sm font-medium truncate">{p.name}</p>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span className="font-mono">{p.sku}</span>
-                  <span className="font-bold text-foreground">{formatCurrency(p.price)}</span>
+                  <span className="font-bold text-foreground">{money(p.price)}</span>
                 </div>
               </button>
             ))}
@@ -353,10 +455,10 @@ export default function POSRegisterPage() {
                 <div className="flex items-center gap-3">
                   <Receipt className="h-6 w-6 text-green-600" />
                   <div>
-                    <p className="font-bold text-lg">{formatCurrency(lastReceipt.total)}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-bold text-lg">{money(lastReceipt.total)}</p>
+                    <p className="break-all text-xs text-muted-foreground">
                       {lastReceipt.ref} — {lastReceipt.payment.toUpperCase()}
-                      {lastReceipt.change > 0 && ` — Change: ${formatCurrency(lastReceipt.change)}`}
+                      {lastReceipt.change > 0 && ` — Change: ${money(lastReceipt.change)}`}
                     </p>
                   </div>
                 </div>
@@ -380,7 +482,7 @@ export default function POSRegisterPage() {
                     <Badge className="bg-red-500 text-white text-[9px] px-1 py-0">SALE</Badge>
                   )}
                   {item.discount > 0 && (
-                    <Badge variant="outline" className="text-[9px] px-1 py-0">-{formatCurrency(item.discount)}</Badge>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0">-{money(item.discount)}</Badge>
                   )}
                 </div>
               </div>
@@ -394,7 +496,7 @@ export default function POSRegisterPage() {
                 </Button>
               </div>
               <p className="text-sm font-bold w-20 text-right shrink-0">
-                {formatCurrency((item.unitPrice - item.discount) * item.quantity)}
+                {money((item.unitPrice - item.discount) * item.quantity)}
               </p>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive shrink-0" onClick={() => setCart((p) => p.filter((_, i) => i !== idx))}>
                 <Trash2 className="h-3.5 w-3.5" />
@@ -461,29 +563,41 @@ export default function POSRegisterPage() {
         {/* Totals */}
         <div className="flex-1 p-4 flex flex-col justify-end space-y-3">
           <div className="space-y-1 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{money(subtotal)}</span></div>
             {orderDiscount > 0 && (
-              <div className="flex justify-between text-green-600"><span>Discount ({orderDiscount}%)</span><span>-{formatCurrency(discountAmount)}</span></div>
+              <div className="flex justify-between text-green-600"><span>Discount ({orderDiscount}%)</span><span>-{money(discountAmount)}</span></div>
             )}
-            <div className="flex justify-between"><span className="text-muted-foreground">Tax ({(TAX_RATE * 100).toFixed(2)}%)</span><span>{formatCurrency(tax)}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Tax ({(TAX_RATE * 100).toFixed(2)}%)</span><span>{money(tax)}</span></div>
           </div>
           <Separator />
           <div className="flex justify-between text-3xl font-bold">
             <span>Total</span>
-            <span>{formatCurrency(total)}</span>
+            <span>{money(total)}</span>
           </div>
 
           {/* Payment method */}
-          <div className="grid grid-cols-3 gap-2">
+          {registerError && <p className="text-sm text-destructive" role="alert">Could not load register settings. Refresh to retry.</p>}
+          {!!registers?.length && <div className="space-y-2">
+            <label className="grid gap-1 text-xs font-medium">Register
+              <select aria-label="Register" className="h-10 w-full rounded-md border bg-background px-2 text-sm"
+                value={register} disabled={processing || cardPending} onChange={event => { setRegister(event.target.value); setPaymentMethod('cash'); }}>
+                <option value="">Choose a register</option>
+                {registers.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+              </select>
+            </label>
+            {!shift && <Link href="/suite-workspace/pos" className="text-sm text-primary underline">Open a Shift in Register Operations</Link>}
+            {terminal && !terminal.livemode && <p className="text-xs text-muted-foreground">Card reader is in Stripe test mode.</p>}
+          </div>}
+          <div className="grid grid-cols-2 gap-2">
             {([
               { key: 'card', icon: CreditCard, label: 'Card' },
               { key: 'cash', icon: Banknote, label: 'Cash' },
-              { key: 'check', icon: DollarSign, label: 'Check' },
             ] as const).map(({ key, icon: Icon, label }) => (
               <Button
                 key={key}
                 variant={paymentMethod === key ? 'default' : 'outline'}
                 className="h-12 flex-col gap-0.5"
+                disabled={processing || cardPending || (key === 'card' && (!shift || !terminal))}
                 onClick={() => setPaymentMethod(key)}
               >
                 <Icon className="h-4 w-4" />
@@ -506,7 +620,7 @@ export default function POSRegisterPage() {
               />
               {cashTendered && parseFloat(cashTendered) >= total && (
                 <div className="text-right text-lg font-bold text-green-600">
-                  Change: {formatCurrency(parseFloat(cashTendered) - total)}
+                  Change: {money(parseFloat(cashTendered) - total)}
                 </div>
               )}
               {/* Quick cash buttons */}
@@ -529,14 +643,22 @@ export default function POSRegisterPage() {
           {/* Checkout button */}
           <Button
             onClick={handleCheckout}
-            disabled={processing || cart.length === 0 || (paymentMethod === 'cash' && (!cashTendered || parseFloat(cashTendered) < total))}
+            disabled={processing || cardPending || !registers || (registers.length > 0 && !shift) || cart.length === 0
+              || (paymentMethod === 'card' && !terminal) || (paymentMethod === 'cash' && (!cashTendered || Number(cashTendered) < total))}
             className="w-full h-16 text-xl font-bold"
             size="lg"
           >
             {processing ? 'Processing...' : (
-              <><CreditCard className="h-5 w-5 mr-2" /> Pay {formatCurrency(total)}</>
+              <><CreditCard className="h-5 w-5 mr-2" /> {paymentMethod === 'card' ? 'Send to Card Reader' : `Pay ${money(total)}`}</>
             )}
           </Button>
+          {cardMessage && <p className="text-sm text-muted-foreground" role="status">{cardMessage}</p>}
+          {cardPending && <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={processing} onClick={() => void updateCard('status')}>Check Payment</Button>
+            <Button type="button" variant="outline" size="sm" disabled={processing} onClick={() => void updateCard('cancel')}>Cancel Payment</Button>
+            <Link href="/suite-workspace/pos" className="text-sm text-primary underline">Register Operations</Link>
+          </div>}
+
         </div>
       </div>
 
@@ -601,7 +723,7 @@ export default function POSRegisterPage() {
                       {wo.asset_info && <p className="text-xs text-muted-foreground">{wo.asset_info}</p>}
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(wo.grand_total)}</p>
+                      <p className="font-bold">{money(wo.grand_total)}</p>
                       <Badge variant="outline" className="text-[10px]">{wo.status}</Badge>
                     </div>
                   </div>
