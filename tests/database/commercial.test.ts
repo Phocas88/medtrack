@@ -1053,3 +1053,38 @@ describe('advance shipment notices', () => {
     expect(await id(create,[po,'asn-replacement',JSON.stringify([{po_line_id:line,quantity:5}])])).toBeTruthy();
   });
 });
+
+describe('supplier PO confirmations', () => {
+  it('isolates buyer history, revokes replaced links and records a reply without touching stock', async () => {
+    await owner();
+    async function id(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const supplier = await id("insert into suppliers(tenant_id,name) values($1,'Confirmation Supplier') returning id",[tenant]);
+    const po = await id("insert into purchase_orders(tenant_id,po_number,supplier_id,status) values($1,'PO-CONFIRM',$2,'sent') returning id",[tenant,supplier]);
+    const line = await id('insert into po_lines(tenant_id,po_id,product_id,quantity_ordered,unit_cost) values($1,$2,$3,10,2) returning id',[tenant,po,product]);
+    const first = '01'.repeat(32);
+    const second = '02'.repeat(32);
+    const openLink = 'select open_supplier_confirmation($1) as document';
+    const submit = 'select submit_supplier_confirmation($1,$2::jsonb) as recorded';
+    const reply = (quantity: number) => JSON.stringify({name:'Supplier contact',note:'Balance next week',lines:[{id:line,quantity,delivery_date:'2027-06-10'}]});
+    await login(manager);
+    await db.query('select create_supplier_confirmation($1,$2)',[po,first]);
+    await db.query('select create_supplier_confirmation($1,$2)',[po,second]);
+    await expect(db.query(openLink,[second])).rejects.toThrow('permission denied');
+    await login(other);
+    expect((await db.query('select id from list_supplier_confirmations($1)',[po])).rows).toEqual([]);
+    await owner();
+    await db.exec('set role service_role');
+    expect((await db.query(openLink,[first])).rows).toEqual([{document:null}]);
+    expect((await db.query(openLink,[second])).rows[0]).toMatchObject({document:{order_number:'PO-CONFIRM',submitted:false,items:[{id:line,open_quantity:10}]}});
+    await expect(db.query(submit,[second,reply(11)])).rejects.toThrow('confirmed quantities');
+    expect((await db.query(submit,[second,reply(8)])).rows).toEqual([{recorded:true}]);
+    expect((await db.query(submit,[second,reply(8)])).rows).toEqual([{recorded:true}]);
+    expect((await db.query(submit,[second,reply(9)])).rows).toEqual([{recorded:false}]);
+    await login(manager);
+    expect((await db.query('select quantity_received from po_lines where id=$1',[line])).rows).toEqual([{quantity_received:0}]);
+    expect((await db.query('select reply from list_supplier_confirmations($1) where submitted_at is not null',[po])).rows)
+      .toMatchObject([{reply:{name:'Supplier contact',lines:[{quantity:8}]}}]);
+  });
+});

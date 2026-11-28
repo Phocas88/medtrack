@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/layout/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { BRAND_COLOR, BRAND_ICON_PATH, BRAND_TAGLINE, PRODUCT_FULL_NAME, PRODUCT_NAME } from "@/lib/brand";
 import { publicSiteOrigin } from "@/lib/public-site";
-import { Analytics } from "@vercel/analytics/react";
+import { SiteAnalytics } from "@/components/layout/site-analytics";
 
 const inter = localFont({
   src: "./fonts/GeistVF.woff",
@@ -56,7 +56,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster />
-          {process.env.VERCEL === "1" && <Analytics />}
+          {process.env.VERCEL === "1" && <SiteAnalytics />}
         </ThemeProvider>
       </body>
     </html>

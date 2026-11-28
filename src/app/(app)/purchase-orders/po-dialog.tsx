@@ -1,5 +1,6 @@
 'use client';
 
+import { SupplierConfirmationPanel } from './supplier-confirmation';
 import { useEffect, useState, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -490,6 +491,9 @@ export function PODialog({ open, onOpenChange, po, onSaved }: Props) {
             )}
           </div>
         </form>
+        {open && po && (role === 'admin' || role === 'manager') && !isEditable && (
+          <SupplierConfirmationPanel key={po.id} poId={po.id} canCreate={['approved','sent','partial'].includes(po.status)} />
+        )}
       </DialogContent>
     </Dialog>
   );

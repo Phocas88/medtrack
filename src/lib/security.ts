@@ -49,6 +49,7 @@ export function isPublicPage(path: string): boolean {
       "/plans",
       "/tools",
       "/windows",
+      "/supplier-confirmation",
       "/academy",
       "/integrations-directory",
       "/audit-report.html",
