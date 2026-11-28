@@ -40,6 +40,9 @@ import type { Product, Supplier, ProductUomConversion, ProductBinAssignment, Bin
 
 // ── Product form schema (unchanged) ──
 
+const stockLevel = z.string().regex(/^(?:[0-9]+)?$/, 'Enter a whole number or leave blank')
+  .refine((value) => Number(value) <= 2147483647, 'Enter a smaller value');
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().min(1, 'SKU is required'),
@@ -50,11 +53,16 @@ const schema = z.object({
   cost: z.coerce.number().min(0),
   price: z.coerce.number().min(0),
   low_stock_threshold: z.coerce.number().int().min(0),
+  par_level_min: stockLevel,
+  par_level_max: stockLevel,
+  stock_rotation: z.enum(['FIFO', 'FEFO', 'LIFO']),
   storage_requirement: z.enum(['room_temp', 'refrigerated', 'frozen']),
   is_lot_tracked: z.boolean(),
   is_serial_tracked: z.boolean(),
   expiry_alert_days: z.coerce.number().int().min(1),
   notes: z.string().optional(),
+}).refine((data) => !data.par_level_max || Number(data.par_level_max) >= Number(data.par_level_min), {
+  path: ['par_level_max'], message: 'Maximum must be at least the minimum',
 });
 
 type FormData = z.infer<typeof schema>;
@@ -99,6 +107,9 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
       cost: 0,
       price: 0,
       low_stock_threshold: 10,
+      par_level_min: '',
+      par_level_max: '',
+      stock_rotation: 'FEFO',
       storage_requirement: 'room_temp',
       is_lot_tracked: true,
       is_serial_tracked: false,
@@ -131,6 +142,9 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
         cost: product.cost,
         price: product.price,
         low_stock_threshold: product.low_stock_threshold,
+        par_level_min: product.par_level_min?.toString() ?? '',
+        par_level_max: product.par_level_max?.toString() ?? '',
+        stock_rotation: product.stock_rotation ?? 'FEFO',
         storage_requirement: product.storage_requirement,
         is_lot_tracked: product.is_lot_tracked,
         is_serial_tracked: product.is_serial_tracked,
@@ -158,6 +172,9 @@ export function ProductDialog({ open, onOpenChange, product, onSaved }: Props) {
       cost: data.cost,
       price: data.price,
       low_stock_threshold: data.low_stock_threshold,
+      par_level_min: data.par_level_min === '' ? null : Number(data.par_level_min),
+      par_level_max: data.par_level_max === '' ? null : Number(data.par_level_max),
+      stock_rotation: data.stock_rotation,
       storage_requirement: data.storage_requirement,
       is_lot_tracked: data.is_lot_tracked,
       is_serial_tracked: data.is_serial_tracked,
@@ -318,6 +335,28 @@ function ProductDetailsForm({
           <Label>Low Stock Threshold</Label>
           <Input type="number" {...form.register('low_stock_threshold')} />
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="product-minimum-stock">Total Minimum Stock</Label>
+          <Input id="product-minimum-stock" type="number" min={0} step={1} placeholder="Use reorder point" {...form.register('par_level_min')} />
+          {form.formState.errors.par_level_min && <p role="alert" className="text-sm text-destructive">{form.formState.errors.par_level_min.message}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="product-maximum-stock">Total Maximum Stock</Label>
+          <Input id="product-maximum-stock" type="number" min={0} step={1} placeholder="Optional" {...form.register('par_level_max')} />
+          {form.formState.errors.par_level_max && <p role="alert" className="text-sm text-destructive">{form.formState.errors.par_level_max.message}</p>}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="product-stock-rotation">Stock Rotation</Label>
+        <select id="product-stock-rotation" className="block min-h-10 w-full rounded-md border bg-background px-3" {...form.register('stock_rotation')}>
+          <option value="FEFO">FEFO · Earliest expiry first</option>
+          <option value="FIFO">FIFO · Oldest received first</option>
+          <option value="LIFO">LIFO · Newest received first</option>
+        </select>
+        <p className="text-xs text-muted-foreground">Applies to outbound lot selection. Accounting valuation stays separate.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -704,9 +743,9 @@ function BinAssignmentsSection({ productId, tenantId }: { productId: string; ten
       bin_id: newBinId,
       bin_role: newRole,
       unit_of_measure: newUom,
-      min_quantity: parseInt(newMin) || 0,
-      max_quantity: parseInt(newMax) || 100,
-      reorder_point: parseInt(newReorder) || 10,
+      min_quantity: Number(newMin),
+      max_quantity: Number(newMax),
+      reorder_point: Number(newReorder),
       is_active: true,
     });
 
@@ -737,9 +776,9 @@ function BinAssignmentsSection({ productId, tenantId }: { productId: string; ten
     const { error } = await supabase
       .from('product_bin_assignments')
       .update({
-        min_quantity: parseInt(editMin) || 0,
-        max_quantity: parseInt(editMax) || 100,
-        reorder_point: parseInt(editReorder) || 10,
+        min_quantity: Number(editMin),
+        max_quantity: Number(editMax),
+        reorder_point: Number(editReorder),
       })
       .eq('id', id);
     if (error) toast.error(error.message);

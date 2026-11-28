@@ -60,12 +60,10 @@ const groups = [
     ['Metrics with drill-downs', growth],
     ['Assigned warehouse follow-ups with resolution history', growth],
   ] },
-  { name: 'Integrations at launch', rows: [
+  { name: 'Integrations at Launch', rows: [
     ['Shopify order import and tracking', connectedAtLaunch],
-    ['WooCommerce order connection', connectedAtLaunch],
     ['EasyPost carrier rates and shipping labels', connectedAtLaunch],
     ['QuickBooks Online eligible invoice export', connectedAtLaunch],
-    ['Square retail connection', connectedAtLaunch],
     ['Workflow automation through Zapier', ['—', '—', 'At launch']],
   ] },
 ] as const;

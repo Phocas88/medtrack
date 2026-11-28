@@ -1,13 +1,18 @@
 import { PublicHeader } from '@/components/layout/public-header';
 import { PublicFooter } from '@/components/layout/public-footer';
+import { PurchaseOrderGenerator, SkuGenerator } from './document-tools';
 import { WarehouseTools } from './warehouse-tools';
 
-export const metadata = { title: 'Free warehouse tools | Invexiqs', description: 'Make bin labels and estimate the inventory level at which to reorder.' };
+export const metadata = { title: 'Free Warehouse Tools | Invexiqs', description: 'Make bin labels and estimate the inventory level at which to reorder.' };
 
 export default function ToolsPage() {
   return <><PublicHeader /><main className="mx-auto max-w-5xl space-y-8 px-5 py-12">
-    <h1 className="text-4xl font-bold text-brand-deep-plum">Free warehouse tools</h1>
+    <h1 className="text-4xl font-bold text-brand-deep-plum">Free Warehouse Tools</h1>
     <WarehouseTools />
+    <div className="grid gap-5 md:grid-cols-2">
+      <SkuGenerator />
+      <PurchaseOrderGenerator />
+    </div>
     <section id="templates" className="space-y-3 rounded-xl border p-5">
       <h2 className="text-xl font-semibold">CSV import templates</h2>
       <p>Use these sample files to prepare a product catalog or opening balances.</p>

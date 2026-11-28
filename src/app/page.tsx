@@ -1,3 +1,4 @@
+import { availableConnectors } from '@/lib/public-integration-directory';
 import { FeatureComparison } from './plans/feature-comparison';
 import { PublicFooter } from '@/components/layout/public-footer';
 import type { Metadata } from 'next';
@@ -100,23 +101,17 @@ export default function HomePage() {
 
         <section id="integrations" className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-16">
           <h2 className="text-3xl font-bold tracking-tight text-brand-deep-plum">Connect your systems at launch</h2>
-          <p className="mt-3 max-w-2xl text-brand-muted-gray">The June 2027 launch lineup covers ecommerce, shipping, accounting, point of sale, and workflow automation. Connect your own provider accounts to get started.</p>
+          <p className="mt-3 max-w-2xl text-brand-muted-gray">Connect provider accounts for ecommerce, shipping, accounting, and workflow automation.</p>
           <ul className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ['Shopify', 'Bring ecommerce orders into the warehouse and send shipment tracking back.'],
-              ['WooCommerce', 'Connect online store orders to warehouse fulfillment.'],
-              ['EasyPost', 'Create carrier labels and track shipments.'],
-              ['QuickBooks Online', 'Export eligible shipped orders as invoices.'],
-              ['Square', 'Bring retail sales into your inventory workflow.'],
-              ['Zapier', 'Use Webhooks by Zapier to connect warehouse events to workflows in other apps.'],
-            ].map(([name, detail]) => (
+            {availableConnectors.map(([name, detail]) => (
               <li key={name} className="rounded-xl border border-brand-border-gray p-5">
                 <h3 className="text-lg font-semibold text-brand-deep-plum">{name}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-brand-muted-gray">{detail}</p>
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-sm text-brand-muted-gray">Setting up inventory today? Use CSV files from Excel or Google Sheets to import products and opening balances.</p>
+          <Link href="/integrations-directory" className="mt-6 inline-block font-semibold text-brand-royal-plum underline">View the Integration Directory</Link>
+          <p className="mt-3 text-sm text-brand-muted-gray">Setting up inventory today? Use CSV files from Excel or Google Sheets to import products and opening balances.</p>
         </section>
 
         <section aria-labelledby="product-tour" className="border-y border-brand-border-gray bg-brand-lavender">

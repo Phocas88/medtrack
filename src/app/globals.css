@@ -104,3 +104,14 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media print {
+  body:has(#public-po-print) :not(#public-po-print):not(#public-po-print *):not(:has(#public-po-print)) {
+    display: none !important;
+  }
+  body #public-po-print {
+    width: 100%;
+    border: 0;
+    padding: 0;
+  }
+}

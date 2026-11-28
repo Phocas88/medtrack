@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { workspaceLogoUrl } from '@/lib/workspace-logo';
 import { createClient } from '@/lib/supabase/server';
 
 const respond = (data: unknown, status = 200) => NextResponse.json(data, {
@@ -26,7 +27,7 @@ export async function GET() {
       user: profile,
       tenant: tenant ? {
         name: tenant.name,
-        settings: { enabled_modules: settings?.enabled_modules, preset: settings?.preset },
+        settings: { enabled_modules: settings?.enabled_modules, preset: settings?.preset, logo_url: workspaceLogoUrl(settings?.logo_url) },
       } : null,
     });
   } catch {

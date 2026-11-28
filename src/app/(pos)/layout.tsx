@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LogOut, User } from 'lucide-react';
-import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
+import { WorkspaceLogo } from '@/components/ui/workspace-logo';
 import { Button } from '@/components/ui/button';
 
 function POSShell({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-brand-deep-plum text-white">
         <div className="flex flex-col items-center gap-3">
-          <InvexiqsLogo theme="dark" />
+          <WorkspaceLogo />
           <span className="text-sm">Loading register...</span>
         </div>
       </div>
@@ -33,7 +33,7 @@ function POSShell({ children }: { children: React.ReactNode }) {
       {/* Register top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-brand-deep-plum text-white shrink-0">
         <div className="flex items-center gap-3">
-          <InvexiqsLogo theme="dark" size="sm" />
+          <WorkspaceLogo />
           <span className="text-[10px] text-brand-lavender ml-1">POS</span>
         </div>
         <div className="flex items-center gap-3">

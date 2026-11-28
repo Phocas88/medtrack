@@ -1,4 +1,4 @@
-import type { Lot } from '@/types/database';
+import type { Lot, StockRotation } from '@/types/database';
 
 /**
  * Sort lots by FEFO (First Expired, First Out) logic:
@@ -7,20 +7,17 @@ import type { Lot } from '@/types/database';
  * 3. Lots without expiration dates go last
  */
 export function sortByFEFO(lots: Lot[]): Lot[] {
+  return sortLots(lots, 'FEFO');
+}
+
+export function sortLots(lots: Lot[], rotation: StockRotation): Lot[] {
   return [...lots].sort((a, b) => {
-    // Both have expiration dates
-    if (a.expiration_date && b.expiration_date) {
-      const expDiff = new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime();
-      if (expDiff !== 0) return expDiff;
-      // Tiebreaker: oldest received first
-      return new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
+    if (rotation === 'FEFO') {
+      const expiryOrder = (a.expiration_date ?? '9999-12-31').localeCompare(b.expiration_date ?? '9999-12-31');
+      if (expiryOrder) return expiryOrder;
     }
-    // Only a has expiration — a goes first
-    if (a.expiration_date && !b.expiration_date) return -1;
-    // Only b has expiration — b goes first
-    if (!a.expiration_date && b.expiration_date) return 1;
-    // Neither has expiration — sort by received date
-    return new Date(a.received_date).getTime() - new Date(b.received_date).getTime();
+    const receivedOrder = a.received_date.localeCompare(b.received_date);
+    return (rotation === 'LIFO' ? -receivedOrder : receivedOrder) || a.id.localeCompare(b.id);
   });
 }
 
@@ -30,22 +27,24 @@ export function sortByFEFO(lots: Lot[]): Lot[] {
  */
 export function pickLotsForQuantity(
   lots: Lot[],
-  quantity: number
+  quantity: number,
+  rotation: StockRotation = 'FEFO',
 ): { picks: { lot: Lot; pickQuantity: number }[]; hasExpired: boolean; fulfilled: boolean } {
   const activeLots = lots.filter(
     (l) => l.status === 'active' && l.quantity_on_hand > 0
   );
-  const sorted = sortByFEFO(activeLots);
+  const sorted = sortLots(activeLots, rotation);
 
   const picks: { lot: Lot; pickQuantity: number }[] = [];
   let remaining = quantity;
   let hasExpired = false;
 
+  const today = new Date().toISOString().slice(0, 10);
   for (const lot of sorted) {
     if (remaining <= 0) break;
 
     const isExpired = lot.expiration_date
-      ? new Date(lot.expiration_date) < new Date()
+      ? lot.expiration_date < today
       : false;
 
     if (isExpired) {

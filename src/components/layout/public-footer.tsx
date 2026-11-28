@@ -3,9 +3,9 @@ import { PublicHelp } from './public-help';
 
 const groups = [
   ['Product', [['Warehouse features', '/#features'], ['Warehouse AI', '/#warehouse-ai'], ['Who it’s for', '/#solutions']]],
-  ['Get started', [['Compare plans', '/#pricing'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
-  ['Resources', [['Launch integrations', '/integrations-directory'], ['Warehouse guide', '/guide'], ['Support', '/support']]],
-  ['Free tools', [['Barcode and bin labels', '/tools#barcode'], ['Reorder-point calculator', '/tools#reorder'], ['CSV import templates', '/tools#templates']]],
+  ['Get Started', [['Compare plans', '/#pricing'], ['Live demo', '/demo'], ['Create a prelaunch account', '/auth/signup'], ['Request a pilot', '/#contact']]],
+  ['Resources', [['Integration Directory', '/integrations-directory'], ['Warehouse Academy', '/academy'], ['Warehouse Guide', '/guide'], ['Warehouse Automation', '/academy#automation'], ['Windows Access', '/academy#windows'], ['Support', '/support']]],
+  ['Free Tools', [['Barcode and Bin Labels', '/tools#barcode'], ['SKU Generator', '/tools#sku'], ['Purchase Order Generator', '/tools#purchase-order'], ['Reorder Point Calculator', '/tools#reorder'], ['CSV Import Templates', '/tools#templates']]],
 ] as const;
 
 export function PublicFooter() {

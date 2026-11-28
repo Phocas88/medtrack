@@ -38,6 +38,8 @@ export interface User {
   updated_at: string;
 }
 
+export type StockRotation = 'FIFO' | 'FEFO' | 'LIFO';
+
 export interface Product {
   id: string;
   tenant_id: string;
@@ -50,6 +52,7 @@ export interface Product {
   cost: number;
   price: number;
   low_stock_threshold: number;
+  stock_rotation: StockRotation;
   storage_requirement: StorageRequirement;
   is_lot_tracked: boolean;
   is_serial_tracked: boolean;

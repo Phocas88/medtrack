@@ -739,7 +739,7 @@ export default function MetricsPage() {
             <KPICard icon={AlertTriangle} title="Already Expired" rows={data.details.expired} value={data.expiredCount} alert={data.expiredCount > 0} subtitle="Still in stock" />
           </div>
           <Card>
-            <CardHeader><CardTitle className="text-base">Expiring Lots (FIFO Order)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Lots by Expiration Date</CardTitle></CardHeader>
             <CardContent>
               {data.expiringItems.length === 0 ? <p className="text-sm text-muted-foreground">No lots expiring within 90 days</p> : (
                 <Table>

@@ -916,3 +916,32 @@ describe('Shopify warehouse stock preview', () => {
     await owner();
   });
 });
+
+describe('product stock policies', () => {
+  it.each([
+    ['FIFO', 'EARLY'],
+    ['FEFO', 'EXPIRING'],
+    ['LIFO', 'NEWEST'],
+  ])('selects the correct outbound lot for %s', async (rotation, expected) => {
+    await owner();
+    const { rows: [item] } = await db.query<{ id: string }>(
+      'insert into products(tenant_id,name,sku,stock_rotation) values($1,$2,$2,$3) returning id',
+      [tenant, `ROTATE-${rotation}`, rotation],
+    );
+    await db.query(`insert into lots(tenant_id,product_id,lot_number,quantity_on_hand,received_date,expiration_date)
+      values ($1,$2,'EARLY',1,current_date-3,current_date+20),
+             ($1,$2,'EXPIRING',1,current_date-2,current_date+10),
+             ($1,$2,'NEWEST',1,current_date-1,current_date+30),
+             ($1,$2,'EXPIRED',1,current_date,current_date-1)`, [tenant, item.id]);
+    await expect(db.query('update products set par_level_min=10, par_level_max=5 where id=$1', [item.id]))
+      .rejects.toThrow('products_valid_stock_levels');
+
+    await login(admin);
+    const { rows: [sale] } = await db.query<{ result: { shipment_id: string } }>(
+      'select ship_inventory(gen_random_uuid(),$1::jsonb) as result',
+      [JSON.stringify({ customer_id: customer, lines: [{ product_id: item.id, quantity: 1, unit_price: 1 }] })],
+    );
+    expect((await db.query('select l.lot_number from shipment_lines sl join lots l on l.id=sl.lot_id where sl.shipment_id=$1', [sale.result.shipment_id])).rows)
+      .toEqual([{ lot_number: expected }]);
+  });
+});

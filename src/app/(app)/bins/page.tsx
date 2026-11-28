@@ -237,7 +237,8 @@ export default function BinsPage() {
       const key = `${pa.bin_id}::${pa.product_id}`;
       const currentQty = invMap.get(key) || 0;
 
-      if (currentQty < pa.reorder_point) {
+      const trigger = Math.min(pa.max_quantity, Math.max(pa.min_quantity, pa.reorder_point));
+      if (currentQty < trigger) {
         // Find secondary bin for same product
         const secondary = assignments.find(
           (a) =>
@@ -255,7 +256,7 @@ export default function BinsPage() {
           primaryBinCode: pa.bin?.bin_code || 'Unknown',
           primaryBinId: pa.bin_id,
           currentQty,
-          reorderPoint: pa.reorder_point,
+          reorderPoint: trigger,
           maxQty: pa.max_quantity,
           replenishQty: pa.max_quantity - currentQty,
           secondaryBinCode: secondary?.bin?.bin_code || null,
@@ -399,9 +400,9 @@ export default function BinsPage() {
         product_id: assignForm.product_id,
         bin_id: assignForm.bin_id,
         bin_role: assignForm.bin_role,
-        min_quantity: Number(assignForm.min_quantity) || 0,
-        max_quantity: Number(assignForm.max_quantity) || 100,
-        reorder_point: Number(assignForm.reorder_point) || 10,
+        min_quantity: Number(assignForm.min_quantity),
+        max_quantity: Number(assignForm.max_quantity),
+        reorder_point: Number(assignForm.reorder_point),
         unit_of_measure: assignForm.unit_of_measure || 'EA',
         is_active: true,
       });

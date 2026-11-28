@@ -1,5 +1,6 @@
 'use client';
 
+import { workspaceLogoUrl } from '@/lib/workspace-logo';
 import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -116,7 +117,7 @@ type NotifPrefs = Record<string, { inApp: boolean; email: boolean }>;
 type FeatureFlags = Record<string, boolean>;
 
 export default function SettingsPage() {
-  const { user: currentUser, tenantId, role } = useAuth();
+  const { user: currentUser, tenantId, role, setTenantLogoUrl } = useAuth();
   const supabase = createClient();
   const isAdmin = role === 'admin';
 
@@ -224,10 +225,15 @@ export default function SettingsPage() {
   // --- General handlers ---
   async function saveGeneral() {
     if (!tenantId) return;
+    const customLogo = workspaceLogoUrl(logoUrl);
+    if (logoUrl.trim() && !customLogo) { toast.error('Enter a valid HTTPS logo URL'); return; }
     setSavingGeneral(true);
-    const { error } = await supabase.rpc('update_tenant_settings', { p_name: companyName, p_patch: { address: businessAddress.trim(), business_phone: businessPhone.trim(), logo_url: logoUrl, timezone, date_format: dateFormat, currency, sales_tax_rate: salesTax / 100 } });
+    const { error } = await supabase.rpc('update_tenant_settings', { p_name: companyName, p_patch: { address: businessAddress.trim(), business_phone: businessPhone.trim(), logo_url: customLogo || '', timezone, date_format: dateFormat, currency, sales_tax_rate: salesTax / 100 } });
     if (error) toast.error(error.message);
-    else toast.success('Settings saved');
+    else {
+      setTenantLogoUrl(customLogo);
+      toast.success('Settings saved');
+    }
     setSavingGeneral(false);
   }
 
@@ -455,15 +461,17 @@ export default function SettingsPage() {
               {/* Logo URL */}
               <div className="grid gap-2 max-w-md">
                 <Label htmlFor="logo-url" className="flex items-center gap-2">
-                  <Image className="h-4 w-4 text-muted-foreground" /> Logo URL
+                  <Image className="h-4 w-4 text-muted-foreground" aria-hidden /> Workspace Logo URL
                 </Label>
                 <Input
                   id="logo-url"
+                  maxLength={2048}
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   placeholder="https://example.com/logo.png"
                   disabled={!isAdmin}
                 />
+                <p className="text-sm text-muted-foreground">Use a publicly readable HTTPS image. Your logo appears above “Powered by Invexiqs” in the workspace. Clear the field to restore the Invexiqs logo.</p>
               </div>
 
               <Separator />

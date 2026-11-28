@@ -72,10 +72,13 @@ export default function ReorderPage() {
       // Open demand and historical run-rate can refer to the same sales. Use the higher figure.
       const horizonDemand = Math.max(openDemand, Math.ceil(dailyVelocity * leadTimeDays));
       const projectedStock = currentStock + inbound - horizonDemand;
-      const reorderPoint = product.reorder_point ?? product.low_stock_threshold ?? 0;
+      const configuredMinimum = product.par_level_min ?? product.reorder_point ?? product.low_stock_threshold ?? 0;
+      const reorderPoint = product.par_level_max == null ? configuredMinimum : Math.min(configuredMinimum, product.par_level_max);
       if (projectedStock > reorderPoint) continue;
-      const target = Math.max(reorderPoint, product.par_level_max ?? 0);
-      const suggestedQty = Math.max(product.reorder_quantity || 0, target - projectedStock);
+      const target = product.par_level_max ?? reorderPoint;
+      const suggestedQty = product.par_level_max == null
+        ? Math.max(product.reorder_quantity || 0, target - projectedStock)
+        : Math.max(0, target - projectedStock);
       if (suggestedQty <= 0) continue;
       const daysOfSupply = dailyVelocity > 0 ? Math.floor(currentStock / dailyVelocity) : null;
 

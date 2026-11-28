@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from '@/components/providers/auth-provider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { LogOut, Wifi, WifiOff, ClipboardList, Search, BarChart3 } from 'lucide-react';
-import { InvexiqsLogo } from '@/components/ui/invexiqs-logo';
+import { WorkspaceLogo } from '@/components/ui/workspace-logo';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center h-screen bg-brand-deep-plum text-white">
         <div className="flex flex-col items-center gap-3">
-          <InvexiqsLogo theme="dark" size="sm" />
+          <WorkspaceLogo />
           <span className="text-sm">Loading scanner...</span>
         </div>
       </div>
@@ -42,7 +42,7 @@ function ScannerShell({ children }: { children: React.ReactNode }) {
       {/* Minimal top bar */}
       <header className="flex items-center justify-between px-4 py-2 border-b bg-brand-deep-plum text-white shrink-0">
         <div className="flex items-center gap-2">
-          <InvexiqsLogo theme="dark" size="sm" />
+          <WorkspaceLogo />
         </div>
         <div className="flex items-center gap-3">
           <OnlineIndicator />

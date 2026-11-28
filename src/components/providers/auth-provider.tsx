@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, UserRole } from '@/types/database';
+import { workspaceLogoUrl } from '@/lib/workspace-logo';
 import type { TenantPreset } from '@/lib/presets';
 
 export type EnabledModules = Record<string, boolean>;
@@ -12,6 +13,8 @@ interface AuthContextValue {
   user: User | null;
   tenantId: string | null;
   tenantName: string | null;
+  tenantLogoUrl: string | null;
+  setTenantLogoUrl: (url: string | null) => void;
   accountEmail: string | null;
   role: UserRole | null;
   preset: TenantPreset;
@@ -24,6 +27,8 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   tenantId: null,
   tenantName: null,
+  tenantLogoUrl: null,
+  setTenantLogoUrl: () => {},
   accountEmail: null,
   role: null,
   preset: 'full',
@@ -36,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [enabledModules, setEnabledModules] = useState<EnabledModules>({});
   const [preset, setPreset] = useState<TenantPreset>('full');
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!response.ok) {
           setUser(null);
           setTenantName(null);
+          setTenantLogoUrl(null);
           setEnabledModules({});
           setPreset('full');
           return;
@@ -64,12 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(profile.user);
         setTenantName(profile.tenant?.name ?? null);
         const settings = (profile.tenant?.settings ?? {}) as Record<string, unknown>;
+        setTenantLogoUrl(workspaceLogoUrl(settings.logo_url));
         setEnabledModules((settings.enabled_modules as EnabledModules) ?? {});
         setPreset((settings.preset as TenantPreset) ?? 'full');
       } catch {
         if (current === requestId) {
           setUser(null);
           setTenantName(null);
+          setTenantLogoUrl(null);
         }
       } finally {
         if (current === requestId) setLoading(false);
@@ -87,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         requestId++;
         setUser(null);
         setTenantName(null);
+        setTenantLogoUrl(null);
         setAccountEmail(null);
         setEnabledModules({});
         setPreset('full');
@@ -109,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setTenantName(null);
+    setTenantLogoUrl(null);
     setEnabledModules({});
     setPreset('full');
     router.push('/auth/login');
@@ -121,6 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         tenantId: user?.tenant_id ?? null,
         tenantName,
+        tenantLogoUrl,
+        setTenantLogoUrl,
         accountEmail,
         role: user?.role ?? null,
         preset,

@@ -277,7 +277,7 @@ export default function ShipPage() {
           }))
           .filter((lot) => lot.quantity_on_hand > 0);
       }
-      const result = pickLotsForQuantity(eligibleLots, line.quantity);
+      const result = pickLotsForQuantity(eligibleLots, line.quantity, product.stock_rotation ?? "FEFO");
       suggestions.push({
         product,
         picks: result.picks,
@@ -363,7 +363,7 @@ export default function ShipPage() {
     <div className="space-y-6">
       <PageHeader
         title="Ship Order"
-        description="Create shipments with FEFO picking logic"
+        description="Create shipments using each product’s stock rotation policy"
       />
 
       <div className="space-y-2">
@@ -612,7 +612,7 @@ export default function ShipPage() {
               onClick={handlePrepareShipment}
               disabled={shipmentLines.length === 0}
             >
-              Prepare Shipment (FEFO Pick)
+              Prepare Shipment
             </Button>
           </div>
         </CardContent>
@@ -679,11 +679,10 @@ export default function ShipPage() {
         </Card>
       )}
 
-      {/* FEFO Picking Dialog */}
       <Dialog open={showPicking} onOpenChange={setShowPicking}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>FEFO Pick Suggestions</DialogTitle>
+            <DialogTitle>Pick Suggestions</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">

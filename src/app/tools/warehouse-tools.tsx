@@ -10,7 +10,7 @@ export function WarehouseTools() {
   const [point, setPoint] = useState<number>();
   return <div className="grid items-start gap-5 md:grid-cols-2">
     <section id="barcode" className="space-y-4 rounded-xl border p-5">
-      <h2 className="text-xl font-semibold">Barcode and bin labels</h2>
+      <h2 className="text-xl font-semibold">Barcode and Bin Label Generator</h2>
       <form className="space-y-3" onSubmit={event => {
         event.preventDefault();
         const value = code.trim();
@@ -34,7 +34,7 @@ export function WarehouseTools() {
       </div>}
     </section>
     <section id="reorder" className="space-y-4 rounded-xl border p-5">
-      <h2 className="text-xl font-semibold">Reorder-point calculator</h2>
+      <h2 className="text-xl font-semibold">Reorder Point Calculator</h2>
       <p>Estimate the reorder point from daily demand, supplier lead time, and safety stock.</p>
       <form className="space-y-3" onSubmit={event => {
         event.preventDefault();
