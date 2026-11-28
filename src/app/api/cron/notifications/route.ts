@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   await drainIntegrationJobs(10);
   const { error: cycleCountError } = await createServiceClient().rpc("schedule_due_cycle_counts");
   if (cycleCountError) console.error("Cycle count scheduler failed", cycleCountError.code);
+  const { error: digestError } = await createServiceClient().rpc("queue_analytics_digests");
+  if (digestError) console.error("Analytics digest scheduler failed", digestError.code);
   const { error } = await createServiceClient()
     .from("gdpr_requests")
     .update({ payload: {} })

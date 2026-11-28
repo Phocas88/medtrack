@@ -3,15 +3,15 @@ export const SUITE_ADD_ON_STATUS = 'Paid add-on in development';
 export const suiteProducts = [
   {
     slug: 'purchasing', name: 'Purchasing', href: '/purchase-orders',
-    description: 'Follow a purchase order from supplier confirmation to the receiving dock.',
-    included: ['Purchase orders and replenishment recommendations', 'Supplier confirmation links and supplier-submitted shipment notices', 'Partial receiving and discrepancy review'],
-    expansion: ['Supplier portal with PO history', 'Approval rules and supplier scorecards'],
+    description: 'Compare supplier fill and on-time completion, then open late purchase orders for follow-up.',
+    included: ['Purchase orders and replenishment recommendations', 'Supplier confirmation links and supplier-submitted shipment notices', 'Partial receiving and discrepancy review', 'Supplier scorecards with CSV export'],
+    expansion: ['Supplier portal with PO history', 'Approval rules and buying controls'],
   },
   {
     slug: 'analytics', name: 'Analytics', href: '/analytics',
-    description: 'See where inventory, fulfillment, and warehouse work need attention.',
-    included: ['Daily exception view, operational dashboards, and inventory reporting', 'Cycle-count progress and CSV exports'],
-    expansion: ['Scheduled exception reports', 'Custom dashboards and cross-warehouse analysis'],
+    description: 'Compare warehouse stock and open work, and schedule a daily or weekly digest of exceptions.',
+    included: ['Daily exception view, operational dashboards, and inventory reporting', 'Cycle-count progress and CSV exports', 'Warehouse comparison and scheduled in-app exception digests'],
+    expansion: ['Custom dashboards', 'Scheduled email delivery and recurring report exports'],
   },
   {
     slug: 'commerce', name: 'Commerce', href: '/customer-portal',
@@ -27,9 +27,9 @@ export const suiteProducts = [
   },
   {
     slug: 'shipping', name: 'Shipping', href: '/ship',
-    description: 'Move orders through verification, cartons, labels, and carrier tracking.',
-    included: ['Verified packing and tracked split shipments', 'Carrier labels and outbound pallet lookup'],
-    expansion: ['Configurable carrier routing and delivery exception management', 'Freight planning and dispatch'],
+    description: 'Track shipments and open follow-ups for failed deliveries, pickup holds, or returns to sender.',
+    included: ['Verified packing and tracked split shipments', 'Carrier labels and outbound pallet lookup', 'Order and carton delivery exception queue'],
+    expansion: ['Configurable carrier routing', 'Freight planning and dispatch'],
   },
   {
     slug: 'manufacturing', name: 'Manufacturing', href: '/kitting',

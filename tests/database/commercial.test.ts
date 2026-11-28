@@ -1191,3 +1191,26 @@ describe('delivery exception follow-ups', () => {
     await expect(db.query(followup,['carton',carton,'return_to_sender'])).rejects.toThrow('has changed');
   });
 });
+
+describe('scheduled analytics digests', () => {
+  it('queues one private in-app snapshot per opted-in manager without scheduling email', async () => {
+    await login(manager);
+    await db.query("select set_analytics_digest('daily')");
+    await expect(db.query('select queue_analytics_digests()')).rejects.toThrow('permission denied');
+    await owner();
+    await db.exec('set role service_role');
+    expect((await db.query('select queue_analytics_digests() as queued')).rows).toEqual([{queued:1}]);
+    expect((await db.query('select queue_analytics_digests() as queued')).rows).toEqual([{queued:0}]);
+    await owner();
+    expect((await db.query("select user_id,is_email_sent from notifications where tenant_id=$1 and entity_type='analytics_digest'",[tenant])).rows)
+      .toEqual([{user_id:manager,is_email_sent:true}]);
+    await login(admin);
+    expect((await db.query('select user_id from analytics_digest_history')).rows).toEqual([]);
+    await login(other);
+    expect((await db.query('select user_id from analytics_digest_history')).rows).toEqual([]);
+    await login(manager);
+    expect((await db.query('select user_id from analytics_digest_history')).rows).toEqual([{user_id:manager}]);
+    await db.query('select set_analytics_digest(null)');
+    expect((await db.query('select cadence from analytics_digest_preferences')).rows).toEqual([]);
+  });
+});

@@ -262,7 +262,10 @@ export default function AnalyticsPage() {
       <PageHeader
         product="analytics" title="Analytics"
         description="Inventory insights, performance metrics, and business intelligence"
-        actions={<Link href="/warehouse-comparison" className="text-sm font-semibold text-primary underline">Compare Warehouses</Link>}
+        actions={<>
+          <Link href="/warehouse-comparison" className="text-sm font-semibold text-primary underline">Compare Warehouses</Link>
+          <Link href="/analytics-digests" className="text-sm font-semibold text-primary underline">Scheduled Digests</Link>
+        </>}
       />
 
       {tenantId && <DailyExceptions key={tenantId} tenantId={tenantId} />}
