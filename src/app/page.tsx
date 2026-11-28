@@ -4,6 +4,7 @@ import { PublicFooter } from '@/components/layout/public-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ProductTour } from './product-tour';
+import { ProductSuiteGrid } from '@/components/layout/product-suite-grid';
 import { ArrowRight, Barcode, Boxes, ClipboardCheck, FileSpreadsheet, MapPin, PackageCheck, Play, Sparkles, Truck, Warehouse } from 'lucide-react';
 import { BRAND_TAGLINE, PRODUCT_NAME } from '@/lib/brand';
 import { publicSiteOrigin } from '@/lib/public-site';
@@ -115,6 +116,21 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="suite" aria-labelledby="landing-suite-title" className="border-y border-brand-border-gray bg-brand-lavender">
+          <div className="mx-auto max-w-7xl space-y-6 px-5 py-14 lg:px-8 lg:py-16">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="max-w-2xl">
+                <h2 id="landing-suite-title" className="text-3xl font-bold tracking-tight text-brand-deep-plum sm:text-4xl">Invexiqs Product Suite</h2>
+                <p className="mt-3 leading-relaxed text-brand-muted-gray">Explore six workspaces for buying, counting, selling, shipping, and assembling stock. Each uses the same warehouse and order records.</p>
+              </div>
+              <Link href="/suite" className="inline-flex items-center gap-2 font-semibold text-brand-royal-plum underline underline-offset-4">
+                View All Products <ArrowRight aria-hidden size={15} />
+              </Link>
+            </div>
+            <ProductSuiteGrid />
+          </div>
+        </section>
+
         <section id="warehouse-ai" className="border-t border-brand-border-gray bg-brand-warm-cream">
           <div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 md:grid-cols-2 lg:px-8 lg:py-16">
             <div>
@@ -152,7 +168,6 @@ export default function HomePage() {
             ))}
           </ul>
           <Link href="/integrations-directory" className="mt-6 inline-block font-semibold text-brand-royal-plum underline">View the Integration Directory</Link>
-          <Link href="/suite" className="mt-4 block w-fit font-semibold text-brand-royal-plum underline">Explore the Invexiqs Product Suite</Link>
           <p className="mt-3 text-sm text-brand-muted-gray">Setting up inventory today? Use CSV files from Excel or Google Sheets to import products and opening balances.</p>
         </section>
 
