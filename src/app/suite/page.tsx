@@ -9,7 +9,7 @@ export default function SuitePage() {
     <section className="bg-brand-lavender px-5 py-12 sm:py-16">
       <div className="mx-auto max-w-6xl space-y-4">
         <h1 className="text-balance text-4xl font-bold tracking-tight text-brand-deep-plum sm:text-5xl">Invexiqs Product Suite</h1>
-        <p className="max-w-2xl text-lg text-brand-muted-gray">Explore the tools your purchasing, warehouse, and sales teams can use with the same stock and order records.</p>
+        <p className="max-w-2xl text-lg text-brand-muted-gray">See what’s included in Invexiqs WMS and which features are still in development for each paid add-on.</p>
       </div>
     </section>
     <section aria-label="Products" className="mx-auto max-w-6xl px-5 py-10">

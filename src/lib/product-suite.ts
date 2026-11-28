@@ -1,3 +1,5 @@
+export const SUITE_ADD_ON_STATUS = 'Paid add-on in development';
+
 export const suiteProducts = [
   {
     slug: 'purchasing', name: 'Purchasing', href: '/purchase-orders',
