@@ -6,10 +6,27 @@ import { loadShopifyConnection } from "@/lib/shopify-connection";
 import { drainIntegrationJobs } from "@/lib/integration-jobs";
 import { uuid } from "@/lib/security";
 export const maxDuration = 60;
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await requireUser(["admin", "manager"], true);
     const db = createServiceClient();
+    const product = new URL(request.url).searchParams.get("preview");
+    if (product !== null) {
+      const { data: mapping, error: mappingError } = await db
+        .from("shopify_inventory_mappings")
+        .select("product_id")
+        .eq("tenant_id", user.tenant_id)
+        .eq("product_id", uuid.parse(product))
+        .maybeSingle();
+      if (mappingError) throw mappingError;
+      if (!mapping) throw new HttpError(404, "No Shopify mapping for this product");
+      const { data, error } = await db.rpc("shopify_warehouse_stock_preview", {
+        p_tenant: user.tenant_id,
+        p_product: mapping.product_id,
+      });
+      if (error) throw error;
+      return NextResponse.json({ warehouses: data }, { headers: { "Cache-Control": "no-store" } });
+    }
     const client = await loadShopifyConnection(user.tenant_id);
     const [locations, mappings] = await Promise.all([
       client.getLocations(),

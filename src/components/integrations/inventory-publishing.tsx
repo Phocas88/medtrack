@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { toast } from "sonner";
+import { ShopifyStockPreview } from "./shopify-stock-preview";
 type Mapping = {
   product_id: string;
   variant_id: string;
@@ -159,6 +160,7 @@ export function InventoryPublishing() {
               Save mapping
             </button>
           )}
+          <ShopifyStockPreview productId={mapping.product_id} />
         </form>
       ))}
       <p className="text-xs text-muted-foreground">

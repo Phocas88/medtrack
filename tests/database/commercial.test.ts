@@ -857,3 +857,41 @@ describe('Shopify partials, pallet codes, and shared picking', () => {
     expect((await db.query('select quantity from order_reservations where order_id=$1',[b])).rows).toEqual([]);
   });
 });
+
+describe('Shopify warehouse stock preview', () => {
+  it('counts split bin stock once, excludes expired stock and keeps company-wide demand separate', async () => {
+    await owner();
+    async function createRow(sql: string, values: unknown[]) {
+      return (await db.query<{ id: string }>(sql, values)).rows[0].id;
+    }
+    const item = await createRow("insert into products(tenant_id,name,sku) values($1,'Preview item','STOCK-PREVIEW') returning id", [tenant]);
+    const west = await createRow("insert into locations(tenant_id,name,code) values($1,'Preview West','PREVIEW-W') returning id", [tenant]);
+    const east = await createRow("insert into locations(tenant_id,name,code) values($1,'Preview East','PREVIEW-E') returning id", [tenant]);
+    const bin = await createRow("insert into bins(tenant_id,location_id,bin_code) values($1,$2,'PREVIEW-BIN') returning id", [tenant, east]);
+    const lot = await createRow("insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand) values($1,$2,$3,'PREVIEW-LOT',10) returning id", [tenant, item, west]);
+    await db.query("insert into lots(tenant_id,product_id,location_id,lot_number,quantity_on_hand,expiration_date) values($1,$2,$3,'PREVIEW-EXPIRED',20,current_date-1)", [tenant, item, east]);
+    await db.query("insert into bin_inventory(tenant_id,bin_id,product_id,lot_id,quantity) values($1,$2,$3,$4,4)", [tenant, bin, item, lot]);
+    const order = await createRow("insert into sales_orders(tenant_id,customer_id,order_number,status) values($1,$2,'PREVIEW-ORDER','confirmed') returning id", [tenant, customer]);
+    await db.query("insert into sales_order_lines(tenant_id,order_id,product_id,quantity_ordered,unit_price) values($1,$2,$3,3,5)", [tenant, order, item]);
+    const query = 'select warehouse_id, eligible_units::int, allocated_demand::int, unallocated_demand::int from shopify_warehouse_stock_preview($1,$2)';
+    await login(other);
+    await expect(db.query(query, [tenant, item])).rejects.toThrow('permission denied');
+    await owner();
+    await db.exec('set role service_role');
+    const { rows } = await db.query(query, [tenant, item]);
+    expect(rows).toEqual(expect.arrayContaining([
+      { warehouse_id: west, eligible_units: 6, allocated_demand: 0, unallocated_demand: 3 },
+      { warehouse_id: east, eligible_units: 4, allocated_demand: 0, unallocated_demand: 3 },
+    ]));
+    await owner();
+    const batch = await createRow('insert into pick_batches(tenant_id,location_id,assigned_to,created_by) values($1,$2,$3,$4) returning id', [tenant, east, staff, admin]);
+    await db.query(`insert into scan_tasks(tenant_id,task_type,status,title,location_id,product_id,requested_quantity,pick_batch_id,pick_order_id,pick_tote_code)
+      values($1,'pick','assigned','Preview test',$2,$3,3,$4,$5,'TOTE-PREVIEW')`, [tenant, east, item, batch, order]);
+    await db.exec('set role service_role');
+    expect((await db.query(query, [tenant, item])).rows).toEqual(expect.arrayContaining([
+      { warehouse_id: west, eligible_units: 6, allocated_demand: 0, unallocated_demand: 0 },
+      { warehouse_id: east, eligible_units: 4, allocated_demand: 3, unallocated_demand: 0 },
+    ]));
+    await owner();
+  });
+});
